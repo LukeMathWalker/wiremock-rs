@@ -1,0 +1,81 @@
+use std::net::TcpStream;
+use wiremock::matchers::{method, PathExactMatcher};
+use wiremock::{Mock, MockServer, ResponseTemplate};
+
+#[async_std::test]
+async fn new_starts_the_server() {
+    // Act
+    let mock_server = MockServer::start().await;
+
+    // Assert
+    assert!(TcpStream::connect(&mock_server.address()).is_ok())
+}
+
+#[async_std::test]
+async fn returns_404_if_nothing_matches() {
+    // Arrange - no mocks mounted
+    let mock_server = MockServer::start().await;
+
+    // Act
+    let status = surf::get(&mock_server.uri()).await.unwrap().status();
+
+    // Assert
+    assert_eq!(status.as_u16(), 404);
+}
+
+#[async_std::test]
+async fn simple_route_mock() {
+    // Arrange
+    let mock_server = MockServer::start().await;
+    let response = ResponseTemplate::new(200).set_body("world");
+    let mock = Mock::given(method("GET"))
+        .and(PathExactMatcher::new("hello"))
+        .respond_with(response);
+    mock_server.register(mock).await;
+
+    // Act
+    let mut response = surf::get(format!("{}/hello", &mock_server.uri()))
+        .await
+        .unwrap();
+
+    // Assert
+    assert_eq!(response.status().as_u16(), 200);
+    assert_eq!(response.body_string().await.unwrap(), "world");
+}
+
+#[async_std::test]
+async fn two_route_mocks() {
+    // Arrange
+    let mock_server = MockServer::start().await;
+
+    // First
+    let response = ResponseTemplate::new(200).set_body("aaa");
+    Mock::given(method("GET"))
+        .and(PathExactMatcher::new("first"))
+        .respond_with(response)
+        .mount(&mock_server)
+        .await;
+
+    // Second
+    let response = ResponseTemplate::new(200).set_body("bbb");
+    Mock::given(method("GET"))
+        .and(PathExactMatcher::new("second"))
+        .respond_with(response)
+        .mount(&mock_server)
+        .await;
+
+    // Act
+    let mut first_response = surf::get(format!("{}/first", &mock_server.uri()))
+        .await
+        .unwrap();
+    let mut second_response = surf::get(format!("{}/second", &mock_server.uri()))
+        .await
+        .unwrap();
+
+    // Assert
+    assert_eq!(first_response.status().as_u16(), 200);
+    assert_eq!(second_response.status().as_u16(), 200);
+
+    assert_eq!(first_response.body_string().await.unwrap(), "aaa");
+    assert_eq!(second_response.body_string().await.unwrap(), "bbb");
+}

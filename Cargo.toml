@@ -1,0 +1,35 @@
+[package]
+name = "wiremock"
+version = "0.1.0"
+authors = ["Luca Palmieri <rust@lpalmieri.com>"]
+edition = "2018"
+
+license = "MIT/Apache-2.0"
+
+repository = "https://github.com/LukeMathWalker/wiremock-rs"
+documentation = "https://docs.rs/wiremock/"
+readme = "README.md"
+
+description = "HTTP mocking to test Rust applications."
+
+keywords = ["test", "http", "mocking", "mock", "black-box"]
+categories = ["development-tools", "asynchronous"]
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+[lib]
+path = "src/lib.rs"
+
+[dependencies]
+log = "0.4"
+async-std = "1"
+async-h1 = "1"
+http-types = { version = "1", features = ["hyperium_http"] }
+serde_json = "1"
+serde = "1"
+bastion = "0.3"
+
+[dev-dependencies]
+async-std = { version = "1", features = ["attributes"] }
+surf = "1.0.3"
+reqwest = "0.10.4"
+tokio = { version = "0.2.18", features = ["macros"] }
