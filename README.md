@@ -35,6 +35,12 @@ interact with third-party APIs.
 
 It provides mocking of HTTP responses using request matching and response templating.
 
+<div align="center">
+  <a style="display: inline" href="https://docs.rs/wiremock">Documentation</a>
+  <span style="display: inline"> - </span>
+  <a style="display: inline" href="https://crates.io/crates/wiremock">Crates.io</a>
+</div>
+
 # Table of Contents
 1. [Getting started](#getting-started)
 2. [Matchers](#matchers)
