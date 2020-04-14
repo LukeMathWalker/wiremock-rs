@@ -1721,7 +1721,7 @@ dependencies = [
 
 [[package]]
 name = "wiremock"
-version = "0.1.1-alpha.0"
+version = "0.1.1"
 dependencies = [
  "async-h1",
  "async-std",
