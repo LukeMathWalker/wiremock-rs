@@ -35,6 +35,8 @@ interact with third-party APIs.
 
 It provides mocking of HTTP responses using request matching and response templating.
 
+*The name `wiremock` is a reference to [`WireMock.Net`](https://github.com/WireMock-Net/WireMock.Net) which is a .NET port of the original [`Wiremock`](http://wiremock.org/) from Java.*
+
 <div align="center">
   <a style="display: inline" href="https://docs.rs/wiremock">Documentation</a>
   <span style="display: inline"> - </span>
