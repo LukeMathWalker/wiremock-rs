@@ -122,10 +122,28 @@ impl ResponseTemplate {
     /// It sets "Content-Type" to "application/json".
     pub fn set_body_json<B: Serialize>(mut self, body: B) -> Self {
         let body = serde_json::to_vec(&body).expect("Failed to convert into body.");
+
         self.body = Some(body);
         self.mime = Some(
             http_types::Mime::from_str("application/json")
                 .expect("Failed to convert into Mime header"),
+        );
+        self
+    }
+
+    /// Set the response body to a string.
+    ///
+    /// It sets "Content-Type" to "text/plain".
+    pub fn set_body_string<T>(mut self, body: T) -> Self
+    where
+        T: TryInto<String>,
+        <T as TryInto<String>>::Error: std::fmt::Debug,
+    {
+        let body = body.try_into().expect("Failed to convert into body.");
+
+        self.body = Some(body.into_bytes());
+        self.mime = Some(
+            http_types::Mime::from_str("text/plain").expect("Failed to convert into Mime header"),
         );
         self
     }

@@ -27,7 +27,7 @@ async fn returns_404_if_nothing_matches() {
 async fn simple_route_mock() {
     // Arrange
     let mock_server = MockServer::start().await;
-    let response = ResponseTemplate::new(200).set_body("world");
+    let response = ResponseTemplate::new(200).set_body_bytes("world");
     let mock = Mock::given(method("GET"))
         .and(PathExactMatcher::new("hello"))
         .respond_with(response);
@@ -49,7 +49,7 @@ async fn two_route_mocks() {
     let mock_server = MockServer::start().await;
 
     // First
-    let response = ResponseTemplate::new(200).set_body("aaa");
+    let response = ResponseTemplate::new(200).set_body_bytes("aaa");
     Mock::given(method("GET"))
         .and(PathExactMatcher::new("first"))
         .respond_with(response)
@@ -57,7 +57,7 @@ async fn two_route_mocks() {
         .await;
 
     // Second
-    let response = ResponseTemplate::new(200).set_body("bbb");
+    let response = ResponseTemplate::new(200).set_body_bytes("bbb");
     Mock::given(method("GET"))
         .and(PathExactMatcher::new("second"))
         .respond_with(response)
