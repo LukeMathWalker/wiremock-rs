@@ -1,14 +1,17 @@
 use http_types::headers::{HeaderName, HeaderValue};
 use http_types::{Response, StatusCode};
+use serde::Serialize;
 use std::collections::HashMap;
 use std::convert::TryInto;
+use std::str::FromStr;
 
 /// The blueprint for the response returned by a [`MockServer`] when a [`Mock`] matches on an incoming request.
 ///
 /// [`Mock`]: struct.Mock.html
 /// [`MockServer`]: struct.MockServer.html
-#[derive(Clone, PartialEq, Debug)]
+#[derive(Clone, Debug)]
 pub struct ResponseTemplate {
+    mime: Option<http_types::Mime>,
     status_code: StatusCode,
     headers: HashMap<HeaderName, Vec<HeaderValue>>,
     body: Option<Vec<u8>>,
@@ -33,6 +36,7 @@ impl ResponseTemplate {
         Self {
             status_code,
             headers: HashMap::new(),
+            mime: None,
             body: None,
         }
     }
@@ -86,7 +90,10 @@ impl ResponseTemplate {
         self
     }
 
-    /// Set the response body.
+    /// Set the response body with bytes.
+    ///
+    /// It sets "Content-Type" to "application/octet-stream".
+    #[deprecated(since = "0.1.1", note = "Please use set_body_bytes instead.")]
     pub fn set_body<B>(mut self, body: B) -> Self
     where
         B: TryInto<Vec<u8>>,
@@ -94,6 +101,32 @@ impl ResponseTemplate {
     {
         let body = body.try_into().expect("Failed to convert into body.");
         self.body = Some(body);
+        self
+    }
+
+    /// Set the response body with bytes.
+    ///
+    /// It sets "Content-Type" to "application/octet-stream".
+    pub fn set_body_bytes<B>(mut self, body: B) -> Self
+    where
+        B: TryInto<Vec<u8>>,
+        <B as TryInto<Vec<u8>>>::Error: std::fmt::Debug,
+    {
+        let body = body.try_into().expect("Failed to convert into body.");
+        self.body = Some(body);
+        self
+    }
+
+    /// Set the response body from a JSON-serializable value.
+    ///
+    /// It sets "Content-Type" to "application/json".
+    pub fn set_body_json<B: Serialize>(mut self, body: B) -> Self {
+        let body = serde_json::to_vec(&body).expect("Failed to convert into body.");
+        self.body = Some(body);
+        self.mime = Some(
+            http_types::Mime::from_str("application/json")
+                .expect("Failed to convert into Mime header"),
+        );
         self
     }
 
@@ -110,7 +143,12 @@ impl ResponseTemplate {
 
         // Add body, if specified
         if let Some(body) = &self.body {
-            response.set_body(body.clone())
+            response.set_body(body.clone());
+        }
+
+        // Set content-type, if needed
+        if let Some(mime) = &self.mime {
+            response.set_content_type(mime.to_owned());
         }
 
         response
