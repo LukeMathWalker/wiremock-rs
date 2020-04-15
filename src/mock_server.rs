@@ -142,6 +142,43 @@ impl MockServer {
         self.mock_actor.register(mock).await;
     }
 
+    /// Drop all mounted `Mock`s from an instance of `MockServer`.
+    ///
+    /// ### Example:
+    /// ```rust
+    /// use wiremock::{MockServer, Mock, ResponseTemplate};
+    /// use wiremock::matchers::method;
+    ///
+    /// #[async_std::main]
+    /// async fn main() {
+    ///     // Arrange
+    ///     let mock_server = MockServer::start().await;
+    ///
+    ///     let response = ResponseTemplate::new(200);
+    ///     Mock::given(method("GET")).respond_with(response).mount(&mock_server).await;
+    ///     
+    ///     // Act
+    ///     let status = surf::get(&mock_server.uri())
+    ///         .await
+    ///         .unwrap()
+    ///         .status();
+    ///     assert_eq!(status.as_u16(), 200);
+    ///
+    ///     // Reset the server
+    ///     mock_server.reset().await;
+    ///
+    ///     // This would have matched our mock, but we have dropped it resetting the server!
+    ///     let status = surf::post(&mock_server.uri())
+    ///         .await
+    ///         .unwrap()
+    ///         .status();
+    ///     assert_eq!(status.as_u16(), 404);
+    /// }
+    /// ```
+    pub async fn reset(&self) {
+        self.mock_actor.reset().await;
+    }
+
     /// Return the base uri of this running instance of `MockServer`, e.g. `http://127.0.0.1:4372`.
     ///
     /// Use this method to compose uris when interacting with this instance of `MockServer` via

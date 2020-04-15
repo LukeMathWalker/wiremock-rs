@@ -8,6 +8,9 @@ pub(crate) struct MockActor {
     pub actor_ref: ChildRef,
 }
 
+#[derive(Clone, Debug)]
+struct Reset {}
+
 impl MockActor {
     /// Start an instance of our MockActor and return a reference to it.
     pub(crate) fn start() -> MockActor {
@@ -16,8 +19,13 @@ impl MockActor {
                 let mut mocks: Vec<Mock> = vec![];
                 loop {
                     msg! { ctx.recv().await?,
+                        _reset: Reset =!> {
+                            debug!("Dropping all mocks.");
+                            mocks = vec![];
+                            answer!(ctx, "Reset.").unwrap();
+                        };
                         mock: Mock =!> {
-                            debug!("Registering mock");
+                            debug!("Registering mock.");
                             mocks.push(mock);
                             answer!(ctx, "Registered.").unwrap();
                         };
@@ -56,5 +64,13 @@ impl MockActor {
 
     pub(crate) async fn register(&self, mock: Mock) {
         self.actor_ref.ask_anonymously(mock).unwrap().await.unwrap();
+    }
+
+    pub(crate) async fn reset(&self) {
+        self.actor_ref
+            .ask_anonymously(Reset {})
+            .unwrap()
+            .await
+            .unwrap();
     }
 }
