@@ -43,6 +43,7 @@ impl MockActor {
                             if let Some(response) = response {
                                 answer!(ctx, response).unwrap();
                             } else {
+                                debug!("Got unexpected request:\n{}", request);
                                 let res = Response::new(StatusCode::NotFound);
                                 answer!(ctx, res).unwrap();
                             }

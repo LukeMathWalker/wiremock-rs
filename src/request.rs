@@ -1,7 +1,10 @@
 use async_std::prelude::*;
 use http_types::headers::{HeaderName, HeaderValue};
 use http_types::{Method, Url};
-use std::collections::HashMap;
+use std::{
+    collections::HashMap,
+    fmt,
+};
 
 /// An incoming request to an instance of [`MockServer`].
 ///
@@ -21,11 +24,24 @@ use std::collections::HashMap;
 /// We introduce our `Request` type to perform this extraction once when the request
 /// arrives in the mock serve, store the result and pass an immutable reference to it
 /// to all our matchers.
+#[derive(Debug)]
 pub struct Request {
     pub url: Url,
     pub method: Method,
     pub headers: HashMap<HeaderName, Vec<HeaderValue>>,
     pub body: Vec<u8>,
+}
+
+impl fmt::Display for Request {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        writeln!(f, "{} {}", self.method, self.url)?;
+        for (name, values) in &self.headers {
+            let values = values.iter().map(|value| format!("{}", value)).collect::<Vec<_>>();
+            let values = values.join(",");
+            writeln!(f, "{}: {}", name, values)?;
+        }
+        writeln!(f, "{}", String::from_utf8_lossy(&self.body))
+    }
 }
 
 impl Request {
