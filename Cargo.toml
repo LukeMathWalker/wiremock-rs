@@ -23,7 +23,7 @@ path = "src/lib.rs"
 log = "0.4"
 async-std = "1"
 async-h1 = "1"
-http-types = { version = "1", features = ["hyperium_http"] }
+http-types = { version = "1.2", features = ["hyperium_http"] }
 serde_json = "1"
 serde = "1"
 bastion = "0.3"

@@ -15,7 +15,6 @@ use http_types::headers::{HeaderName, HeaderValue};
 use http_types::Method;
 use serde::Serialize;
 use std::convert::TryInto;
-use std::str::FromStr;
 
 /// Implement the `Match` trait for all closures, out of the box,
 /// if their signature is compatible.
@@ -63,11 +62,9 @@ pub struct MethodExactMatcher(Method);
 /// Shorthand for [`MethodExactMatcher::new`](struct.MethodExactMatcher.html).
 pub fn method<T>(method: T) -> MethodExactMatcher
 where
-    T: AsRef<str>,
+    T: TryInto<Method>,
+    <T as TryInto<Method>>::Error: std::fmt::Debug,
 {
-    // Using a different trait-bound compared to MethodExactMatcher
-    // to work around https://github.com/http-rs/http-types/pull/95
-    let method = Method::from_str(method.as_ref()).expect("Failed to convert into method");
     MethodExactMatcher::new(method)
 }
 
@@ -181,13 +178,11 @@ pub struct HeaderExactMatcher(HeaderName, HeaderValue);
 /// Shorthand for [`HeaderExactMatcher::new`](struct.HeaderExactMatcher.html).
 pub fn header<K, V>(key: K, value: V) -> HeaderExactMatcher
 where
-    K: AsRef<str>,
-    V: AsRef<str>,
+    K: TryInto<HeaderName>,
+    <K as TryInto<HeaderName>>::Error: std::fmt::Debug,
+    V: TryInto<HeaderValue>,
+    <V as TryInto<HeaderValue>>::Error: std::fmt::Debug,
 {
-    // Using a different set of trait-bounds compared to HeaderExactMatcher
-    // to work around https://github.com/http-rs/http-types/pull/95
-    let key = HeaderName::from_str(key.as_ref()).expect("Failed to convert to header name.");
-    let value = HeaderValue::from_str(value.as_ref()).expect("Failed to convert to header value.");
     HeaderExactMatcher::new(key, value)
 }
 
