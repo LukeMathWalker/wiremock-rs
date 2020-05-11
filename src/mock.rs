@@ -189,12 +189,7 @@ impl Debug for Matcher {
 ///
 ///     Mock::given(method("GET"))
 ///         .respond_with(ResponseTemplate::new(200))
-///         // Default behaviour will have this Mock responding to any matching incoming Response.
-///         // You can change it by setting a cap on the number of matched requests this Mock
-///         // should repond to.
-///         // In this case, once two matching requests have been received, the mock will stop
-///         // matching additional requests and you will receive a 404 if no other mock matches them.
-///         .up_to_n_times(2)
+///         .up_to_n_times(1)
 ///         // Mounting the mock on the mock server - it's now effective!
 ///         .mount(&mock_server)
 ///         .await;
