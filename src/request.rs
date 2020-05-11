@@ -1,10 +1,7 @@
 use async_std::prelude::*;
 use http_types::headers::{HeaderName, HeaderValue};
 use http_types::{Method, Url};
-use std::{
-    collections::HashMap,
-    fmt,
-};
+use std::{collections::HashMap, fmt};
 
 /// An incoming request to an instance of [`MockServer`].
 ///
@@ -36,7 +33,10 @@ impl fmt::Display for Request {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         writeln!(f, "{} {}", self.method, self.url)?;
         for (name, values) in &self.headers {
-            let values = values.iter().map(|value| format!("{}", value)).collect::<Vec<_>>();
+            let values = values
+                .iter()
+                .map(|value| format!("{}", value))
+                .collect::<Vec<_>>();
             let values = values.join(",");
             writeln!(f, "{}: {}", name, values)?;
         }

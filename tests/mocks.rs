@@ -24,6 +24,21 @@ async fn returns_404_if_nothing_matches() {
 }
 
 #[async_std::test]
+#[should_panic]
+async fn panics_if_the_expectation_is_not_satisfied() {
+    // Arrange
+    let mock_server = MockServer::start().await;
+    let response = ResponseTemplate::new(200);
+    Mock::given(method("GET"))
+        .respond_with(response)
+        .expect(1..)
+        .mount(&mock_server)
+        .await;
+
+    // Act - we never call the mock
+}
+
+#[async_std::test]
 async fn simple_route_mock() {
     // Arrange
     let mock_server = MockServer::start().await;

@@ -7,10 +7,11 @@
 //! # Table of Contents
 //! 1. [Getting started](#getting-started)
 //! 2. [Matchers](#matchers)
-//! 3. [Test isolation](#test-isolation)
-//! 4. [Runtime compatibility](#runtime-compatibility)
-//! 5. [Prior art](#prior-art)
-//! 6. [Future evolution](#future-evolution)
+//! 3. [Spying](#spying)
+//! 4. [Test isolation](#test-isolation)
+//! 5. [Runtime compatibility](#runtime-compatibility)
+//! 6. [Prior art](#prior-art)
+//! 7. [Future evolution](#future-evolution)
 //!
 //! ## Getting started
 //! ```rust
@@ -55,6 +56,17 @@
 //! You can define your own matchers using the [`Match`] trait, as well as using `Fn` closures.  
 //! Check [`Match`]'s documentation for more details and examples.
 //!
+//! ## Spying
+//!
+//! `wiremock` empowers you to set expectations on the number of invocations to your [`Mock`]s -
+//! check the [`expect`] method for more details.
+//!
+//! Expectations can be used to verify that a side-effect has (or has not) taken place!
+//!
+//! Expectations are automatically verified during the shutdown of each [`MockServer`] instance,
+//! at the end of your test. A failed verification will trigger a panic.  
+//! By default, no expectations are set on your [`Mock`]s.
+//!
 //! ## Test isolation
 //!
 //! Each instance of [`MockServer`] is fully isolated: [`start`] takes care of finding a random port
@@ -89,23 +101,25 @@
 //! |-----------|-------------------------|---------------------------|---------------------------------|----------------------------|-------|----------|-----------------|
 //! | mockito   | ❌ Sequential             | ❌ 1                        | ✔                           | ❌                        | Sync  | ✔     | ❌              |
 //! | httpmock | ❌ Sequential             | ❌ 1                        | ✔                           | ❌                        | Sync  | ✔     | ✔              |
-//! | wiremock  | ✔ Parallel ️              | ✔ Unbounded                | ✔                           | ✔                       | Async | ❌      | ❌              |
+//! | wiremock  | ✔ Parallel ️              | ✔ Unbounded                | ✔                           | ✔                       | Async | ✔      | ❌              |
 //!
 //!
 //! ## Future evolution
 //!
-//! Spying is in scope for future releases of `wiremock`.  
 //! More request matchers can be added to those provided out-of-the-box to handle common usecases.
 //!
 //! [`MockServer`]: struct.MockServer.html
+//! [`Mock`]: struct.Mock.html
 //! [`Match`]: trait.Match.html
 //! [`start`]: struct.MockServer.html#method.start
+//! [`expect`]: struct.Mock.html#method.expect
 //! [`matchers`]: matchers/index.html
 //! [GitHub repository]: https://github.com/LukeMathWalker/wiremock-rs
 //! [`mockito`]: https://docs.rs/mockito/
 //! [`httpmock`]: https://docs.rs/httpmock/
 //! [`async_std`]: https://docs.rs/async-std/
 //! [`tokio`]: https://docs.rs/tokio/
+mod active_mock;
 pub mod matchers;
 mod mock;
 mod mock_actor;
@@ -114,7 +128,7 @@ mod request;
 mod response_template;
 mod server_actor;
 
-pub use mock::{Match, Mock, MockBuilder};
+pub use mock::{Match, Mock, MockBuilder, Times};
 pub use mock_server::MockServer;
 pub use request::Request;
 pub use response_template::ResponseTemplate;

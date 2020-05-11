@@ -1,4 +1,5 @@
-use crate::{Match, Mock, Request};
+use crate::active_mock::ActiveMock;
+use crate::{Mock, Request};
 use bastion::prelude::*;
 use http_types::{Response, StatusCode};
 use log::{debug, warn};
@@ -11,12 +12,15 @@ pub(crate) struct MockActor {
 #[derive(Clone, Debug)]
 struct Reset {}
 
+#[derive(Clone, Debug)]
+struct Verify {}
+
 impl MockActor {
     /// Start an instance of our MockActor and return a reference to it.
     pub(crate) fn start() -> MockActor {
         let mock_actors = Bastion::children(|children: Children| {
             children.with_exec(move |ctx: BastionContext| async move {
-                let mut mocks: Vec<Mock> = vec![];
+                let mut mocks: Vec<ActiveMock> = vec![];
                 loop {
                     msg! { ctx.recv().await?,
                         _reset: Reset =!> {
@@ -24,9 +28,14 @@ impl MockActor {
                             mocks = vec![];
                             answer!(ctx, "Reset.").unwrap();
                         };
+                        _verify: Verify =!> {
+                            debug!("Verifying expectations for all mounted mocks.");
+                            let verified = mocks.iter().all(|m| m.verify());
+                            answer!(ctx, verified).unwrap();
+                        };
                         mock: Mock =!> {
                             debug!("Registering mock.");
-                            mocks.push(mock);
+                            mocks.push(ActiveMock::new(mock));
                             answer!(ctx, "Registered.").unwrap();
                         };
                         request: http_types::Request =!> {
@@ -34,7 +43,7 @@ impl MockActor {
                             let request = Request::from(request).await;
 
                             let mut response: Option<Response> = None;
-                            for mock in &mocks {
+                            for mock in &mut mocks {
                                 if mock.matches(&request) {
                                     response = Some(mock.response());
                                     break;
@@ -73,5 +82,14 @@ impl MockActor {
             .unwrap()
             .await
             .unwrap();
+    }
+
+    pub(crate) async fn verify(&self) -> bool {
+        let answer = self.actor_ref.ask_anonymously(Verify {}).unwrap();
+        let response = msg! { answer.await.expect("Couldn't receive the answer."),
+            outcome: bool => outcome;
+            _: _ => false;
+        };
+        response
     }
 }

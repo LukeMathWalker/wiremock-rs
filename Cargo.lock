@@ -674,9 +674,9 @@ dependencies = [
 
 [[package]]
 name = "http-types"
-version = "1.1.1"
+version = "1.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c85c8f8128a08fd00f9e1ef32ff9e4201f8e3134a52844fe221241a6eaaee671"
+checksum = "05af75a78dfeb163d472b1d27bebb6a8845917a069accdf53a9bed47aaff9bfc"
 dependencies = [
  "anyhow",
  "async-std",
@@ -1726,7 +1726,9 @@ dependencies = [
  "async-h1",
  "async-std",
  "bastion",
+ "bastion-executor",
  "http-types",
+ "lightproc",
  "log",
  "reqwest",
  "serde",
