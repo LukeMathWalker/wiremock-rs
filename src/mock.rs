@@ -2,9 +2,7 @@ use crate::response_template::ResponseTemplate;
 use crate::{MockServer, Request};
 use http_types::Response;
 use std::fmt::{Debug, Formatter};
-use std::ops::{
-    Range, RangeBounds, RangeFrom, RangeFull, RangeInclusive, RangeTo, RangeToInclusive,
-};
+use std::ops::{Range, RangeBounds, RangeFrom, RangeInclusive, RangeTo, RangeToInclusive};
 
 /// Anything that implements `Match` can be used to constrain when a [`Mock`] is activated.
 ///
@@ -191,6 +189,12 @@ impl Debug for Matcher {
 ///
 ///     Mock::given(method("GET"))
 ///         .respond_with(ResponseTemplate::new(200))
+///         // Default behaviour will have this Mock responding to any matching incoming Response.
+///         // You can change it by setting a cap on the number of matched requests this Mock
+///         // should repond to.
+///         // In this case, once two matching requests have been received, the mock will stop
+///         // matching additional requests and you will receive a 404 if no other mock matches them.
+///         .up_to_n_times(2)
 ///         // Mounting the mock on the mock server - it's now effective!
 ///         .mount(&mock_server)
 ///         .await;
@@ -213,6 +217,12 @@ impl Debug for Matcher {
 pub struct Mock {
     pub(crate) matchers: Vec<Matcher>,
     pub(crate) response: ResponseTemplate,
+    // Maximum number of times (inclusive) we should return a response from this Mock on
+    // matching requests.
+    // If `None`, there is no cap and we will respond to all incoming matching requests.
+    // If `Some(max_n_matches)`, when `max_n_matches` matching incoming requests have been processed,
+    // `self.matches` should start returning `false`, regardless of the incoming request.
+    pub(crate) max_n_matches: Option<u64>,
 }
 
 /// A fluent builder to construct a [`Mock`] instance given matchers and a [`ResponseTemplate`].
@@ -234,6 +244,58 @@ impl Mock {
         MockBuilder {
             matchers: vec![Matcher(Box::new(matcher))],
         }
+    }
+
+    /// Specify the maximum number of times you would like this `Mock` to respond to
+    /// incoming requests that satisfy the conditions imposed by your [`matchers`].
+    ///
+    /// ### Example:
+    ///
+    /// ```rust
+    /// use wiremock::{MockServer, Mock, ResponseTemplate};
+    /// use wiremock::matchers::method;
+    ///
+    /// #[async_std::main]
+    /// async fn main() {
+    ///     // Arrange
+    ///     let mock_server = MockServer::start().await;
+    ///
+    ///     Mock::given(method("GET"))
+    ///         .respond_with(ResponseTemplate::new(200))
+    ///         // Default behaviour will have this Mock responding to any incoming request
+    ///         // that satisfied our matcher (e.g. being a GET request).
+    ///         // We can opt out of the default behaviour by setting a cap on the number of
+    ///         // matching requests this Mock should respond to.
+    ///         //
+    ///         // In this case, once one matching request has been received, the mock will stop
+    ///         // matching additional requests and you will receive a 404 if no other mock
+    ///         // matches on those requests.
+    ///         .up_to_n_times(1)
+    ///         .mount(&mock_server)
+    ///         .await;
+    ///     
+    ///     // Act
+    ///
+    ///     // The first request matches, as expected.
+    ///     let status = surf::get(&mock_server.uri())
+    ///         .await
+    ///         .unwrap()
+    ///         .status();
+    ///     assert_eq!(status.as_u16(), 200);
+    ///
+    ///     // The second request does NOT match given our `up_to_n_times(1)` setting.
+    ///     let status = surf::get(&mock_server.uri())
+    ///         .await
+    ///         .unwrap()
+    ///         .status();
+    ///     assert_eq!(status.as_u16(), 404);
+    /// }
+    /// ```
+    ///
+    /// [`matchers`]: matchers/index.html
+    pub fn up_to_n_times(mut self, n: u64) -> Mock {
+        self.max_n_matches = Some(n);
+        self
     }
 
     /// Mount a `Mock` on an instance of [`MockServer`].
@@ -291,11 +353,13 @@ impl MockBuilder {
         Mock {
             matchers: self.matchers,
             response: template,
+            max_n_matches: None,
         }
     }
 }
 
 /// Specify how many times a [`Mock`] should match.
+/// It is used to set expectations on the usage of a [`Mock`] in a test case.
 ///
 /// You can either specify an exact value, e.g.
 /// ```rust
@@ -319,6 +383,7 @@ impl MockBuilder {
 /// let times: Times<_> = (..=15).into();
 /// ```
 ///
+/// [`Mock`]: struct.Mock.html
 pub struct Times<R: RangeBounds<u64>>(R);
 
 // Implementation notes: the original draft used an enum with two variants (Exact and Range)
