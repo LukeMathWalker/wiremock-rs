@@ -2,7 +2,9 @@ use crate::response_template::ResponseTemplate;
 use crate::{MockServer, Request};
 use http_types::Response;
 use std::fmt::{Debug, Formatter};
-use std::ops::{Range, RangeFrom, RangeFull, RangeInclusive, RangeTo, RangeToInclusive};
+use std::ops::{
+    Range, RangeBounds, RangeFrom, RangeFull, RangeInclusive, RangeTo, RangeToInclusive,
+};
 
 /// Anything that implements `Match` can be used to constrain when a [`Mock`] is activated.
 ///
@@ -244,7 +246,7 @@ impl Mock {
 
     /// Specify an upper limit to the number of times you would like this `Mock` to respond to
     /// incoming requests that satisfy the conditions imposed by your [`matchers`].
-    /// 
+    ///
     /// ### Example:
     ///
     /// ```rust
@@ -349,7 +351,7 @@ impl Mock {
     /// }
     /// ```
     ///
-    /// [`matchers`]: matchers/index.html
+    /// [`MockServer`]: struct.MockServer.html
     pub fn expect<T: Into<Times>>(mut self, r: T) -> Mock {
         let range = r.into();
         self.expectation = range;
@@ -411,7 +413,7 @@ impl MockBuilder {
     }
 }
 
-/// Specify how many times we expect a [`Mock`] to match.
+/// Specify how many times we expect a [`Mock`] to match via [`expect`].
 /// It is used to set expectations on the usage of a [`Mock`] in a test case.
 ///
 /// You can either specify an exact value, e.g.
@@ -437,8 +439,23 @@ impl MockBuilder {
 /// ```
 ///
 /// [`Mock`]: struct.Mock.html
+/// [`expect`]: struct.Mock.html#method.expect
 #[derive(Debug)]
 pub struct Times(TimesEnum);
+
+impl Times {
+    pub(crate) fn contains(&self, n_calls: u64) -> bool {
+        match &self.0 {
+            TimesEnum::Exact(e) => e == &n_calls,
+            TimesEnum::Unbounded(r) => r.contains(&n_calls),
+            TimesEnum::Range(r) => r.contains(&n_calls),
+            TimesEnum::RangeFrom(r) => r.contains(&n_calls),
+            TimesEnum::RangeTo(r) => r.contains(&n_calls),
+            TimesEnum::RangeToInclusive(r) => r.contains(&n_calls),
+            TimesEnum::RangeInclusive(r) => r.contains(&n_calls),
+        }
+    }
+}
 
 // Implementation notes: this has gone through a couple of iterations before landing to
 // what you see now.

@@ -2,7 +2,7 @@ use crate::mock::Mock;
 use crate::mock_actor::MockActor;
 use crate::server_actor::ServerActor;
 use async_std::net::TcpStream;
-use bastion::Bastion;
+use bastion::{run, Bastion};
 use log::debug;
 use std::net::SocketAddr;
 use std::time::Duration;
@@ -179,6 +179,12 @@ impl MockServer {
         self.mock_actor.reset().await;
     }
 
+    /// Verify that all mounted `Mock`s on this instance of `MockServer` have satisfied
+    /// their expectations on their number of invocations.
+    async fn verify(&self) -> bool {
+        self.mock_actor.verify().await
+    }
+
     /// Return the base uri of this running instance of `MockServer`, e.g. `http://127.0.0.1:4372`.
     ///
     /// Use this method to compose uris when interacting with this instance of `MockServer` via
@@ -231,6 +237,10 @@ impl MockServer {
 impl Drop for MockServer {
     // Clean up when the `MockServer` instance goes out of scope.
     fn drop(&mut self) {
+        debug!("Verify mock expectations.");
+        if !run!(self.verify()) {
+            panic!("Verification failed: mock expectations have not been satisfied.");
+        }
         debug!("Killing server actor.");
         self.server_actor.actor_ref.kill().unwrap();
         debug!("Killed server actor.");

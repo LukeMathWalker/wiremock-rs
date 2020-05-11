@@ -12,6 +12,9 @@ pub(crate) struct MockActor {
 #[derive(Clone, Debug)]
 struct Reset {}
 
+#[derive(Clone, Debug)]
+struct Verify {}
+
 impl MockActor {
     /// Start an instance of our MockActor and return a reference to it.
     pub(crate) fn start() -> MockActor {
@@ -24,6 +27,11 @@ impl MockActor {
                             debug!("Dropping all mocks.");
                             mocks = vec![];
                             answer!(ctx, "Reset.").unwrap();
+                        };
+                        _verify: Verify =!> {
+                            debug!("Verifying expectations for all mounted mocks.");
+                            let verified = mocks.iter().all(|m| m.verify());
+                            answer!(ctx, verified).unwrap();
                         };
                         mock: Mock =!> {
                             debug!("Registering mock.");
@@ -74,5 +82,14 @@ impl MockActor {
             .unwrap()
             .await
             .unwrap();
+    }
+
+    pub(crate) async fn verify(&self) -> bool {
+        let answer = self.actor_ref.ask_anonymously(Verify {}).unwrap();
+        let response = msg! { answer.await.expect("Couldn't receive the answer."),
+            outcome: bool => outcome;
+            _: _ => false;
+        };
+        response
     }
 }

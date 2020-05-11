@@ -41,6 +41,15 @@ impl ActiveMock {
         }
     }
 
+    /// Verify if this mock has verified the expectations set at creation time
+    /// over the number of invocations.
+    /// Returns true if expectations have been satisfied, false otherwise.
+    pub(crate) fn verify(&self) -> bool {
+        self.specification
+            .expectation
+            .contains(self.n_matched_requests)
+    }
+
     pub(crate) fn response(&self) -> Response {
         self.specification.response()
     }

@@ -27,6 +27,8 @@ http-types = { version = "1", features = ["hyperium_http"] }
 serde_json = "1"
 serde = "1"
 bastion = "0.3"
+bastion-executor = "0.3.4"
+lightproc = "0.3.4"
 
 [dev-dependencies]
 async-std = { version = "1", features = ["attributes"] }
