@@ -107,6 +107,7 @@
 //! [`async_std`]: https://docs.rs/async-std/
 //! [`tokio`]: https://docs.rs/tokio/
 pub mod matchers;
+mod active_mock;
 mod mock;
 mod mock_actor;
 mod mock_server;

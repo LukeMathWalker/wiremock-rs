@@ -1,4 +1,5 @@
-use crate::{Match, Mock, Request};
+use crate::active_mock::ActiveMock;
+use crate::{Mock, Request};
 use bastion::prelude::*;
 use http_types::{Response, StatusCode};
 use log::{debug, warn};
@@ -16,7 +17,7 @@ impl MockActor {
     pub(crate) fn start() -> MockActor {
         let mock_actors = Bastion::children(|children: Children| {
             children.with_exec(move |ctx: BastionContext| async move {
-                let mut mocks: Vec<Mock> = vec![];
+                let mut mocks: Vec<ActiveMock> = vec![];
                 loop {
                     msg! { ctx.recv().await?,
                         _reset: Reset =!> {
@@ -26,7 +27,7 @@ impl MockActor {
                         };
                         mock: Mock =!> {
                             debug!("Registering mock.");
-                            mocks.push(mock);
+                            mocks.push(ActiveMock::new(mock));
                             answer!(ctx, "Registered.").unwrap();
                         };
                         request: http_types::Request =!> {
@@ -34,7 +35,7 @@ impl MockActor {
                             let request = Request::from(request).await;
 
                             let mut response: Option<Response> = None;
-                            for mock in &mocks {
+                            for mock in &mut mocks {
                                 if mock.matches(&request) {
                                     response = Some(mock.response());
                                     break;

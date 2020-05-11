@@ -315,12 +315,6 @@ impl Mock {
     }
 }
 
-impl Match for Mock {
-    fn matches(&self, request: &Request) -> bool {
-        self.matchers.iter().all(|matcher| matcher.matches(request))
-    }
-}
-
 impl MockBuilder {
     /// Add another request matcher to the mock you are building.
     ///
