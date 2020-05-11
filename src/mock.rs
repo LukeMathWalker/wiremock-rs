@@ -289,6 +289,7 @@ impl Mock {
     ///
     /// [`matchers`]: matchers/index.html
     pub fn up_to_n_times(mut self, n: u64) -> Mock {
+        assert!(n > 0, "n must be strictly greater than 0!");
         self.max_n_matches = Some(n);
         self
     }
