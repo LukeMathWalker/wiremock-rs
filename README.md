@@ -155,6 +155,7 @@ Unless you explicitly state otherwise, any contribution intentionally submitted 
 
 
 [`MockServer`]: https://docs.rs/wiremock/0.2.0/wiremock/struct.MockServer.html
+[`Mock`]: https://docs.rs/wiremock/0.2.0/wiremock/struct.Mock.html
 [`Match`]: https://docs.rs/wiremock/0.2.0/wiremock/trait.Match.html
 [`start`]: https://docs.rs/wiremock/0.2.0/wiremock/struct.MockServer.html#method.start
 [`expect`]: https://docs.rs/wiremock/0.2.0/wiremock/struct.Mock.html#method.expect

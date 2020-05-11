@@ -109,6 +109,7 @@
 //! More request matchers can be added to those provided out-of-the-box to handle common usecases.
 //!
 //! [`MockServer`]: struct.MockServer.html
+//! [`Mock`]: struct.Mock.html
 //! [`Match`]: trait.Match.html
 //! [`start`]: struct.MockServer.html#method.start
 //! [`expect`]: struct.Mock.html#method.expect
