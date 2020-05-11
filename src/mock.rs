@@ -2,6 +2,9 @@ use crate::response_template::ResponseTemplate;
 use crate::{MockServer, Request};
 use http_types::Response;
 use std::fmt::{Debug, Formatter};
+use std::ops::{
+    Range, RangeBounds, RangeFrom, RangeFull, RangeInclusive, RangeTo, RangeToInclusive,
+};
 
 /// Anything that implements `Match` can be used to constrain when a [`Mock`] is activated.
 ///
@@ -291,3 +294,67 @@ impl MockBuilder {
         }
     }
 }
+
+/// Specify how many times a [`Mock`] should match.
+///
+/// You can either specify an exact value, e.g.
+/// ```rust
+/// use wiremock::Times;
+///
+/// let times: Times<_> = 10.into();
+/// ```
+/// or a range
+/// ```rust
+/// use wiremock::Times;
+///
+/// // Between 10 and 15 (not included) times
+/// let times: Times<_> = (10..15).into();
+/// // Between 10 and 15 (included) times
+/// let times: Times<_> = (10..=15).into();
+/// // At least 10 times
+/// let times: Times<_> = (10..).into();
+/// // Strictly less than 15 times
+/// let times: Times<_> = (..15).into();
+/// // Strictly less than 16 times
+/// let times: Times<_> = (..=15).into();
+/// ```
+///
+pub struct Times<R: RangeBounds<u64>>(R);
+
+// Implementation notes: the original draft used an enum with two variants (Exact and Range)
+// instead of a struct wrapped around a generic range.
+// We switched to a range wrapper when we realised that you would have had to specify a range
+// type when creating the exact variant (e.g. as you do for `Option` when creating a `None` variant).
+//
+// We achieve the same functionality with a wrapper, but exact values have to converted to ranges
+// with a single element (e.g. 15 -> 15..16).
+// Not the most expressive representation, but we will have to live with it.
+impl From<u64> for Times<Range<u64>> {
+    fn from(x: u64) -> Self {
+        Times(x..x + 1)
+    }
+}
+
+// We can't use a single `impl<R: RangeBounds<u64>> From<R> for Times<R>` because of the orphan
+// rule - we end up with a conflicting implementation to the conversion we implemented above
+// for u64.
+// A quick macro to help easing the pain.
+//
+// Important: we do not provide a conversion for RangeFull given that we never expect the user
+// to pass it in considering it is the default behaviour of a mock when no times quantifier
+// is specific.
+macro_rules! impl_from_for_range {
+    ($type_name:ident) => {
+        impl From<$type_name<u64>> for Times<$type_name<u64>> {
+            fn from(r: $type_name<u64>) -> Self {
+                Times(r)
+            }
+        }
+    };
+}
+
+impl_from_for_range!(Range);
+impl_from_for_range!(RangeTo);
+impl_from_for_range!(RangeFrom);
+impl_from_for_range!(RangeInclusive);
+impl_from_for_range!(RangeToInclusive);
