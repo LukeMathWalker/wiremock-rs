@@ -100,13 +100,42 @@ impl Match for MethodExactMatcher {
 ///     // Arrange
 ///     let mock_server = MockServer::start().await;
 ///
-///     let response = ResponseTemplate::new(200).set_body("world");
+///     let response = ResponseTemplate::new(200).set_body_string("world");
 ///     let mock = Mock::given(path("/hello")).respond_with(response);
 ///
 ///     mock_server.register(mock).await;
 ///     
 ///     // Act
 ///     let status = surf::get(format!("{}/hello", &mock_server.uri()))
+///         .await
+///         .unwrap()
+///         .status();
+///     
+///     // Assert
+///     assert_eq!(status.as_u16(), 200);
+/// }
+/// ```
+///
+/// ### Example:
+///
+/// The path matcher ignores query parameters:
+///
+/// ```rust
+/// use wiremock::{MockServer, Mock, ResponseTemplate};
+/// use wiremock::matchers::path;
+///
+/// #[async_std::main]
+/// async fn main() {
+///     // Arrange
+///     let mock_server = MockServer::start().await;
+///
+///     let response = ResponseTemplate::new(200).set_body_string("world");
+///     let mock = Mock::given(path("/hello")).respond_with(response);
+///
+///     mock_server.register(mock).await;
+///     
+///     // Act
+///     let status = surf::get(format!("{}/hello?a_parameter=some_value", &mock_server.uri()))
 ///         .await
 ///         .unwrap()
 ///         .status();
