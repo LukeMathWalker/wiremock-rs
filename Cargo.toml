@@ -29,6 +29,7 @@ serde = "1"
 bastion = "0.3"
 bastion-executor = "0.3.4"
 lightproc = "0.3.4"
+regex = "1"
 
 [dev-dependencies]
 async-std = { version = "1", features = ["attributes"] }

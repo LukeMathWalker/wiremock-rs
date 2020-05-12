@@ -15,6 +15,7 @@ use http_types::headers::{HeaderName, HeaderValue};
 use http_types::Method;
 use serde::Serialize;
 use std::convert::TryInto;
+use regex::Regex;
 
 /// Implement the `Match` trait for all closures, out of the box,
 /// if their signature is compatible.
@@ -170,6 +171,84 @@ impl PathExactMatcher {
 impl Match for PathExactMatcher {
     fn matches(&self, request: &Request) -> bool {
         request.url.path() == self.0
+    }
+}
+
+#[derive(Debug)]
+/// Match the path of a request against a regular expression.
+///
+/// ### Example:
+/// ```rust
+/// use wiremock::{MockServer, Mock, ResponseTemplate};
+/// use wiremock::matchers::path_regex;
+///
+/// #[async_std::main]
+/// async fn main() {
+///     // Arrange
+///     let mock_server = MockServer::start().await;
+///
+///     let response = ResponseTemplate::new(200).set_body_string("world");
+///     let mock = Mock::given(path_regex(r"^/hello/\d{3}$")).respond_with(response);
+///
+///     mock_server.register(mock).await;
+///
+///     // Act
+///     let status = surf::get(format!("{}/hello/123", &mock_server.uri()))
+///         .await
+///         .unwrap()
+///         .status();
+///
+///     // Assert
+///     assert_eq!(status.as_u16(), 200);
+/// }
+/// ```
+///
+/// ### Example:
+/// ```rust
+/// use wiremock::{MockServer, Mock, ResponseTemplate};
+/// use wiremock::matchers::path_regex;
+///
+/// #[async_std::main]
+/// async fn main() {
+///     // Arrange
+///     let mock_server = MockServer::start().await;
+///
+///     let response = ResponseTemplate::new(200).set_body_string("world");
+///     let mock = Mock::given(path_regex(r"^/users/.+/posts$")).respond_with(response);
+///
+///     mock_server.register(mock).await;
+///
+///     // Act
+///     let status = surf::get(format!("{}/users/da2854ea-b70f-46e7-babc-2846eff4d33c/posts", &mock_server.uri()))
+///         .await
+///         .unwrap()
+///         .status();
+///
+///     // Assert
+///     assert_eq!(status.as_u16(), 200);
+/// }
+/// ```
+pub struct PathRegexMatcher(Regex);
+
+/// Shorthand for [`PathRegexMatcher::new`](struct.PathRegexMatcher.html).
+pub fn path_regex<T>(path: T) -> PathRegexMatcher
+where
+    T: Into<String>,
+{
+    PathRegexMatcher::new(path)
+}
+
+impl PathRegexMatcher {
+    pub fn new<T: Into<String>>(path: T) -> Self {
+        let path = path.into();
+
+        Self(Regex::new(&path).expect("Failed to create regex for path matcher"))
+    }
+}
+
+impl Match for PathRegexMatcher {
+    fn matches(&self, request: &Request) -> bool {
+        self.0.is_match(request.url.path())
     }
 }
 
