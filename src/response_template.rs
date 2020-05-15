@@ -107,6 +107,9 @@ impl ResponseTemplate {
     /// Set the response body with bytes.
     ///
     /// It sets "Content-Type" to "application/octet-stream".
+    ///
+    /// To set a body with bytes but a different "Content-Type"
+    /// `set_body_raw` can be used.
     pub fn set_body_bytes<B>(mut self, body: B) -> Self
     where
         B: TryInto<Vec<u8>>,
@@ -144,6 +147,21 @@ impl ResponseTemplate {
         self.body = Some(body.into_bytes());
         self.mime = Some(
             http_types::Mime::from_str("text/plain").expect("Failed to convert into Mime header"),
+        );
+        self
+    }
+
+    /// Set a raw response body. The mime type needs to be set because the
+    /// raw body could be of any type.
+    pub fn set_body_raw<B>(mut self, body: B, mime: &str) -> Self
+    where
+        B: TryInto<Vec<u8>>,
+        <B as TryInto<Vec<u8>>>::Error: std::fmt::Debug,
+    {
+        let body = body.try_into().expect("Failed to convert into body.");
+        self.body = Some(body);
+        self.mime = Some(
+            http_types::Mime::from_str(mime).expect("Failed to convert into Mime header"),
         );
         self
     }
