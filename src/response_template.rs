@@ -109,7 +109,7 @@ impl ResponseTemplate {
     /// It sets "Content-Type" to "application/octet-stream".
     ///
     /// To set a body with bytes but a different "Content-Type"
-    /// `set_body_raw` can be used.
+    /// [`set_body_raw`](#method.set_body_raw) can be used.
     pub fn set_body_bytes<B>(mut self, body: B) -> Self
     where
         B: TryInto<Vec<u8>>,
