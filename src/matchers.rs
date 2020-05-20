@@ -214,7 +214,7 @@ impl Match for PathExactMatcher {
 ///     let mock_server = MockServer::start().await;
 ///
 ///     let response = ResponseTemplate::new(200).set_body_string("world");
-///     let mock = Mock::given(path_regex(r"^/users/.+/posts$")).respond_with(response);
+///     let mock = Mock::given(path_regex(r"^/users/[a-z0-9-~_]{1,}/posts$")).respond_with(response);
 ///
 ///     mock_server.register(mock).await;
 ///
