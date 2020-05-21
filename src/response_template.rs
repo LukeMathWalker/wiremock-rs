@@ -107,6 +107,9 @@ impl ResponseTemplate {
     /// Set the response body with bytes.
     ///
     /// It sets "Content-Type" to "application/octet-stream".
+    ///
+    /// To set a body with bytes but a different "Content-Type"
+    /// [`set_body_raw`](#method.set_body_raw) can be used.
     pub fn set_body_bytes<B>(mut self, body: B) -> Self
     where
         B: TryInto<Vec<u8>>,
@@ -144,6 +147,63 @@ impl ResponseTemplate {
         self.body = Some(body.into_bytes());
         self.mime = Some(
             http_types::Mime::from_str("text/plain").expect("Failed to convert into Mime header"),
+        );
+        self
+    }
+
+    /// Set a raw response body. The mime type needs to be set because the
+    /// raw body could be of any type.
+    ///
+    /// ### Example:
+    /// ```rust
+    /// use surf::mime;
+    /// use wiremock::{MockServer, Mock, ResponseTemplate};
+    /// use wiremock::matchers::method;
+    ///
+    /// mod external {
+    ///     // This could be a method of a struct that is
+    ///     // implemented in another crate and the struct
+    ///     // does not implement Serialize.
+    ///     pub fn body() -> Vec<u8>{
+    ///         r#"{"hello": "world"}"#.as_bytes().to_owned()
+    ///     }
+    /// }
+    ///
+    /// #[async_std::main]
+    /// async fn main() {
+    ///     // Arrange
+    ///     let mock_server = MockServer::start().await;
+    ///     let template = ResponseTemplate::new(200).set_body_raw(
+    ///         external::body(),
+    ///         "application/json"
+    ///     );
+    ///     Mock::given(method("GET"))
+    ///         .respond_with(template)
+    ///         .mount(&mock_server)
+    ///         .await;
+    ///
+    ///     // Act
+    ///     let mut res = surf::get(&mock_server.uri())
+    ///         .await
+    ///         .unwrap();
+    ///     let body = res.body_string()
+    ///         .await
+    ///         .unwrap();
+    ///
+    ///     // Assert
+    ///     assert_eq!(body, r#"{"hello": "world"}"#);
+    ///     assert_eq!(res.mime(), Some(mime::APPLICATION_JSON));
+    /// }
+    /// ```
+    pub fn set_body_raw<B>(mut self, body: B, mime: &str) -> Self
+    where
+        B: TryInto<Vec<u8>>,
+        <B as TryInto<Vec<u8>>>::Error: std::fmt::Debug,
+    {
+        let body = body.try_into().expect("Failed to convert into body.");
+        self.body = Some(body);
+        self.mime = Some(
+            http_types::Mime::from_str(mime).expect("Failed to convert into Mime header"),
         );
         self
     }
