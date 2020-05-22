@@ -13,9 +13,9 @@
 use crate::{Match, Request};
 use http_types::headers::{HeaderName, HeaderValue};
 use http_types::Method;
+use regex::Regex;
 use serde::Serialize;
 use std::convert::TryInto;
-use regex::Regex;
 
 /// Implement the `Match` trait for all closures, out of the box,
 /// if their signature is compatible.

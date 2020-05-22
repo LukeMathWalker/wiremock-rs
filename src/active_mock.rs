@@ -1,5 +1,6 @@
 use crate::{Match, Mock, Request};
 use http_types::Response;
+use std::time::Duration;
 
 // Given the behaviour specification as a `Mock`, keep track of runtime information concerning
 // this mock - e.g. how many times it matched on a incoming request.
@@ -52,5 +53,9 @@ impl ActiveMock {
 
     pub(crate) fn response(&self) -> Response {
         self.specification.response()
+    }
+
+    pub(crate) fn delay(&self) -> &Option<Duration> {
+        &self.specification.delay()
     }
 }

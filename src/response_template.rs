@@ -4,6 +4,7 @@ use serde::Serialize;
 use std::collections::HashMap;
 use std::convert::TryInto;
 use std::str::FromStr;
+use std::time::Duration;
 
 /// The blueprint for the response returned by a [`MockServer`] when a [`Mock`] matches on an incoming request.
 ///
@@ -15,6 +16,7 @@ pub struct ResponseTemplate {
     status_code: StatusCode,
     headers: HashMap<HeaderName, Vec<HeaderValue>>,
     body: Option<Vec<u8>>,
+    delay: Option<Duration>,
 }
 
 // `wiremock` is a crate meant for testing - failures are most likely not handled/temporary mistakes.
@@ -38,6 +40,7 @@ impl ResponseTemplate {
             headers: HashMap::new(),
             mime: None,
             body: None,
+            delay: None,
         }
     }
 
@@ -202,9 +205,50 @@ impl ResponseTemplate {
     {
         let body = body.try_into().expect("Failed to convert into body.");
         self.body = Some(body);
-        self.mime = Some(
-            http_types::Mime::from_str(mime).expect("Failed to convert into Mime header"),
-        );
+        self.mime =
+            Some(http_types::Mime::from_str(mime).expect("Failed to convert into Mime header"));
+        self
+    }
+
+    /// By default the [`MockServer`] tries to fulfill incoming requests as fast as possible.
+    ///
+    /// You can use `set_delay` to introduce an artificial delay to simulate the behaviour of
+    /// a real server with a non-neglibible latency.
+    ///
+    /// In particular, you can use it to test the behaviour of your timeout policies.  
+    ///
+    /// ### Example:
+    /// ```rust
+    /// use wiremock::{MockServer, Mock, ResponseTemplate};
+    /// use wiremock::matchers::method;
+    /// use std::time::Duration;
+    /// use async_std::prelude::FutureExt;
+    ///
+    /// #[async_std::main]
+    /// async fn main() {
+    ///     // Arrange
+    ///     let mock_server = MockServer::start().await;
+    ///     let delay = Duration::from_secs(1);
+    ///     let template = ResponseTemplate::new(200).set_delay(delay.clone());
+    ///     Mock::given(method("GET"))
+    ///         .respond_with(template)
+    ///         .mount(&mock_server)
+    ///         .await;
+    ///
+    ///     // Act
+    ///     let mut res = surf::get(&mock_server.uri())
+    ///         // Shorter than the time taken by the MockServer
+    ///         // to return a response
+    ///         .timeout(delay / 3)
+    ///         .await;
+    ///
+    ///     // Assert - Timeout error!
+    ///     assert!(res.is_err());
+    /// }
+    /// ```
+    pub fn set_delay(mut self, delay: Duration) -> Self {
+        self.delay = Some(delay);
+
         self
     }
 
@@ -230,5 +274,10 @@ impl ResponseTemplate {
         }
 
         response
+    }
+
+    /// Retrieve the response delay.
+    pub(crate) fn delay(&self) -> &Option<Duration> {
+        &self.delay
     }
 }

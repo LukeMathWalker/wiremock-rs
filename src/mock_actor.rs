@@ -1,8 +1,10 @@
 use crate::active_mock::ActiveMock;
 use crate::{Mock, Request};
 use bastion::prelude::*;
+use futures_timer::Delay;
 use http_types::{Response, StatusCode};
 use log::{debug, warn};
+use std::time::Duration;
 
 #[derive(Clone)]
 pub(crate) struct MockActor {
@@ -43,13 +45,18 @@ impl MockActor {
                             let request = Request::from(request).await;
 
                             let mut response: Option<Response> = None;
+                            let mut delay: Option<Duration> = None;
                             for mock in &mut mocks {
                                 if mock.matches(&request) {
                                     response = Some(mock.response());
+                                    delay = mock.delay().to_owned();
                                     break;
                                 }
                             }
                             if let Some(response) = response {
+                                if let Some(delay) = delay {
+                                    Delay::new(delay).await;
+                                }
                                 answer!(ctx, response).unwrap();
                             } else {
                                 debug!("Got unexpected request:\n{}", request);
