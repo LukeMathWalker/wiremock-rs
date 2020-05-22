@@ -5,6 +5,7 @@ use std::fmt::{Debug, Formatter};
 use std::ops::{
     Range, RangeBounds, RangeFrom, RangeFull, RangeInclusive, RangeTo, RangeToInclusive,
 };
+use std::time::Duration;
 
 /// Anything that implements `Match` can be used to constrain when a [`Mock`] is activated.
 ///
@@ -377,6 +378,14 @@ impl Mock {
     /// [`ResponseTemplate`]: struct.ResponseTemplate.html
     pub fn response(&self) -> Response {
         self.response.generate_response()
+    }
+
+    /// Build an instance of `http_types::Response` from the [`ResponseTemplate`] associated
+    /// with a `Mock`.
+    ///
+    /// [`ResponseTemplate`]: struct.ResponseTemplate.html
+    pub(crate) fn delay(&self) -> &Option<Duration> {
+        self.response.delay()
     }
 }
 

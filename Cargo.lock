@@ -1763,6 +1763,7 @@ dependencies = [
  "async-std",
  "bastion",
  "bastion-executor",
+ "futures-timer 3.0.2",
  "http-types",
  "lightproc",
  "log",

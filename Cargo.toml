@@ -30,6 +30,7 @@ bastion = "0.3"
 bastion-executor = "0.3.4"
 lightproc = "0.3.4"
 regex = "1"
+futures-timer = "3.0.2"
 
 [dev-dependencies]
 async-std = { version = "1", features = ["attributes"] }
