@@ -33,7 +33,7 @@ impl ServerActor {
                                 msg: (ChildRef, TcpListener) => {
                                     let (mock_actor, listener) = msg;
                                     debug!("Mock server started listening on {}!", listener.local_addr().unwrap());
-                                    listen(mock_actor, listener).await;
+                                    async_std::task::spawn(listen(mock_actor, listener)).await;
                                     debug!("Shutting down!");
                                 };
                                 _: _ => {
