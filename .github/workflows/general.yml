@@ -68,4 +68,4 @@ jobs:
       - name: Run cargo-tarpaulin
         uses: actions-rs/tarpaulin@v0.1
         with:
-          args: '-- --ignore-tests'
+          args: '--ignore-tests'
