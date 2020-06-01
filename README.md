@@ -154,12 +154,12 @@ Licensed under either of Apache License, Version 2.0 or MIT license at your opti
 Unless you explicitly state otherwise, any contribution intentionally submitted for inclusion in this crate by you, as defined in the Apache-2.0 license, shall be dual licensed as above, without any additional terms or conditions. 
 
 
-[`MockServer`]: https://docs.rs/wiremock/0.2.1/wiremock/struct.MockServer.html
-[`Mock`]: https://docs.rs/wiremock/0.2.1/wiremock/struct.Mock.html
-[`Match`]: https://docs.rs/wiremock/0.2.1/wiremock/trait.Match.html
-[`start`]: https://docs.rs/wiremock/0.2.1/wiremock/struct.MockServer.html#method.start
-[`expect`]: https://docs.rs/wiremock/0.2.1/wiremock/struct.Mock.html#method.expect
-[`matchers`]: https://docs.rs/wiremock/0.2.1/wiremock/matchers/index.html
+[`MockServer`]: https://docs.rs/wiremock/0.2.2/wiremock/struct.MockServer.html
+[`Mock`]: https://docs.rs/wiremock/0.2.2/wiremock/struct.Mock.html
+[`Match`]: https://docs.rs/wiremock/0.2.2/wiremock/trait.Match.html
+[`start`]: https://docs.rs/wiremock/0.2.2/wiremock/struct.MockServer.html#method.start
+[`expect`]: https://docs.rs/wiremock/0.2.2/wiremock/struct.Mock.html#method.expect
+[`matchers`]: https://docs.rs/wiremock/0.2.2/wiremock/matchers/index.html
 [GitHub repository]: https://github.com/LukeMathWalker/wiremock-rs
 [`mockito`]: https://docs.rs/mockito/
 [`httpmock`]: https://docs.rs/httpmock/
