@@ -13,6 +13,7 @@
 use crate::{Match, Request};
 use http_types::headers::{HeaderName, HeaderValue};
 use http_types::Method;
+use log::debug;
 use regex::Regex;
 use serde::Serialize;
 use std::convert::TryInto;
@@ -481,11 +482,25 @@ where
 
 impl Match for BodyContainsMatcher {
     fn matches(&self, request: &Request) -> bool {
-        let body = str::from_utf8(&request.body)
-            .expect("can't convert body from byte slice to string")
-            .to_string();
-        let part =
-            str::from_utf8(&self.0).expect("can't convert expected part from byte slice to string");
+        let body = match str::from_utf8(&request.body) {
+            Ok(body) => body.to_string(),
+            Err(err) => {
+                debug!("can't convert body from byte slice to string: {}", err);
+                return false;
+            }
+        };
+
+        let part = match str::from_utf8(&self.0) {
+            Ok(part) => part,
+            Err(err) => {
+                debug!(
+                    "can't convert expected part from byte slice to string: {}",
+                    err
+                );
+                return false;
+            }
+        };
+
         body.contains(part)
     }
 }
