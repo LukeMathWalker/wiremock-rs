@@ -13,9 +13,11 @@
 use crate::{Match, Request};
 use http_types::headers::{HeaderName, HeaderValue};
 use http_types::Method;
+use log::debug;
 use regex::Regex;
 use serde::Serialize;
 use std::convert::TryInto;
+use std::str;
 
 /// Implement the `Match` trait for all closures, out of the box,
 /// if their signature is compatible.
@@ -429,6 +431,77 @@ where
 impl Match for BodyExactMatcher {
     fn matches(&self, request: &Request) -> bool {
         request.body == self.0
+    }
+}
+
+#[derive(Debug)]
+/// Match part of the body of a request.
+///
+/// ### Example (string):
+/// ```rust
+/// use wiremock::{MockServer, Mock, ResponseTemplate};
+/// use wiremock::matchers::body_string_contains;
+///
+/// #[async_std::main]
+/// async fn main() {
+///     // Arrange
+///     let mock_server = MockServer::start().await;
+///
+///     Mock::given(body_string_contains("hello world"))
+///         .respond_with(ResponseTemplate::new(200))
+///         .mount(&mock_server)
+///         .await;
+///
+///     // Act
+///     let status = surf::post(&mock_server.uri())
+///         .body_string("this is a hello world example!".into())
+///         .await
+///         .unwrap()
+///         .status();
+///
+///     // Assert
+///     assert_eq!(status.as_u16(), 200);
+/// }
+/// ```
+pub struct BodyContainsMatcher(Vec<u8>);
+
+impl BodyContainsMatcher {
+    /// Specify the part of the body that should be matched as a string.
+    pub fn string<T: Into<String>>(body: T) -> Self {
+        Self(body.into().as_bytes().into())
+    }
+}
+
+/// Shorthand for [`BodyContainsMatcher::string`](struct.BodyContainsMatcher.html).
+pub fn body_string_contains<T>(body: T) -> BodyContainsMatcher
+where
+    T: Into<String>,
+{
+    BodyContainsMatcher::string(body)
+}
+
+impl Match for BodyContainsMatcher {
+    fn matches(&self, request: &Request) -> bool {
+        let body = match str::from_utf8(&request.body) {
+            Ok(body) => body.to_string(),
+            Err(err) => {
+                debug!("can't convert body from byte slice to string: {}", err);
+                return false;
+            }
+        };
+
+        let part = match str::from_utf8(&self.0) {
+            Ok(part) => part,
+            Err(err) => {
+                debug!(
+                    "can't convert expected part from byte slice to string: {}",
+                    err
+                );
+                return false;
+            }
+        };
+
+        body.contains(part)
     }
 }
 
