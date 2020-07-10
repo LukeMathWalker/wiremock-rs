@@ -71,7 +71,7 @@ async fn main() {
         // Mounting the mock on the mock server - it's now effective!
         .mount(&mock_server)
         .await;
-    
+
     // If we probe the MockServer using any HTTP client it behaves as expected.
     let status = surf::get(format!("{}/hello", &mock_server.uri()))
         .await
@@ -93,18 +93,18 @@ async fn main() {
 `wiremock` provides a set of matching strategies out of the box - check the [`matchers`] module
 for a complete list.
 
-You can define your own matchers using the [`Match`] trait, as well as using `Fn` closures.  
+You can define your own matchers using the [`Match`] trait, as well as using `Fn` closures.
 Check [`Match`]'s documentation for more details and examples.
 
-## Spying 
+## Spying
 
-`wiremock` empowers you to set expectations on the number of invocations to your [`Mock`]s - 
+`wiremock` empowers you to set expectations on the number of invocations to your [`Mock`]s -
 check the [`expect`] method for more details.
 
 Expectations can be used to verify that a side-effect has (or has not) taken place!
 
 Expectations are automatically verified during the shutdown of each [`MockServer`] instance,
-at the end of your test. A failed verification will trigger a panic.  
+at the end of your test. A failed verification will trigger a panic.
 By default, no expectations are set on your [`Mock`]s.
 
 ## Test isolation
@@ -121,7 +121,7 @@ HTTP server running in the background is shut down to free up the port it was us
 ## Runtime compatibility
 
 `wiremock` can be used (and it is tested to work) with both [`async_std`] and [`tokio`] as
-futures runtimes.  
+futures runtimes.
 If you encounter any compatibility bug, please open an issue on our [GitHub repository].
 
 ## Prior art
@@ -150,16 +150,16 @@ More request matchers can be added to those provided out-of-the-box to handle co
 
 ## License
 
-Licensed under either of Apache License, Version 2.0 or MIT license at your option.  
-Unless you explicitly state otherwise, any contribution intentionally submitted for inclusion in this crate by you, as defined in the Apache-2.0 license, shall be dual licensed as above, without any additional terms or conditions. 
+Licensed under either of Apache License, Version 2.0 or MIT license at your option.
+Unless you explicitly state otherwise, any contribution intentionally submitted for inclusion in this crate by you, as defined in the Apache-2.0 license, shall be dual licensed as above, without any additional terms or conditions.
 
 
-[`MockServer`]: https://docs.rs/wiremock/0.2.2/wiremock/struct.MockServer.html
-[`Mock`]: https://docs.rs/wiremock/0.2.2/wiremock/struct.Mock.html
-[`Match`]: https://docs.rs/wiremock/0.2.2/wiremock/trait.Match.html
-[`start`]: https://docs.rs/wiremock/0.2.2/wiremock/struct.MockServer.html#method.start
-[`expect`]: https://docs.rs/wiremock/0.2.2/wiremock/struct.Mock.html#method.expect
-[`matchers`]: https://docs.rs/wiremock/0.2.2/wiremock/matchers/index.html
+[`MockServer`]: https://docs.rs/wiremock/0.2.3/wiremock/struct.MockServer.html
+[`Mock`]: https://docs.rs/wiremock/0.2.3/wiremock/struct.Mock.html
+[`Match`]: https://docs.rs/wiremock/0.2.3/wiremock/trait.Match.html
+[`start`]: https://docs.rs/wiremock/0.2.3/wiremock/struct.MockServer.html#method.start
+[`expect`]: https://docs.rs/wiremock/0.2.3/wiremock/struct.Mock.html#method.expect
+[`matchers`]: https://docs.rs/wiremock/0.2.3/wiremock/matchers/index.html
 [GitHub repository]: https://github.com/LukeMathWalker/wiremock-rs
 [`mockito`]: https://docs.rs/mockito/
 [`httpmock`]: https://docs.rs/httpmock/
