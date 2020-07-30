@@ -240,7 +240,7 @@ impl Drop for MockServer {
         debug!("Verify mock expectations.");
         if !run!(self.verify()) {
             if std::thread::panicking() {
-                debug!("Verification failed, but already panicking.");
+                debug!("Verification failed: mock expectations have not been satisfied.");
             } else {
                 panic!("Verification failed: mock expectations have not been satisfied.");
             }
