@@ -39,6 +39,22 @@ async fn panics_if_the_expectation_is_not_satisfied() {
 }
 
 #[async_std::test]
+#[should_panic]
+async fn panic_during_expectation_does_not_crash() {
+    // Arrange
+    let mock_server = MockServer::start().await;
+    let response = ResponseTemplate::new(200);
+    Mock::given(method("GET"))
+        .respond_with(response)
+        .expect(1..)
+        .mount(&mock_server)
+        .await;
+
+    // Act - start a panic
+    assert!(false);
+}
+
+#[async_std::test]
 async fn simple_route_mock() {
     // Arrange
     let mock_server = MockServer::start().await;

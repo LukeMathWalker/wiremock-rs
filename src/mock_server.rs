@@ -239,7 +239,11 @@ impl Drop for MockServer {
     fn drop(&mut self) {
         debug!("Verify mock expectations.");
         if !run!(self.verify()) {
-            panic!("Verification failed: mock expectations have not been satisfied.");
+            if std::thread::panicking() {
+                debug!("Verification failed: mock expectations have not been satisfied.");
+            } else {
+                panic!("Verification failed: mock expectations have not been satisfied.");
+            }
         }
         debug!("Killing server actor.");
         self.server_actor.actor_ref.kill().unwrap();
