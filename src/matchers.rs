@@ -356,18 +356,18 @@ pub struct HeaderExistsMatcher(HeaderName);
 
 /// Shorthand for [`HeaderExistsMatcher::new`](struct.HeaderExistsMatcher.html).
 pub fn header_exists<K>(key: K) -> HeaderExistsMatcher
-    where
-        K: TryInto<HeaderName>,
-        <K as TryInto<HeaderName>>::Error: std::fmt::Debug,
+where
+    K: TryInto<HeaderName>,
+    <K as TryInto<HeaderName>>::Error: std::fmt::Debug,
 {
     HeaderExistsMatcher::new(key)
 }
 
 impl HeaderExistsMatcher {
     pub fn new<K>(key: K) -> Self
-        where
-            K: TryInto<HeaderName>,
-            <K as TryInto<HeaderName>>::Error: std::fmt::Debug,
+    where
+        K: TryInto<HeaderName>,
+        <K as TryInto<HeaderName>>::Error: std::fmt::Debug,
     {
         let key = key.try_into().expect("Failed to convert to header name.");
         Self(key)
@@ -376,10 +376,7 @@ impl HeaderExistsMatcher {
 
 impl Match for HeaderExistsMatcher {
     fn matches(&self, request: &Request) -> bool {
-        match request.headers.get(&self.0) {
-            None => false,
-            Some(_) => true,
-        }
+        request.headers.get(&self.0).is_some()
     }
 }
 
