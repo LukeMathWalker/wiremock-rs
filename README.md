@@ -60,7 +60,7 @@ Add `wiremock` to your development dependencies:
 ```toml
 [dev-dependencies]
 # ...
-wiremock = "0.2"
+wiremock = "0.3"
 ```
 If you are using [`cargo-edit`](https://github.com/killercup/cargo-edit), run
 ```bash
@@ -168,12 +168,12 @@ Licensed under either of Apache License, Version 2.0 or MIT license at your opti
 Unless you explicitly state otherwise, any contribution intentionally submitted for inclusion in this crate by you, as defined in the Apache-2.0 license, shall be dual licensed as above, without any additional terms or conditions.
 
 
-[`MockServer`]: https://docs.rs/wiremock/0.2.5/wiremock/struct.MockServer.html
-[`Mock`]: https://docs.rs/wiremock/0.2.5/wiremock/struct.Mock.html
-[`Match`]: https://docs.rs/wiremock/0.2.5/wiremock/trait.Match.html
-[`start`]: https://docs.rs/wiremock/0.2.5/wiremock/struct.MockServer.html#method.start
-[`expect`]: https://docs.rs/wiremock/0.2.5/wiremock/struct.Mock.html#method.expect
-[`matchers`]: https://docs.rs/wiremock/0.2.5/wiremock/matchers/index.html
+[`MockServer`]: https://docs.rs/wiremock/0.3.0/wiremock/struct.MockServer.html
+[`Mock`]: https://docs.rs/wiremock/0.3.0/wiremock/struct.Mock.html
+[`Match`]: https://docs.rs/wiremock/0.3.0/wiremock/trait.Match.html
+[`start`]: https://docs.rs/wiremock/0.3.0/wiremock/struct.MockServer.html#method.start
+[`expect`]: https://docs.rs/wiremock/0.3.0/wiremock/struct.Mock.html#method.expect
+[`matchers`]: https://docs.rs/wiremock/0.3.0/wiremock/matchers/index.html
 [GitHub repository]: https://github.com/LukeMathWalker/wiremock-rs
 [`mockito`]: https://docs.rs/mockito/
 [`httpmock`]: https://docs.rs/httpmock/
