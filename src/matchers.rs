@@ -334,7 +334,7 @@ impl Match for HeaderExactMatcher {
 /// async fn main() {
 ///     // Arrange
 ///     use wiremock::matchers::header_exists;
-/// let mock_server = MockServer::start().await;
+///     let mock_server = MockServer::start().await;
 ///
 ///     Mock::given(header_exists("custom"))
 ///         .respond_with(ResponseTemplate::new(200))
