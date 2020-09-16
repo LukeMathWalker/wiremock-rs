@@ -322,6 +322,65 @@ impl Match for HeaderExactMatcher {
 }
 
 #[derive(Debug)]
+/// Match **exactly** the header name of a request. It checks that the
+/// header is present but does not validate the value.
+///
+/// ### Example:
+/// ```rust
+/// use wiremock::{MockServer, Mock, ResponseTemplate};
+/// use wiremock::matchers::header;
+///
+/// #[async_std::main]
+/// async fn main() {
+///     // Arrange
+///     use wiremock::matchers::header_exists;
+///     let mock_server = MockServer::start().await;
+///
+///     Mock::given(header_exists("custom"))
+///         .respond_with(ResponseTemplate::new(200))
+///         .mount(&mock_server)
+///         .await;
+///
+///     // Act
+///     let status = surf::get(&mock_server.uri())
+///         .set_header("custom", "header")
+///         .await
+///         .unwrap()
+///         .status();
+///
+///     // Assert
+///     assert_eq!(status.as_u16(), 200);
+/// }
+/// ```
+pub struct HeaderExistsMatcher(HeaderName);
+
+/// Shorthand for [`HeaderExistsMatcher::new`](struct.HeaderExistsMatcher.html).
+pub fn header_exists<K>(key: K) -> HeaderExistsMatcher
+where
+    K: TryInto<HeaderName>,
+    <K as TryInto<HeaderName>>::Error: std::fmt::Debug,
+{
+    HeaderExistsMatcher::new(key)
+}
+
+impl HeaderExistsMatcher {
+    pub fn new<K>(key: K) -> Self
+    where
+        K: TryInto<HeaderName>,
+        <K as TryInto<HeaderName>>::Error: std::fmt::Debug,
+    {
+        let key = key.try_into().expect("Failed to convert to header name.");
+        Self(key)
+    }
+}
+
+impl Match for HeaderExistsMatcher {
+    fn matches(&self, request: &Request) -> bool {
+        request.headers.get(&self.0).is_some()
+    }
+}
+
+#[derive(Debug)]
 /// Match **exactly** the body of a request.
 ///
 /// ### Example (string):
