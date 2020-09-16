@@ -1,6 +1,6 @@
 [package]
 name = "wiremock"
-version = "0.2.6-alpha.0"
+version = "0.3.0"
 authors = ["Luca Palmieri <rust@lpalmieri.com>"]
 edition = "2018"
 
@@ -22,13 +22,11 @@ path = "src/lib.rs"
 [dependencies]
 log = "0.4"
 async-std = "1"
-async-h1 = "1"
-http-types = { version = "1.2", features = ["hyperium_http"] }
+async-h1 = "2.1"
+http-types = { version = "2.4", default-features = false, features = ["hyperium_http"] }
 serde_json = "1"
 serde = "1"
-bastion = "0.3"
-bastion-executor = "0.3.4"
-lightproc = "0.3.4"
+bastion = "0.4"
 regex = "1"
 futures-timer = "3.0.2"
 

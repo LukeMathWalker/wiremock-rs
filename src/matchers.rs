@@ -316,7 +316,14 @@ impl Match for HeaderExactMatcher {
     fn matches(&self, request: &Request) -> bool {
         match request.headers.get(&self.0) {
             None => false,
-            Some(values) => values.contains(&self.1),
+            Some(values) => {
+                for value in values {
+                    if value == &self.1 {
+                        return true;
+                    }
+                }
+                false
+            }
         }
     }
 }
