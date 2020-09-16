@@ -62,14 +62,12 @@ impl ServerActor {
 }
 
 async fn listen(mock_actor: ChildRef, listener: async_std::net::TcpListener) {
-    let addr = format!("http://{}", listener.local_addr().unwrap());
     while let Some(stream) = listener.incoming().next().await {
         // For each incoming stream, spawn up a task.
         let stream = stream.unwrap();
-        let addr = addr.clone();
         let actor = mock_actor.clone();
         async_std::task::spawn(async {
-            if let Err(err) = accept(actor, addr, stream).await {
+            if let Err(err) = accept(actor, stream).await {
                 warn!("{}", err);
             }
         });
@@ -77,13 +75,9 @@ async fn listen(mock_actor: ChildRef, listener: async_std::net::TcpListener) {
 }
 
 // Take a TCP stream, and convert it into sequential HTTP request / response pairs.
-async fn accept(
-    mock_actor: ChildRef,
-    addr: String,
-    stream: async_std::net::TcpStream,
-) -> http_types::Result<()> {
+async fn accept(mock_actor: ChildRef, stream: async_std::net::TcpStream) -> http_types::Result<()> {
     debug!("Starting new connection from {}", stream.peer_addr()?);
-    async_h1::accept(&addr, stream.clone(), move |req| {
+    async_h1::accept(stream.clone(), move |req| {
         let a = mock_actor.clone();
         async move {
             info!("Request: {:?}", req);

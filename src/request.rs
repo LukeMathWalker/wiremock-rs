@@ -1,5 +1,5 @@
 use async_std::prelude::*;
-use http_types::headers::{HeaderName, HeaderValue};
+use http_types::headers::{HeaderName, HeaderValues};
 use http_types::{Method, Url};
 use std::{collections::HashMap, fmt};
 
@@ -25,7 +25,7 @@ use std::{collections::HashMap, fmt};
 pub struct Request {
     pub url: Url,
     pub method: Method,
-    pub headers: HashMap<HeaderName, Vec<HeaderValue>>,
+    pub headers: HashMap<HeaderName, HeaderValues>,
     pub body: Vec<u8>,
 }
 
