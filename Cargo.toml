@@ -26,9 +26,7 @@ async-h1 = "1"
 http-types = { version = "1.2", features = ["hyperium_http"] }
 serde_json = "1"
 serde = "1"
-bastion = "0.3"
-bastion-executor = "0.3.4"
-lightproc = "0.3.4"
+bastion = "0.4"
 regex = "1"
 futures-timer = "3.0.2"
 
