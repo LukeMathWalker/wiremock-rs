@@ -4,16 +4,21 @@
 //!
 //! It provides mocking of HTTP responses using request matching and response templating.
 //!
-//! # Table of Contents
-//! 1. [Getting started](#getting-started)
-//! 2. [Matchers](#matchers)
-//! 3. [Spying](#spying)
-//! 4. [Test isolation](#test-isolation)
-//! 5. [Runtime compatibility](#runtime-compatibility)
-//! 6. [Prior art](#prior-art)
-//! 7. [Future evolution](#future-evolution)
+//! ## How to install
+//!
+//! Add `wiremock` to your development dependencies:
+//! ```toml
+//! [dev-dependencies]
+//! # ...
+//! wiremock = "0.2"
+//! ```
+//! If you are using [`cargo-edit`](https://github.com/killercup/cargo-edit), run
+//! ```bash
+//! cargo add wiremock --dev
+//! ```
 //!
 //! ## Getting started
+//!
 //! ```rust
 //! use wiremock::{MockServer, Mock, ResponseTemplate};
 //! use wiremock::matchers::{method, path};
@@ -99,9 +104,9 @@
 //!
 //! |           | Test execution strategy | How many APIs can I mock? | Out-of-the-box request matchers | Extensible request maching | API   | Spying | Standalone mode |
 //! |-----------|-------------------------|---------------------------|---------------------------------|----------------------------|-------|----------|-----------------|
-//! | mockito   | ❌ Sequential             | ❌ 1                        | ✔                           | ❌                        | Sync  | ✔     | ❌              |
-//! | httpmock | ❌ Sequential             | ❌ 1                        | ✔                           | ❌                        | Sync  | ✔     | ✔              |
-//! | wiremock  | ✔ Parallel ️              | ✔ Unbounded                | ✔                           | ✔                       | Async | ✔      | ❌              |
+//! | mockito   | ❌ Sequential           | ❌ 1                        | ✔                           | ❌                        | Sync  | ✔     | ❌              |
+//! | httpmock  | ✔ Parallel              | ✔ Unbounded                | ✔                           | ❌                        | Async/Sync  | ✔     | ✔              |
+//! | wiremock  | ✔ Parallel ️             | ✔ Unbounded                | ✔                           | ✔                       | Async | ✔      | ❌              |
 //!
 //!
 //! ## Future evolution

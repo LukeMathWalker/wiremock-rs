@@ -44,6 +44,7 @@ It provides mocking of HTTP responses using request matching and response templa
 </div>
 
 # Table of Contents
+0. [How to install](#how-to-install)
 1. [Getting started](#getting-started)
 2. [Matchers](#matchers)
 3. [Spying](#spying)
@@ -52,6 +53,19 @@ It provides mocking of HTTP responses using request matching and response templa
 6. [Prior art](#prior-art)
 7. [Future evolution](#future-evolution)
 8. [License](#license)
+
+## How to install
+
+Add `wiremock` to your development dependencies:
+```toml
+[dev-dependencies]
+# ...
+wiremock = "0.2"
+```
+If you are using [`cargo-edit`](https://github.com/killercup/cargo-edit), run
+```bash
+cargo add wiremock --dev
+```
 
 ## Getting started
 ```rust
@@ -139,9 +153,9 @@ Check the table below to see how `wiremock` compares to them across the followin
 
 |           | Test execution strategy | How many APIs can I mock? | Out-of-the-box request matchers | Extensible request maching | API   | Spying | Standalone mode |
 |-----------|-------------------------|---------------------------|---------------------------------|----------------------------|-------|----------|-----------------|
-| mockito   | ❌ Sequential             | ❌ 1                        | ✔                           | ❌                        | Sync  | ✔     | ❌              |
-| httpmock | ❌ Sequential             | ❌ 1                        | ✔                           | ❌                        | Sync  | ✔     | ✔              |
-| wiremock  | ✔ Parallel ️              | ✔ Unbounded                | ✔                           | ✔                       | Async | ✔      | ❌              |
+| mockito   | ❌ Sequential           | ❌ 1                        | ✔                           | ❌                        | Sync  | ✔     | ❌              |
+| httpmock  | ✔ Parallel              | ✔ Unbounded                | ✔                           | ❌                        | Async/Sync  | ✔     | ✔              |
+| wiremock  | ✔ Parallel ️             | ✔ Unbounded                | ✔                           | ✔                       | Async | ✔      | ❌              |
 
 
 ## Future evolution
@@ -154,12 +168,12 @@ Licensed under either of Apache License, Version 2.0 or MIT license at your opti
 Unless you explicitly state otherwise, any contribution intentionally submitted for inclusion in this crate by you, as defined in the Apache-2.0 license, shall be dual licensed as above, without any additional terms or conditions.
 
 
-[`MockServer`]: https://docs.rs/wiremock/0.2.4/wiremock/struct.MockServer.html
-[`Mock`]: https://docs.rs/wiremock/0.2.4/wiremock/struct.Mock.html
-[`Match`]: https://docs.rs/wiremock/0.2.4/wiremock/trait.Match.html
-[`start`]: https://docs.rs/wiremock/0.2.4/wiremock/struct.MockServer.html#method.start
-[`expect`]: https://docs.rs/wiremock/0.2.4/wiremock/struct.Mock.html#method.expect
-[`matchers`]: https://docs.rs/wiremock/0.2.4/wiremock/matchers/index.html
+[`MockServer`]: https://docs.rs/wiremock/0.2.5/wiremock/struct.MockServer.html
+[`Mock`]: https://docs.rs/wiremock/0.2.5/wiremock/struct.Mock.html
+[`Match`]: https://docs.rs/wiremock/0.2.5/wiremock/trait.Match.html
+[`start`]: https://docs.rs/wiremock/0.2.5/wiremock/struct.MockServer.html#method.start
+[`expect`]: https://docs.rs/wiremock/0.2.5/wiremock/struct.Mock.html#method.expect
+[`matchers`]: https://docs.rs/wiremock/0.2.5/wiremock/matchers/index.html
 [GitHub repository]: https://github.com/LukeMathWalker/wiremock-rs
 [`mockito`]: https://docs.rs/mockito/
 [`httpmock`]: https://docs.rs/httpmock/
