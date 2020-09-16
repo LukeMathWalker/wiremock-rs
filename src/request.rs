@@ -15,13 +15,13 @@ use std::{collections::HashMap, fmt};
 /// ### Implementation notes:
 /// We can't use `http_types::Request` directly in our `Match::matches` signature:
 /// it requires having mutable access to the request to extract the body (which gets
-/// consumed when read!).  
+/// consumed when read!).
 /// It would also require `matches` to be async, which is cumbersome due to the lack of async traits.
 ///
 /// We introduce our `Request` type to perform this extraction once when the request
 /// arrives in the mock serve, store the result and pass an immutable reference to it
 /// to all our matchers.
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Request {
     pub url: Url,
     pub method: Method,
