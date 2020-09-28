@@ -1,11 +1,11 @@
 use crate::mock::Mock;
-use crate::mock_actor::MockActor;
-use crate::server_actor::ServerActor;
-use async_std::net::TcpStream;
-use bastion::{run, Bastion};
+use crate::mock_set::MockSet;
+use crate::server_actor::run_server;
 use log::debug;
-use std::net::SocketAddr;
-use std::time::Duration;
+use std::net::{SocketAddr, TcpListener, TcpStream};
+use std::sync::Arc;
+use std::sync::RwLock;
+use tokio::task::LocalSet;
 
 /// An HTTP web-server running in the background to behave as one of your dependencies using `Mock`s for testing purposes.
 ///
@@ -22,8 +22,8 @@ use std::time::Duration;
 ///
 /// You can register as many `Mock`s as your scenario requires on a `MockServer`.
 pub struct MockServer {
-    server_actor: ServerActor,
-    mock_actor: MockActor,
+    mock_set: Arc<RwLock<MockSet>>,
+    server_address: SocketAddr,
 }
 
 impl MockServer {
@@ -71,30 +71,37 @@ impl MockServer {
     /// }
     /// ```
     pub async fn start() -> Self {
-        // Should I put this behind a lazy_static to call them only once?
-        Bastion::init();
-        Bastion::start();
+        let mock_set = Arc::new(RwLock::new(MockSet::new()));
+        let listener = TcpListener::bind("127.0.0.1:0").expect("Failed to find a free port!");
+        let server_address = listener
+            .local_addr()
+            .expect("Failed to get server address.");
 
-        let mock_actor = MockActor::start();
+        let server_mock_set = mock_set.clone();
+        std::thread::spawn(move || {
+            let server_future = run_server(listener, server_mock_set);
 
-        // Start our mock server
-        let server_actor = ServerActor::start(mock_actor.clone()).await;
+            let mut runtime = tokio::runtime::Builder::new()
+                .enable_all()
+                .basic_scheduler()
+                .build()
+                .expect("Cannot build local tokio runtime");
 
-        let mock_server = Self {
-            server_actor,
-            mock_actor,
-        };
-
-        // Wait (up to 2 second) for the actor to start listening on the specified socket
+            LocalSet::new().block_on(&mut runtime, server_future)
+        });
         for _ in 0..40 {
-            if TcpStream::connect(mock_server.address()).await.is_ok() {
+            if TcpStream::connect_timeout(&server_address, std::time::Duration::from_millis(25))
+                .is_ok()
+            {
                 break;
             }
-            // Sleep between retries
-            async_std::task::sleep(Duration::from_millis(50)).await;
+            futures_timer::Delay::new(std::time::Duration::from_millis(25)).await;
         }
 
-        mock_server
+        Self {
+            mock_set,
+            server_address,
+        }
     }
 
     /// Register a `Mock` on an instance of `MockServer`.
@@ -139,7 +146,10 @@ impl MockServer {
     /// }
     /// ```
     pub async fn register(&self, mock: Mock) {
-        self.mock_actor.register(mock).await;
+        self.mock_set
+            .write()
+            .expect("Poisoned lock!")
+            .register(mock);
     }
 
     /// Drop all mounted `Mock`s from an instance of `MockServer`.
@@ -176,13 +186,13 @@ impl MockServer {
     /// }
     /// ```
     pub async fn reset(&self) {
-        self.mock_actor.reset().await;
+        self.mock_set.write().expect("Poisoned lock!").reset();
     }
 
     /// Verify that all mounted `Mock`s on this instance of `MockServer` have satisfied
     /// their expectations on their number of invocations.
-    async fn verify(&self) -> bool {
-        self.mock_actor.verify().await
+    fn verify(&self) -> bool {
+        self.mock_set.read().expect("Poisoned lock!").verify()
     }
 
     /// Return the base uri of this running instance of `MockServer`, e.g. `http://127.0.0.1:4372`.
@@ -208,7 +218,7 @@ impl MockServer {
     /// }
     /// ```
     pub fn uri(&self) -> String {
-        format!("http://{}", self.server_actor.address)
+        format!("http://{}", self.server_address)
     }
 
     /// Return the socket address of this running instance of `MockServer`, e.g. `127.0.0.1:4372`.
@@ -230,7 +240,7 @@ impl MockServer {
     /// }
     /// ```
     pub fn address(&self) -> &SocketAddr {
-        &self.server_actor.address
+        &self.server_address
     }
 }
 
@@ -238,18 +248,13 @@ impl Drop for MockServer {
     // Clean up when the `MockServer` instance goes out of scope.
     fn drop(&mut self) {
         debug!("Verify mock expectations.");
-        if !run!(self.verify()) {
+        if !self.verify() {
             if std::thread::panicking() {
                 debug!("Verification failed: mock expectations have not been satisfied.");
             } else {
                 panic!("Verification failed: mock expectations have not been satisfied.");
             }
         }
-        debug!("Killing server actor.");
-        self.server_actor.actor_ref.kill().unwrap();
-        debug!("Killed server actor.");
-        debug!("Killing mock actor.");
-        self.mock_actor.actor_ref.kill().unwrap();
-        debug!("Killed mock actor.");
+        // Kill thread?
     }
 }

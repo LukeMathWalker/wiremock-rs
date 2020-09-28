@@ -38,3 +38,20 @@ async fn hello_surf() {
 
     assert_eq!(status.as_u16(), 200);
 }
+
+#[actix_rt::test]
+async fn hello_reqwest_actix() {
+    let mock_server = MockServer::start().await;
+
+    Mock::given(method("GET"))
+        .and(path("/"))
+        .respond_with(ResponseTemplate::new(200))
+        .mount(&mock_server)
+        .await;
+
+    println!("sending reqwest request");
+    let resp = Client::new().get(&mock_server.uri()).send().await.unwrap();
+    println!("reqwest request done");
+
+    assert_eq!(resp.status(), 200);
+}

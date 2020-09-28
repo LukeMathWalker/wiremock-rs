@@ -127,8 +127,8 @@
 mod active_mock;
 pub mod matchers;
 mod mock;
-mod mock_actor;
 mod mock_server;
+mod mock_set;
 mod request;
 mod response_template;
 mod server_actor;

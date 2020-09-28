@@ -1,109 +1,83 @@
-use crate::mock_actor::MockActor;
-use async_std::net::TcpListener;
-use async_std::prelude::*;
-use bastion::prelude::*;
-use http_types::{Response, StatusCode};
-use log::{debug, info, warn};
-use std::net::SocketAddr;
+use crate::mock_set::MockSet;
+use hyper::http;
+use hyper::service::{make_service_fn, service_fn};
+use std::net::TcpListener;
+use std::sync::{Arc, RwLock};
 
-#[derive(Clone)]
-pub(crate) struct ServerActor {
-    pub(crate) actor_ref: ChildRef,
-    pub(crate) address: SocketAddr,
-}
+type DynError = Box<dyn std::error::Error + Send + Sync>;
 
-impl ServerActor {
-    pub(crate) async fn start(mock_actor: MockActor) -> ServerActor {
-        // Allocate a random port
-        let listener = get_available_port()
-            .await
-            .expect("No free port - cannot start an HTTP mock server!");
-        Self::start_with(listener, mock_actor)
-    }
-
-    pub(crate) fn start_with(listener: TcpListener, mock_actor: MockActor) -> ServerActor {
-        let address = listener.local_addr().unwrap();
-
-        let server_actors = Bastion::children(|children: Children| {
-            children
-                .with_exec(move |ctx: BastionContext| {
-                    async move {
-                        loop {
-                            msg! { ctx.recv().await?,
-                                msg: (ChildRef, TcpListener) => {
-                                    let (mock_actor, listener) = msg;
-                                    debug!("Mock server started listening on {}!", listener.local_addr().unwrap());
-                                    async_std::task::spawn(listen(mock_actor, listener)).await;
-                                    debug!("Shutting down!");
-                                };
-                                _: _ => {
-                                    warn!("Received a message I was not listening for.");
-                                };
-                            }
-                        }
-                    }
-                })
-        })
-            .expect("Couldn't create the server actor.");
-        // We actually started only one actor
-        let server_actor = server_actors.elems()[0].clone();
-
-        // Pass in the TcpListener to start receiving connections and the mock actor
-        // ChildRef to know what to respond to requests
-        server_actor
-            .tell_anonymously((mock_actor.actor_ref, listener))
-            .expect("Failed to post TcpListener and mock actor address.");
-
-        ServerActor {
-            actor_ref: server_actor,
-            address,
-        }
-    }
-}
-
-async fn listen(mock_actor: ChildRef, listener: async_std::net::TcpListener) {
-    while let Some(stream) = listener.incoming().next().await {
-        // For each incoming stream, spawn up a task.
-        let stream = stream.unwrap();
-        let actor = mock_actor.clone();
-        async_std::task::spawn(async {
-            if let Err(err) = accept(actor, stream).await {
-                warn!("{}", err);
-            }
-        });
-    }
-}
-
-// Take a TCP stream, and convert it into sequential HTTP request / response pairs.
-async fn accept(mock_actor: ChildRef, stream: async_std::net::TcpStream) -> http_types::Result<()> {
-    debug!("Starting new connection from {}", stream.peer_addr()?);
-    async_h1::accept(stream.clone(), move |req| {
-        let a = mock_actor.clone();
+pub(crate) async fn run_server(listener: TcpListener, mock_set: Arc<RwLock<MockSet>>) {
+    let request_handler = make_service_fn(move |_| {
+        let mock_set = mock_set.clone();
         async move {
-            info!("Request: {:?}", req);
-            let answer = (&a).ask_anonymously(req).unwrap();
+            Ok::<_, DynError>(service_fn(move |request: hyper::Request<hyper::Body>| {
+                let mock_set = mock_set.clone();
+                async move {
+                    let wiremock_request = crate::Request::from_hyper(request).await;
+                    let response = mock_set
+                        .write()
+                        .unwrap()
+                        .handle_request(wiremock_request)
+                        .await;
 
-            let response = msg! { answer.await.expect("Couldn't receive the answer."),
-                msg: Response => msg;
-                _: _ => Response::new(StatusCode::NotFound);
-            };
-            info!("Response: {:?}", response);
-            Ok(response)
+                    Ok::<_, DynError>(http_types_response_to_hyper_response(response).await)
+                }
+            }))
         }
-    })
-    .await?;
-    Ok(())
+    });
+
+    let server = hyper::Server::from_tcp(listener)
+        .unwrap()
+        .executor(LocalExec)
+        .serve(request_handler);
+
+    if let Err(e) = server.await {
+        panic!("Mock server failed: {}", e);
+    }
 }
 
-/// Get a local TCP listener for an available port.
-/// If no port is available, returns None.
-async fn get_available_port() -> Option<TcpListener> {
-    for port in 8000..9000 {
-        // Check if the specified port if available.
-        match TcpListener::bind(("127.0.0.1", port)).await {
-            Ok(l) => return Some(l),
-            Err(_) => continue,
+// An executor that can spawn !Send futures.
+#[derive(Clone, Copy, Debug)]
+struct LocalExec;
+
+impl<F> hyper::rt::Executor<F> for LocalExec
+where
+    F: std::future::Future + 'static, // not requiring `Send`
+{
+    fn execute(&self, fut: F) {
+        // This will spawn into the currently running `LocalSet`.
+        tokio::task::spawn_local(fut);
+    }
+}
+
+async fn http_types_response_to_hyper_response(
+    mut response: http_types::Response,
+) -> hyper::Response<hyper::Body> {
+    let version = response.version().map(|v| v.into()).unwrap_or_default();
+    let mut builder = http::response::Builder::new()
+        .status(response.status() as u16)
+        .version(version);
+
+    headers_to_hyperium_headers(response.as_mut(), builder.headers_mut().unwrap());
+
+    let body_bytes = response.take_body().into_bytes().await.unwrap();
+    let body = hyper::Body::from(body_bytes);
+
+    builder.body(body).unwrap()
+}
+
+fn headers_to_hyperium_headers(
+    headers: &mut http_types::Headers,
+    hyperium_headers: &mut http::HeaderMap,
+) {
+    for (name, values) in headers {
+        let name = format!("{}", name).into_bytes();
+        let name = http::header::HeaderName::from_bytes(&name).unwrap();
+
+        for value in values.iter() {
+            let value = format!("{}", value).into_bytes();
+            let value = http::header::HeaderValue::from_bytes(&value).unwrap();
+            hyperium_headers.append(&name, value);
         }
     }
-    None
 }
