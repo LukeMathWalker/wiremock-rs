@@ -1,6 +1,7 @@
-use async_std::prelude::*;
-use http_types::headers::{HeaderName, HeaderValues};
+use futures::AsyncReadExt;
+use http_types::headers::{HeaderName, HeaderValue, HeaderValues};
 use http_types::{Method, Url};
+use hyper::body::Buf;
 use std::{collections::HashMap, fmt};
 
 /// An incoming request to an instance of [`MockServer`].
@@ -61,6 +62,36 @@ impl Request {
             .read_to_end(&mut body)
             .await
             .expect("Failed to read body");
+
+        Self {
+            url,
+            method,
+            headers,
+            body,
+        }
+    }
+
+    pub(crate) async fn from_hyper(request: hyper::Request<hyper::Body>) -> Request {
+        let (parts, body) = request.into_parts();
+        let method = parts.method.into();
+        let url = format!("http://localhost{}", parts.uri).parse().unwrap();
+
+        let mut headers = HashMap::new();
+        for (name, value) in parts.headers {
+            let value = value.as_bytes().to_owned();
+            let value = HeaderValue::from_bytes(value).unwrap();
+            if let Some(name) = name {
+                let name = name.as_str().as_bytes().to_owned();
+                let name = HeaderName::from_bytes(name).unwrap();
+                headers.insert(name, value.into());
+            }
+        }
+
+        let body = hyper::body::aggregate(body)
+            .await
+            .expect("Failed to read request body.")
+            .bytes()
+            .to_vec();
 
         Self {
             url,
