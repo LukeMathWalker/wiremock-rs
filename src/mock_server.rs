@@ -2,9 +2,12 @@ use crate::mock::Mock;
 use crate::mock_set::MockSet;
 use crate::server::run_server;
 use log::debug;
+use std::future::Future;
 use std::net::{SocketAddr, TcpListener, TcpStream};
+use std::pin::Pin;
 use std::sync::Arc;
 use std::sync::RwLock;
+use std::task::{Context, Poll};
 use tokio::task::LocalSet;
 
 /// An HTTP web-server running in the background to behave as one of your dependencies using `Mock`s for testing purposes.
@@ -245,6 +248,18 @@ impl MockServer {
     /// ```
     pub fn address(&self) -> &SocketAddr {
         &self.server_address
+    }
+}
+
+impl Future for MockServer {
+    type Output = ();
+
+    fn poll(self: Pin<&mut Self>, _: &mut Context<'_>) -> Poll<Self::Output> {
+        if self.verify() {
+            Poll::Ready(())
+        } else {
+            Poll::Pending
+        }
     }
 }
 
