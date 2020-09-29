@@ -131,7 +131,7 @@ mod mock_server;
 mod mock_set;
 mod request;
 mod response_template;
-mod server_actor;
+mod server;
 
 pub use mock::{Match, Mock, MockBuilder, Times};
 pub use mock_server::MockServer;

@@ -1,6 +1,6 @@
 use crate::mock::Mock;
 use crate::mock_set::MockSet;
-use crate::server_actor::run_server;
+use crate::server::run_server;
 use log::debug;
 use std::net::{SocketAddr, TcpListener, TcpStream};
 use std::sync::Arc;
@@ -24,6 +24,8 @@ use tokio::task::LocalSet;
 pub struct MockServer {
     mock_set: Arc<RwLock<MockSet>>,
     server_address: SocketAddr,
+    // Used to trigger server shutdown on Drop
+    _shutdown_trigger: tokio::sync::oneshot::Sender<()>,
 }
 
 impl MockServer {
@@ -71,6 +73,7 @@ impl MockServer {
     /// }
     /// ```
     pub async fn start() -> Self {
+        let (shutdown_trigger, shutdown_receiver) = tokio::sync::oneshot::channel();
         let mock_set = Arc::new(RwLock::new(MockSet::new()));
         let listener = TcpListener::bind("127.0.0.1:0").expect("Failed to find a free port!");
         let server_address = listener
@@ -79,7 +82,7 @@ impl MockServer {
 
         let server_mock_set = mock_set.clone();
         std::thread::spawn(move || {
-            let server_future = run_server(listener, server_mock_set);
+            let server_future = run_server(listener, server_mock_set, shutdown_receiver);
 
             let mut runtime = tokio::runtime::Builder::new()
                 .enable_all()
@@ -101,6 +104,7 @@ impl MockServer {
         Self {
             mock_set,
             server_address,
+            _shutdown_trigger: shutdown_trigger,
         }
     }
 
@@ -255,6 +259,7 @@ impl Drop for MockServer {
                 panic!("Verification failed: mock expectations have not been satisfied.");
             }
         }
-        // Kill thread?
+        // The sender half of the channel, `shutdown_trigger`, gets dropped here
+        // Triggering the graceful shutdown of the server itself.
     }
 }

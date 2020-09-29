@@ -6,7 +6,11 @@ use std::sync::{Arc, RwLock};
 
 type DynError = Box<dyn std::error::Error + Send + Sync>;
 
-pub(crate) async fn run_server(listener: TcpListener, mock_set: Arc<RwLock<MockSet>>) {
+pub(crate) async fn run_server(
+    listener: TcpListener,
+    mock_set: Arc<RwLock<MockSet>>,
+    shutdown_signal: tokio::sync::oneshot::Receiver<()>,
+) {
     let request_handler = make_service_fn(move |_| {
         let mock_set = mock_set.clone();
         async move {
@@ -29,7 +33,13 @@ pub(crate) async fn run_server(listener: TcpListener, mock_set: Arc<RwLock<MockS
     let server = hyper::Server::from_tcp(listener)
         .unwrap()
         .executor(LocalExec)
-        .serve(request_handler);
+        .serve(request_handler)
+        .with_graceful_shutdown(async {
+            // This futures resolves when either:
+            // - the sender half of the channel gets dropped (i.e. MockServer is dropped)
+            // - the sender is used, therefore sending a poison pill willingly as a shutdown signal
+            let _ = shutdown_signal.await;
+        });
 
     if let Err(e) = server.await {
         panic!("Mock server failed: {}", e);
