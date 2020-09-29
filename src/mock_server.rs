@@ -6,6 +6,9 @@ use bastion::{run, Bastion};
 use log::debug;
 use std::net::SocketAddr;
 use std::time::Duration;
+use std::future::Future;
+use std::task::{Context, Poll};
+use std::pin::Pin;
 
 /// An HTTP web-server running in the background to behave as one of your dependencies using `Mock`s for testing purposes.
 ///
@@ -231,6 +234,18 @@ impl MockServer {
     /// ```
     pub fn address(&self) -> &SocketAddr {
         &self.server_actor.address
+    }
+}
+
+impl Future for MockServer {
+    type Output = ();
+
+    fn poll(self: Pin<&mut Self>, _: &mut Context<'_>) -> Poll<Self::Output> {
+        if run!(self.verify()) {
+            Poll::Ready(())
+        } else {
+            Poll::Pending
+        }
     }
 }
 
