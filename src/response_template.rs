@@ -78,6 +78,36 @@ impl ResponseTemplate {
     /// - if there are no header values with `key` as header name, it will insert one;
     /// - if there are already some values with `key` as header name, it will drop them and
     ///   start a new list of header values, containing only `value`.
+    ///
+    /// ### Example:
+    /// ```rust
+    /// use surf::mime;
+    /// use wiremock::{MockServer, Mock, ResponseTemplate};
+    /// use wiremock::matchers::method;
+    ///
+    /// #[async_std::main]
+    /// async fn main() {
+    ///     // Arrange
+    ///     let mock_server = MockServer::start().await;
+    ///     let correlation_id = "1311db4f-fe65-4cb2-b514-1bb47f781aa7";
+    ///     let template = ResponseTemplate::new(200).insert_header(
+    ///         "X-Correlation-ID",
+    ///         correlation_id
+    ///     );
+    ///     Mock::given(method("GET"))
+    ///         .respond_with(template)
+    ///         .mount(&mock_server)
+    ///         .await;
+    ///
+    ///     // Act
+    ///     let res = surf::get(&mock_server.uri())
+    ///         .await
+    ///         .unwrap();
+    ///
+    ///     // Assert
+    ///     assert_eq!(res.header("X-Correlation-ID"), Some(correlation_id));
+    /// }
+    /// ```
     pub fn insert_header<K, V>(mut self, key: K, value: V) -> Self
     where
         K: TryInto<HeaderName>,
@@ -258,9 +288,7 @@ impl ResponseTemplate {
 
         // Add headers
         for (header_name, header_values) in &self.headers {
-            response
-                .insert_header(header_name.clone(), header_values.as_slice())
-                .unwrap();
+            response.insert_header(header_name.clone(), header_values.as_slice());
         }
 
         // Add body, if specified
