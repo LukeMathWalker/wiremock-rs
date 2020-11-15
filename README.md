@@ -23,10 +23,6 @@
     <img src="https://img.shields.io/badge/docs-latest-blue.svg?style=flat-square"
       alt="docs.rs docs" />
   </a>
-  <!-- CI -->
-  <a href="https://github.com/LukeMathWalker/wiremock-rs">
-    <img src="https://circleci.com/gh/LukeMathWalker/wiremock-rs.svg?style=shield" alt="CircleCI badge" />
-  </a>
 </div>
 <br/>
 
