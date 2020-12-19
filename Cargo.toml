@@ -21,7 +21,7 @@ path = "src/lib.rs"
 
 [dependencies]
 log = "0.4"
-http-types = { version = "2.4", default-features = false, features = ["hyperium_http"] }
+http-types = { version = "2.9", default-features = false, features = ["hyperium_http"] }
 serde_json = "1"
 serde = "1"
 regex = "1"
