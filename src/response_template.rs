@@ -8,8 +8,8 @@ use std::time::Duration;
 
 /// The blueprint for the response returned by a [`MockServer`] when a [`Mock`] matches on an incoming request.
 ///
-/// [`Mock`]: struct.Mock.html
-/// [`MockServer`]: struct.MockServer.html
+/// [`Mock`]: crate::Mock
+/// [`MockServer`]: crate::MockServer
 #[derive(Clone, Debug)]
 pub struct ResponseTemplate {
     mime: Option<http_types::Mime>,
@@ -276,6 +276,8 @@ impl ResponseTemplate {
     ///     assert!(res.is_err());
     /// }
     /// ```
+    ///
+    /// [`MockServer`]: crate::mock_server::MockServer
     pub fn set_delay(mut self, delay: Duration) -> Self {
         self.delay = Some(delay);
 
