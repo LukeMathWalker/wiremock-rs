@@ -2,8 +2,8 @@ use crate::{Match, Mock, Request};
 use http_types::Response;
 use std::time::Duration;
 
-// Given the behaviour specification as a `Mock`, keep track of runtime information concerning
-// this mock - e.g. how many times it matched on a incoming request.
+/// Given the behaviour specification as a `Mock`, keep track of runtime information concerning
+/// this mock - e.g. how many times it matched on a incoming request.
 pub(crate) struct ActiveMock {
     specification: Mock,
     n_matched_requests: u64,
