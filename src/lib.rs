@@ -42,14 +42,14 @@
 //!         .await
 //!         .unwrap()
 //!         .status();
-//!     assert_eq!(status.as_u16(), 200);
+//!     assert_eq!(status, 200);
 //!
 //!     // If the request doesn't match any `Mock` mounted on our `MockServer` a 404 is returned.
 //!     let status = surf::get(format!("{}/missing", &mock_server.uri()))
 //!         .await
 //!         .unwrap()
 //!         .status();
-//!     assert_eq!(status.as_u16(), 404);
+//!     assert_eq!(status, 404);
 //! }
 //! ```
 //!
@@ -130,10 +130,12 @@ mod mock;
 mod mock_server;
 mod mock_set;
 mod request;
+mod responder;
 mod response_template;
 mod server;
 
 pub use mock::{Match, Mock, MockBuilder, Times};
 pub use mock_server::MockServer;
 pub use request::Request;
+pub use responder::Responder;
 pub use response_template::ResponseTemplate;

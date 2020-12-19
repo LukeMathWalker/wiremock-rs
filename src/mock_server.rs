@@ -61,7 +61,7 @@ impl MockServer {
     ///         .await
     ///         .unwrap()
     ///         .status();
-    ///     assert_eq!(status.as_u16(), 200);
+    ///     assert_eq!(status, 200);
     ///
     ///     // This would have matched our mock, but we haven't registered it for `mock_server_two`!
     ///     // Hence it returns a 404, the default response when no mocks matched on the mock server.
@@ -69,7 +69,7 @@ impl MockServer {
     ///         .await
     ///         .unwrap()
     ///         .status();
-    ///     assert_eq!(status.as_u16(), 404);
+    ///     assert_eq!(status, 404);
     /// }
     /// ```
     pub async fn start() -> Self {
@@ -138,7 +138,7 @@ impl MockServer {
     ///         .await
     ///         .unwrap()
     ///         .status();
-    ///     assert_eq!(status.as_u16(), 200);
+    ///     assert_eq!(status, 200);
     ///
     ///     // This would have matched `unregistered_mock`, but we haven't registered it!
     ///     // Hence it returns a 404, the default response when no mocks matched on the mock server.
@@ -146,7 +146,7 @@ impl MockServer {
     ///         .await
     ///         .unwrap()
     ///         .status();
-    ///     assert_eq!(status.as_u16(), 404);
+    ///     assert_eq!(status, 404);
     /// }
     /// ```
     pub async fn register(&self, mock: Mock) {
@@ -176,7 +176,7 @@ impl MockServer {
     ///         .await
     ///         .unwrap()
     ///         .status();
-    ///     assert_eq!(status.as_u16(), 200);
+    ///     assert_eq!(status, 200);
     ///
     ///     // Reset the server
     ///     mock_server.reset().await;
@@ -186,7 +186,7 @@ impl MockServer {
     ///         .await
     ///         .unwrap()
     ///         .status();
-    ///     assert_eq!(status.as_u16(), 404);
+    ///     assert_eq!(status, 404);
     /// }
     /// ```
     pub async fn reset(&self) {
@@ -218,7 +218,7 @@ impl MockServer {
     ///     let status = surf::get(uri).await.unwrap().status();
     ///
     ///     // Assert - default response
-    ///     assert_eq!(status.as_u16(), 404);
+    ///     assert_eq!(status, 404);
     /// }
     /// ```
     pub fn uri(&self) -> String {

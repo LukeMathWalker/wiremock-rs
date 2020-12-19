@@ -81,7 +81,6 @@ impl ResponseTemplate {
     ///
     /// ### Example:
     /// ```rust
-    /// use surf::mime;
     /// use wiremock::{MockServer, Mock, ResponseTemplate};
     /// use wiremock::matchers::method;
     ///
@@ -105,7 +104,7 @@ impl ResponseTemplate {
     ///         .unwrap();
     ///
     ///     // Assert
-    ///     assert_eq!(res.header("X-Correlation-ID"), Some(correlation_id));
+    ///     assert_eq!(res.header("X-Correlation-ID").unwrap().as_str(), correlation_id);
     /// }
     /// ```
     pub fn insert_header<K, V>(mut self, key: K, value: V) -> Self
@@ -189,7 +188,7 @@ impl ResponseTemplate {
     ///
     /// ### Example:
     /// ```rust
-    /// use surf::mime;
+    /// use surf::http::mime;
     /// use wiremock::{MockServer, Mock, ResponseTemplate};
     /// use wiremock::matchers::method;
     ///
@@ -225,7 +224,7 @@ impl ResponseTemplate {
     ///
     ///     // Assert
     ///     assert_eq!(body, r#"{"hello": "world"}"#);
-    ///     assert_eq!(res.mime(), Some(mime::APPLICATION_JSON));
+    ///     assert_eq!(res.content_type(), Some(mime::JSON));
     /// }
     /// ```
     pub fn set_body_raw<B>(mut self, body: B, mime: &str) -> Self
@@ -249,6 +248,7 @@ impl ResponseTemplate {
     ///
     /// ### Example:
     /// ```rust
+    /// use isahc::config::Configurable;
     /// use wiremock::{MockServer, Mock, ResponseTemplate};
     /// use wiremock::matchers::method;
     /// use std::time::Duration;
@@ -266,11 +266,12 @@ impl ResponseTemplate {
     ///         .await;
     ///
     ///     // Act
-    ///     let mut res = surf::get(&mock_server.uri())
-    ///         // Shorter than the time taken by the MockServer
-    ///         // to return a response
-    ///         .timeout(delay / 3)
-    ///         .await;
+    ///     let mut res = async_std::future::timeout(
+    ///         // Shorter than the response delay!
+    ///         delay / 3,
+    ///         surf::get(&mock_server.uri())
+    ///     )
+    ///     .await;
     ///
     ///     // Assert - Timeout error!
     ///     assert!(res.is_err());
