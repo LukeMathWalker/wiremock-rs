@@ -113,12 +113,8 @@
 //!
 //! More request matchers can be added to those provided out-of-the-box to handle common usecases.
 //!
-//! [`MockServer`]: struct.MockServer.html
-//! [`Mock`]: struct.Mock.html
-//! [`Match`]: trait.Match.html
-//! [`start`]: struct.MockServer.html#method.start
-//! [`expect`]: struct.Mock.html#method.expect
-//! [`matchers`]: matchers/index.html
+//! [`start`]: MockServer::start
+//! [`expect`]: Mock::expect
 //! [GitHub repository]: https://github.com/LukeMathWalker/wiremock-rs
 //! [`mockito`]: https://docs.rs/mockito/
 //! [`httpmock`]: https://docs.rs/httpmock/

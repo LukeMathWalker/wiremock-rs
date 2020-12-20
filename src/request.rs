@@ -9,9 +9,9 @@ use std::{collections::HashMap, fmt};
 /// Each matcher gets an immutable reference to a `Request` instance in the [`matches`] method
 /// defined in the [`Match`] trait.
 ///
-/// [`MockServer`]: struct.MockServer.html
-/// [`matches`]: trait.Match.html
-/// [`Match`]: trait.Match.html
+/// [`MockServer`]: crate::MockServer
+/// [`matches`]: crate::Match::matches
+/// [`Match`]: crate::Match
 ///
 /// ### Implementation notes:
 /// We can't use `http_types::Request` directly in our `Match::matches` signature:

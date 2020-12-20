@@ -102,9 +102,6 @@ use std::time::Duration;
 ///     assert_eq!(status.as_u16(), 200);
 /// }
 /// ```
-///
-/// [`Mock`]: struct.Mock.html
-/// [`Request`]: struct.Request.html
 pub trait Match: Send + Sync {
     /// Given a reference to a `Request`, determine if it should match or not given
     /// a specific criterion.
@@ -208,9 +205,8 @@ impl Debug for Matcher {
 ///
 /// Both `register` and `mount` are asynchronous methods - don't forget to `.await` them!
 ///
-/// [`MockServer`]: struct.MockServer.html
-/// [`register`]: struct.MockServer.html#method.register
-/// [`mount`]: #method.mount
+/// [`register`]: MockServer::register
+/// [`mount`]: Mock::mount
 #[derive(Debug)]
 pub struct Mock {
     pub(crate) matchers: Vec<Matcher>,
@@ -225,9 +221,6 @@ pub struct Mock {
 }
 
 /// A fluent builder to construct a [`Mock`] instance given matchers and a [`ResponseTemplate`].
-///
-/// [`Mock`]: struct.Mock.html
-/// [`ResponseTemplate`]: struct.ResponseTemplate.html
 #[derive(Debug)]
 pub struct MockBuilder {
     pub(crate) matchers: Vec<Matcher>,
@@ -237,8 +230,6 @@ impl Mock {
     /// Start building a `Mock` specifying the first matcher.
     ///
     /// It returns an instance of [`MockBuilder`].
-    ///
-    /// [`MockBuilder`]: struct.MockBuilder.html
     pub fn given<M: 'static + Match>(matcher: M) -> MockBuilder {
         MockBuilder {
             matchers: vec![Matcher(Box::new(matcher))],
@@ -291,7 +282,7 @@ impl Mock {
     /// }
     /// ```
     ///
-    /// [`matchers`]: matchers/index.html
+    /// [`matchers`]: crate::matchers
     pub fn up_to_n_times(mut self, n: u64) -> Mock {
         assert!(n > 0, "n must be strictly greater than 0!");
         self.max_n_matches = Some(n);
@@ -351,8 +342,6 @@ impl Mock {
     ///     // The `MockServer` will shutdown peacefully, without panicking.
     /// }
     /// ```
-    ///
-    /// [`MockServer`]: struct.MockServer.html
     pub fn expect<T: Into<Times>>(mut self, r: T) -> Mock {
         let range = r.into();
         self.expectation = range;
@@ -365,25 +354,20 @@ impl Mock {
     ///
     /// [`mount`] is an asynchronous method, make sure to `.await` it!
     ///
-    /// [`MockServer`]: struct.MockServer.html
-    /// [`register`]: struct.MockServer.html#method.register
-    /// [`mount`]: #method.mount
+    /// [`register`]: MockServer::register
+    /// [`mount`]: Mock::mount
     pub async fn mount(self, server: &MockServer) {
         server.register(self).await;
     }
 
     /// Build an instance of `http_types::Response` from the [`ResponseTemplate`] associated
     /// with a `Mock`.
-    ///
-    /// [`ResponseTemplate`]: struct.ResponseTemplate.html
     pub fn response(&self) -> Response {
         self.response.generate_response()
     }
 
     /// Build an instance of `http_types::Response` from the [`ResponseTemplate`] associated
     /// with a `Mock`.
-    ///
-    /// [`ResponseTemplate`]: struct.ResponseTemplate.html
     pub(crate) fn delay(&self) -> &Option<Duration> {
         self.response.delay()
     }
@@ -394,8 +378,7 @@ impl MockBuilder {
     ///
     /// **All** specified [`matchers`] must match for the overall [`Mock`] to match an incoming request.
     ///
-    /// [`matchers`]: matchers/index.html
-    /// [`Mock`]: struct.Mock.html
+    /// [`matchers`]: crate::matchers
     pub fn and<M: Match + 'static>(mut self, matcher: M) -> Self {
         self.matchers.push(Matcher(Box::new(matcher)));
         self
@@ -407,11 +390,8 @@ impl MockBuilder {
     /// `respond_with` finalises the `MockBuilder` and returns you a [`Mock`] instance, ready to
     /// be [`register`]ed or [`mount`]ed on a [`MockServer`]!
     ///
-    /// [`Mock`]: struct.Mock.html
-    /// [`MockServer`]: struct.MockServer.html
-    /// [`ResponseTemplate`]: struct.ResponseTemplate.html
-    /// [`register`]: struct.MockServer.html#method.register
-    /// [`mount`]: #method.mount
+    /// [`register`]: MockServer::register
+    /// [`mount`]: Mock::mount
     pub fn respond_with(self, template: ResponseTemplate) -> Mock {
         Mock {
             matchers: self.matchers,
@@ -447,8 +427,7 @@ impl MockBuilder {
 /// let times: Times = (..=15).into();
 /// ```
 ///
-/// [`Mock`]: struct.Mock.html
-/// [`expect`]: struct.Mock.html#method.expect
+/// [`expect`]: Mock::expect
 #[derive(Debug)]
 pub struct Times(TimesEnum);
 
