@@ -1,11 +1,11 @@
 use crate::{Request, ResponseTemplate};
 
-/// Anything that implements `Responder` can be used to reply to an incoming request when a
+/// Anything that implements `Respond` can be used to reply to an incoming request when a
 /// [`Mock`] is activated.
 ///
 /// ## Fixed responses
 ///
-/// The simplest `Responder` is [`ResponseTemplate`]: no matter the request, it will
+/// The simplest `Respond` is [`ResponseTemplate`]: no matter the request, it will
 /// always return itself.
 ///
 /// ```rust
@@ -39,13 +39,13 @@ use crate::{Request, ResponseTemplate};
 ///
 /// ## Dynamic responses
 ///
-/// You can use `Responder`, though, to implement responses that depend on the data in
+/// You can use `Respond`, though, to implement responses that depend on the data in
 /// the request matched by a [`Mock`].  
 /// You could, for example, propagate back a request header in the response:
 ///
 /// ```rust
 /// use http_types::headers::HeaderName;
-/// use wiremock::{Match, MockServer, Mock, Request, ResponseTemplate, Responder};
+/// use wiremock::{Match, MockServer, Mock, Request, ResponseTemplate, Respond};
 /// use wiremock::matchers::path;
 /// use std::convert::TryInto;
 /// use std::str::FromStr;
@@ -54,7 +54,7 @@ use crate::{Request, ResponseTemplate};
 /// /// `X-Correlation-Id` header from the request data.
 /// pub struct CorrelationIdResponder(pub ResponseTemplate);
 ///
-/// impl Responder for CorrelationIdResponder {
+/// impl Respond for CorrelationIdResponder {
 ///     fn respond(&self, request: &Request) -> ResponseTemplate {
 ///         let mut response_template = self.0.clone();
 ///         let header_name = HeaderName::from_str("X-Correlation-Id").unwrap();
@@ -90,7 +90,7 @@ use crate::{Request, ResponseTemplate};
 ///
 /// [`Mock`]: crate::Mock
 /// [`ResponseTemplate`]: crate::ResponseTemplate
-pub trait Responder: Send + Sync {
+pub trait Respond: Send + Sync {
     /// Given a reference to a [`Request`] return a [`ResponseTemplate`] that will be used
     /// by the [`MockServer`] as blueprint for the response returned to the client.
     ///
@@ -100,7 +100,7 @@ pub trait Responder: Send + Sync {
     fn respond(&self, request: &Request) -> ResponseTemplate;
 }
 
-impl Responder for ResponseTemplate {
+impl Respond for ResponseTemplate {
     fn respond(&self, _request: &Request) -> ResponseTemplate {
         self.clone()
     }

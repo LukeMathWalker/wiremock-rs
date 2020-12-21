@@ -126,12 +126,12 @@ mod mock;
 mod mock_server;
 mod mock_set;
 mod request;
-mod responder;
+mod respond;
 mod response_template;
 mod server;
 
 pub use mock::{Match, Mock, MockBuilder, Times};
 pub use mock_server::MockServer;
 pub use request::Request;
-pub use responder::Responder;
+pub use respond::Respond;
 pub use response_template::ResponseTemplate;

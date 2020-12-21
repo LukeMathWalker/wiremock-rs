@@ -1,4 +1,4 @@
-use crate::responder::Responder;
+use crate::respond::Respond;
 use crate::{MockServer, Request, ResponseTemplate};
 use std::fmt::{Debug, Formatter};
 use std::ops::{
@@ -207,7 +207,7 @@ impl Debug for Matcher {
 /// [`mount`]: Mock::mount
 pub struct Mock {
     pub(crate) matchers: Vec<Matcher>,
-    pub(crate) response: Box<dyn Responder>,
+    pub(crate) response: Box<dyn Respond>,
     // Maximum number of times (inclusive) we should return a response from this Mock on
     // matching requests.
     // If `None`, there is no cap and we will respond to all incoming matching requests.
@@ -383,7 +383,7 @@ impl MockBuilder {
     ///
     /// [`register`]: MockServer::register
     /// [`mount`]: Mock::mount
-    pub fn respond_with<R: Responder + 'static>(self, responder: R) -> Mock {
+    pub fn respond_with<R: Respond + 'static>(self, responder: R) -> Mock {
         Mock {
             matchers: self.matchers,
             response: Box::new(responder),
