@@ -7,9 +7,6 @@
 //! as input automatically implement [`Match`] and can be used where a matcher is expected.
 //!
 //! Check [`Match`]'s documentation for examples.
-//!
-//! [`Match`]: ../trait.Match.html
-//! [`Request`]: ../struct.Request.html
 use crate::{Match, Request};
 use http_types::headers::{HeaderName, HeaderValue};
 use http_types::Method;
@@ -62,7 +59,7 @@ where
 /// ```
 pub struct MethodExactMatcher(Method);
 
-/// Shorthand for [`MethodExactMatcher::new`](struct.MethodExactMatcher.html).
+/// Shorthand for [`MethodExactMatcher::new`].
 pub fn method<T>(method: T) -> MethodExactMatcher
 where
     T: TryInto<Method>,
@@ -149,7 +146,7 @@ impl Match for MethodExactMatcher {
 /// ```
 pub struct PathExactMatcher(String);
 
-/// Shorthand for [`PathExactMatcher::new`](struct.PathExactMatcher.html).
+/// Shorthand for [`PathExactMatcher::new`].
 pub fn path<T>(path: T) -> PathExactMatcher
 where
     T: Into<String>,
@@ -232,7 +229,7 @@ impl Match for PathExactMatcher {
 /// ```
 pub struct PathRegexMatcher(Regex);
 
-/// Shorthand for [`PathRegexMatcher::new`](struct.PathRegexMatcher.html).
+/// Shorthand for [`PathRegexMatcher::new`].
 pub fn path_regex<T>(path: T) -> PathRegexMatcher
 where
     T: Into<String>,
@@ -285,7 +282,7 @@ impl Match for PathRegexMatcher {
 /// ```
 pub struct HeaderExactMatcher(HeaderName, HeaderValue);
 
-/// Shorthand for [`HeaderExactMatcher::new`](struct.HeaderExactMatcher.html).
+/// Shorthand for [`HeaderExactMatcher::new`].
 pub fn header<K, V>(key: K, value: V) -> HeaderExactMatcher
 where
     K: TryInto<HeaderName>,
@@ -361,7 +358,7 @@ impl Match for HeaderExactMatcher {
 /// ```
 pub struct HeaderExistsMatcher(HeaderName);
 
-/// Shorthand for [`HeaderExistsMatcher::new`](struct.HeaderExistsMatcher.html).
+/// Shorthand for [`HeaderExistsMatcher::new`].
 pub fn header_exists<K>(key: K) -> HeaderExistsMatcher
 where
     K: TryInto<HeaderName>,
@@ -469,7 +466,7 @@ impl BodyExactMatcher {
     }
 }
 
-/// Shorthand for [`BodyExactMatcher::json`](struct.BodyExactMatcher.html).
+/// Shorthand for [`BodyExactMatcher::json`].
 pub fn body_json<T>(body: T) -> BodyExactMatcher
 where
     T: Serialize,
@@ -477,7 +474,7 @@ where
     BodyExactMatcher::json(body)
 }
 
-/// Shorthand for [`BodyExactMatcher::string`](struct.BodyExactMatcher.html).
+/// Shorthand for [`BodyExactMatcher::string`].
 pub fn body_string<T>(body: T) -> BodyExactMatcher
 where
     T: Into<String>,
@@ -485,7 +482,7 @@ where
     BodyExactMatcher::string(body)
 }
 
-/// Shorthand for [`BodyExactMatcher::bytes`](struct.BodyExactMatcher.html).
+/// Shorthand for [`BodyExactMatcher::bytes`].
 pub fn body_bytes<T>(body: T) -> BodyExactMatcher
 where
     T: Into<Vec<u8>>,
@@ -537,7 +534,7 @@ impl BodyContainsMatcher {
     }
 }
 
-/// Shorthand for [`BodyContainsMatcher::string`](struct.BodyContainsMatcher.html).
+/// Shorthand for [`BodyContainsMatcher::string`].
 pub fn body_string_contains<T>(body: T) -> BodyContainsMatcher
 where
     T: Into<String>,
@@ -609,7 +606,7 @@ impl QueryParamExactMatcher {
     }
 }
 
-/// Shorthand for [`QueryParamExactMatcher::new`](struct.QueryParamExactMatcher.html).
+/// Shorthand for [`QueryParamExactMatcher::new`].
 pub fn query_param<K, V>(key: K, value: V) -> QueryParamExactMatcher
 where
     K: Into<String>,
