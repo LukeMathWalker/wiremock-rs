@@ -72,6 +72,15 @@
 //! at the end of your test. A failed verification will trigger a panic.  
 //! By default, no expectations are set on your [`Mock`]s.
 //!
+//! ## Responses
+//!
+//! `wiremock` lets you specify pre-determined responses using [`ResponseTemplate`] and
+//! [`respond_with`].
+//!
+//! You also given the option to have [`Mock`]s that return different responses based on the matched
+//! [`Request`] using the [`Respond`] trait.  
+//! Check [`Respond`]'s documentation for more details and examples.
+//!
 //! ## Test isolation
 //!
 //! Each instance of [`MockServer`] is fully isolated: [`start`] takes care of finding a random port
@@ -115,6 +124,7 @@
 //!
 //! [`start`]: MockServer::start
 //! [`expect`]: Mock::expect
+//! [`respond_with`]: MockBuilder::respond_with
 //! [GitHub repository]: https://github.com/LukeMathWalker/wiremock-rs
 //! [`mockito`]: https://docs.rs/mockito/
 //! [`httpmock`]: https://docs.rs/httpmock/
