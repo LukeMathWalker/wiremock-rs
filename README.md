@@ -134,7 +134,7 @@ Each instance of [`MockServer`] is fully isolated: [`start`] takes care of findi
 available on your local machine which is assigned to the new [`MockServer`].
 
 To ensure full isolation and no cross-test interference, [`MockServer`]s shouldn't be
-shared between tests. Instead, [`MockServer`]s should be created in the test that they are used.
+shared between tests. Instead, [`MockServer`]s should be created in the test where they are used.
 
 When a [`MockServer`] instance goes out of scope (e.g. the test finishes), the corresponding
 HTTP server running in the background is shut down to free up the port it was using.
