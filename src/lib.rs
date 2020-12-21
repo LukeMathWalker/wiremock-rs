@@ -98,6 +98,15 @@
 //! futures runtimes.  
 //! If you encounter any compatibility bug, please open an issue on our [GitHub repository].
 //!
+//! ## Efficiency
+//!
+//! `wiremock` maintains a pool of mock servers in the background to minimise the number of
+//! connections and the time spent starting up a new [`MockServer`].  
+//! Pooling reduces the likelihood of you having to tune your OS configurations (e.g. ulimit).
+//!
+//! The pool is designed to be invisible: it makes your life easier and your tests faster. If you
+//! end up having to worry about it, it's a bug: open an issue!
+//!
 //! ## Prior art
 //!
 //! [`mockito`] and [`httpmock`] provide HTTP mocking for Rust.

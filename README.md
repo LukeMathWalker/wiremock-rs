@@ -47,9 +47,10 @@ It provides mocking of HTTP responses using request matching and response templa
 4. [Responses](#spying)
 5. [Test isolation](#test-isolation)
 6. [Runtime compatibility](#runtime-compatibility)
-7. [Prior art](#prior-art)
-8. [Future evolution](#future-evolution)
-9. [License](#license)
+7. [Efficiency](#efficiency)
+8. [Prior art](#prior-art)
+9. [Future evolution](#future-evolution)
+10. [License](#license)
 
 ## How to install
 
@@ -143,6 +144,15 @@ HTTP server running in the background is shut down to free up the port it was us
 `wiremock` can be used (and it is tested to work) with both [`async_std`] and [`tokio`] as
 futures runtimes.
 If you encounter any compatibility bug, please open an issue on our [GitHub repository].
+
+## Efficiency
+
+`wiremock` maintains a pool of mock servers in the background to minimise the number of
+connections and the time spent starting up a new [`MockServer`].  
+Pooling reduces the likelihood of you having to tune your OS configurations (e.g. ulimit).
+
+The pool is designed to be invisible: it makes your life easier and your tests faster. If you
+end up having to worry about it, it's a bug: open an issue!
 
 ## Prior art
 
