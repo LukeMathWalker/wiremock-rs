@@ -125,20 +125,6 @@ impl ResponseTemplate {
     /// Set the response body with bytes.
     ///
     /// It sets "Content-Type" to "application/octet-stream".
-    #[deprecated(since = "0.1.1", note = "Please use set_body_bytes instead.")]
-    pub fn set_body<B>(mut self, body: B) -> Self
-    where
-        B: TryInto<Vec<u8>>,
-        <B as TryInto<Vec<u8>>>::Error: std::fmt::Debug,
-    {
-        let body = body.try_into().expect("Failed to convert into body.");
-        self.body = Some(body);
-        self
-    }
-
-    /// Set the response body with bytes.
-    ///
-    /// It sets "Content-Type" to "application/octet-stream".
     ///
     /// To set a body with bytes but a different "Content-Type"
     /// [`set_body_raw`](#method.set_body_raw) can be used.
