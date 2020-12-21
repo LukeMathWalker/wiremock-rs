@@ -1,13 +1,13 @@
 use crate::mock::Mock;
-use crate::mock_set::MockSet;
-use crate::server::run_server;
+use crate::mock_server::bare_server::BareMockServer;
+use crate::mock_server::pool::get_pooled_mock_server;
+use deadpool::managed::Object;
 use log::debug;
-use std::net::{SocketAddr, TcpListener, TcpStream};
-use std::sync::Arc;
-use std::sync::RwLock;
-use tokio::task::LocalSet;
+use std::convert::Infallible;
+use std::net::SocketAddr;
 
-/// An HTTP web-server running in the background to behave as one of your dependencies using `Mock`s for testing purposes.
+/// An HTTP web-server running in the background to behave as one of your dependencies using `Mock`s
+/// for testing purposes.
 ///
 /// Each instance of `MockServer` is fully isolated: `start` takes care of finding a random port
 /// available on your local machine which is assigned to the new `MockServer`.
@@ -21,12 +21,7 @@ use tokio::task::LocalSet;
 /// no cross-test interference.
 ///
 /// You can register as many `Mock`s as your scenario requires on a `MockServer`.
-pub struct MockServer {
-    mock_set: Arc<RwLock<MockSet>>,
-    server_address: SocketAddr,
-    // Used to trigger server shutdown on Drop
-    _shutdown_trigger: tokio::sync::oneshot::Sender<()>,
-}
+pub struct MockServer(Object<BareMockServer, Infallible>);
 
 impl MockServer {
     /// Start a new instance of a `MockServer`.
@@ -73,39 +68,7 @@ impl MockServer {
     /// }
     /// ```
     pub async fn start() -> Self {
-        let (shutdown_trigger, shutdown_receiver) = tokio::sync::oneshot::channel();
-        let mock_set = Arc::new(RwLock::new(MockSet::new()));
-        let listener = TcpListener::bind("127.0.0.1:0").expect("Failed to find a free port!");
-        let server_address = listener
-            .local_addr()
-            .expect("Failed to get server address.");
-
-        let server_mock_set = mock_set.clone();
-        std::thread::spawn(move || {
-            let server_future = run_server(listener, server_mock_set, shutdown_receiver);
-
-            let mut runtime = tokio::runtime::Builder::new()
-                .enable_all()
-                .basic_scheduler()
-                .build()
-                .expect("Cannot build local tokio runtime");
-
-            LocalSet::new().block_on(&mut runtime, server_future)
-        });
-        for _ in 0..40 {
-            if TcpStream::connect_timeout(&server_address, std::time::Duration::from_millis(25))
-                .is_ok()
-            {
-                break;
-            }
-            futures_timer::Delay::new(std::time::Duration::from_millis(25)).await;
-        }
-
-        Self {
-            mock_set,
-            server_address,
-            _shutdown_trigger: shutdown_trigger,
-        }
+        Self(get_pooled_mock_server().await)
     }
 
     /// Register a `Mock` on an instance of `MockServer`.
@@ -150,10 +113,7 @@ impl MockServer {
     /// }
     /// ```
     pub async fn register(&self, mock: Mock) {
-        self.mock_set
-            .write()
-            .expect("Poisoned lock!")
-            .register(mock);
+        self.0.register(mock).await
     }
 
     /// Drop all mounted `Mock`s from an instance of `MockServer`.
@@ -190,13 +150,13 @@ impl MockServer {
     /// }
     /// ```
     pub async fn reset(&self) {
-        self.mock_set.write().expect("Poisoned lock!").reset();
+        self.0.reset().await;
     }
 
     /// Verify that all mounted `Mock`s on this instance of `MockServer` have satisfied
     /// their expectations on their number of invocations.
     fn verify(&self) -> bool {
-        self.mock_set.read().expect("Poisoned lock!").verify()
+        self.0.verify()
     }
 
     /// Return the base uri of this running instance of `MockServer`, e.g. `http://127.0.0.1:4372`.
@@ -222,7 +182,7 @@ impl MockServer {
     /// }
     /// ```
     pub fn uri(&self) -> String {
-        format!("http://{}", self.server_address)
+        self.0.uri()
     }
 
     /// Return the socket address of this running instance of `MockServer`, e.g. `127.0.0.1:4372`.
@@ -244,7 +204,7 @@ impl MockServer {
     /// }
     /// ```
     pub fn address(&self) -> &SocketAddr {
-        &self.server_address
+        self.0.address()
     }
 }
 

@@ -6,6 +6,7 @@ use std::sync::{Arc, RwLock};
 
 type DynError = Box<dyn std::error::Error + Send + Sync>;
 
+/// The actual HTTP server responding to incoming requests according to the specified mocks.
 pub(crate) async fn run_server(
     listener: TcpListener,
     mock_set: Arc<RwLock<MockSet>>,

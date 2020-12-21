@@ -138,7 +138,6 @@ mod mock_set;
 mod request;
 mod respond;
 mod response_template;
-mod server;
 
 pub use mock::{Match, Mock, MockBuilder, Times};
 pub use mock_server::MockServer;
