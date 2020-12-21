@@ -1,12 +1,13 @@
-use crate::bare_mock_server::BareMockServer;
 use crate::mock::Mock;
-use crate::mock_server_pool::get_pooled_mock_server;
+use crate::mock_server::bare_server::BareMockServer;
+use crate::mock_server::pool::get_pooled_mock_server;
 use deadpool::managed::Object;
 use log::debug;
 use std::convert::Infallible;
 use std::net::SocketAddr;
 
-/// An HTTP web-server running in the background to behave as one of your dependencies using `Mock`s for testing purposes.
+/// An HTTP web-server running in the background to behave as one of your dependencies using `Mock`s
+/// for testing purposes.
 ///
 /// Each instance of `MockServer` is fully isolated: `start` takes care of finding a random port
 /// available on your local machine which is assigned to the new `MockServer`.

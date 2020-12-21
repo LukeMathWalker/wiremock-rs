@@ -1,6 +1,6 @@
 use crate::mock::Mock;
+use crate::mock_server::hyper::run_server;
 use crate::mock_set::MockSet;
-use crate::server::run_server;
 use std::net::{SocketAddr, TcpListener, TcpStream};
 use std::sync::Arc;
 use std::sync::RwLock;
@@ -10,7 +10,8 @@ use tokio::task::LocalSet;
 /// for testing purposes.
 ///
 /// `BareMockServer` is the actual mock server behind the publicly-exposed `MockServer`, which
-/// is instead a thin facade over a `BareMockServer` retrieved from a pool.
+/// is instead a thin facade over a `BareMockServer` retrieved from a pool - see `get_pooled_server`
+/// for more details.
 pub(crate) struct BareMockServer {
     mock_set: Arc<RwLock<MockSet>>,
     server_address: SocketAddr,
