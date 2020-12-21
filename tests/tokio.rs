@@ -15,9 +15,7 @@ async fn hello_reqwest() {
         .mount(&mock_server)
         .await;
 
-    println!("sending reqwest request");
     let resp = Client::new().get(&mock_server.uri()).send().await.unwrap();
-    println!("reqwest request done");
 
     assert_eq!(resp.status(), 200);
 }
@@ -32,9 +30,7 @@ async fn hello_surf() {
         .mount(&mock_server)
         .await;
 
-    println!("sending surf request");
     let status = surf::get(&mock_server.uri()).await.unwrap().status();
-    println!("surf request done");
 
     assert_eq!(status, 200);
 }
@@ -49,9 +45,7 @@ async fn hello_reqwest_actix() {
         .mount(&mock_server)
         .await;
 
-    println!("sending reqwest request");
     let resp = Client::new().get(&mock_server.uri()).send().await.unwrap();
-    println!("reqwest request done");
 
     assert_eq!(resp.status(), 200);
 }
