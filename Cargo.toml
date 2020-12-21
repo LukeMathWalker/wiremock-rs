@@ -21,7 +21,7 @@ path = "src/lib.rs"
 
 [dependencies]
 log = "0.4"
-http-types = { version = "2.4", default-features = false, features = ["hyperium_http"] }
+http-types = { version = "2.9", default-features = false, features = ["hyperium_http"] }
 serde_json = "1"
 serde = "1"
 regex = "1"
@@ -32,7 +32,8 @@ tokio = { version = "0.2", features = ["rt-core"] }
 
 [dev-dependencies]
 async-std = { version = "1", features = ["attributes"] }
-surf = "1.0.3"
+surf = "2"
 reqwest = "0.10.4"
 tokio = { version = "0.2.18", features = ["macros"] }
 actix-rt = "1.1.1"
+isahc = "0.9.14"

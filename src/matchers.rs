@@ -54,7 +54,7 @@ where
 ///         .status();
 ///     
 ///     // Assert
-///     assert_eq!(status.as_u16(), 200);
+///     assert_eq!(status, 200);
 /// }
 /// ```
 pub struct MethodExactMatcher(Method);
@@ -112,7 +112,7 @@ impl Match for MethodExactMatcher {
 ///         .status();
 ///     
 ///     // Assert
-///     assert_eq!(status.as_u16(), 200);
+///     assert_eq!(status, 200);
 /// }
 /// ```
 ///
@@ -141,7 +141,7 @@ impl Match for MethodExactMatcher {
 ///         .status();
 ///     
 ///     // Assert
-///     assert_eq!(status.as_u16(), 200);
+///     assert_eq!(status, 200);
 /// }
 /// ```
 pub struct PathExactMatcher(String);
@@ -198,7 +198,7 @@ impl Match for PathExactMatcher {
 ///         .status();
 ///
 ///     // Assert
-///     assert_eq!(status.as_u16(), 200);
+///     assert_eq!(status, 200);
 /// }
 /// ```
 ///
@@ -224,7 +224,7 @@ impl Match for PathExactMatcher {
 ///         .status();
 ///
 ///     // Assert
-///     assert_eq!(status.as_u16(), 200);
+///     assert_eq!(status, 200);
 /// }
 /// ```
 pub struct PathRegexMatcher(Regex);
@@ -271,13 +271,13 @@ impl Match for PathRegexMatcher {
 ///     
 ///     // Act
 ///     let status = surf::get(&mock_server.uri())
-///         .set_header("custom", "header")
+///         .header("custom", "header")
 ///         .await
 ///         .unwrap()
 ///         .status();
 ///     
 ///     // Assert
-///     assert_eq!(status.as_u16(), 200);
+///     assert_eq!(status, 200);
 /// }
 /// ```
 pub struct HeaderExactMatcher(HeaderName, HeaderValue);
@@ -347,13 +347,13 @@ impl Match for HeaderExactMatcher {
 ///
 ///     // Act
 ///     let status = surf::get(&mock_server.uri())
-///         .set_header("custom", "header")
+///         .header("custom", "header")
 ///         .await
 ///         .unwrap()
 ///         .status();
 ///
 ///     // Assert
-///     assert_eq!(status.as_u16(), 200);
+///     assert_eq!(status, 200);
 /// }
 /// ```
 pub struct HeaderExistsMatcher(HeaderName);
@@ -404,13 +404,13 @@ impl Match for HeaderExistsMatcher {
 ///
 ///     // Act
 ///     let status = surf::post(&mock_server.uri())
-///         .body_string("hello world!".into())
+///         .body("hello world!")
 ///         .await
 ///         .unwrap()
 ///         .status();
 ///
 ///     // Assert
-///     assert_eq!(status.as_u16(), 200);
+///     assert_eq!(status, 200);
 /// }
 /// ```
 ///
@@ -435,14 +435,13 @@ impl Match for HeaderExistsMatcher {
 ///
 ///     // Act
 ///     let status = surf::post(&mock_server.uri())
-///         .body_json(&expected_body)
-///         .unwrap()
+///         .body(expected_body)
 ///         .await
 ///         .unwrap()
 ///         .status();
 ///
 ///     // Assert
-///     assert_eq!(status.as_u16(), 200);
+///     assert_eq!(status, 200);
 /// }
 /// ```
 pub struct BodyExactMatcher(Vec<u8>);
@@ -517,13 +516,13 @@ impl Match for BodyExactMatcher {
 ///
 ///     // Act
 ///     let status = surf::post(&mock_server.uri())
-///         .body_string("this is a hello world example!".into())
+///         .body("this is a hello world example!")
 ///         .await
 ///         .unwrap()
 ///         .status();
 ///
 ///     // Assert
-///     assert_eq!(status.as_u16(), 200);
+///     assert_eq!(status, 200);
 /// }
 /// ```
 pub struct BodyContainsMatcher(Vec<u8>);
@@ -593,7 +592,7 @@ impl Match for BodyContainsMatcher {
 ///         .status();
 ///
 ///     // Assert
-///     assert_eq!(status.as_u16(), 200);
+///     assert_eq!(status, 200);
 /// }
 /// ```
 pub struct QueryParamExactMatcher(String, String);

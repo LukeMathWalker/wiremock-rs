@@ -44,11 +44,12 @@ It provides mocking of HTTP responses using request matching and response templa
 1. [Getting started](#getting-started)
 2. [Matchers](#matchers)
 3. [Spying](#spying)
-4. [Test isolation](#test-isolation)
-5. [Runtime compatibility](#runtime-compatibility)
-6. [Prior art](#prior-art)
-7. [Future evolution](#future-evolution)
-8. [License](#license)
+4. [Responses](#spying)
+5. [Test isolation](#test-isolation)
+6. [Runtime compatibility](#runtime-compatibility)
+7. [Prior art](#prior-art)
+8. [Future evolution](#future-evolution)
+9. [License](#license)
 
 ## How to install
 
@@ -117,6 +118,15 @@ Expectations are automatically verified during the shutdown of each [`MockServer
 at the end of your test. A failed verification will trigger a panic.
 By default, no expectations are set on your [`Mock`]s.
 
+## Responses
+
+`wiremock` lets you specify pre-determined responses using [`ResponseTemplate`] and
+[`respond_with`].
+
+You also given the option to have [`Mock`]s that return different responses based on the matched
+[`Request`] using the [`Respond`] trait.  
+Check [`Respond`]'s documentation for more details and examples.
+
 ## Test isolation
 
 Each instance of [`MockServer`] is fully isolated: [`start`] takes care of finding a random port
@@ -166,9 +176,13 @@ Unless you explicitly state otherwise, any contribution intentionally submitted 
 
 [`MockServer`]: https://docs.rs/wiremock/0.3.0/wiremock/struct.MockServer.html
 [`Mock`]: https://docs.rs/wiremock/0.3.0/wiremock/struct.Mock.html
+[`ResponseTemplate`]: https://docs.rs/wiremock/0.3.0/wiremock/struct.ResponseTemplate
+[`Request`]: https://docs.rs/wiremock/0.3.0/wiremock/struct.Request
 [`Match`]: https://docs.rs/wiremock/0.3.0/wiremock/trait.Match.html
+[`Respond`]: https://docs.rs/wiremock/0.3.0/wiremock/trait.Respond.html
 [`start`]: https://docs.rs/wiremock/0.3.0/wiremock/struct.MockServer.html#method.start
 [`expect`]: https://docs.rs/wiremock/0.3.0/wiremock/struct.Mock.html#method.expect
+[`respond_with`]: https://docs.rs/wiremock/0.3.0/wiremock/struct.MockBuilder.html#method.respond_with
 [`matchers`]: https://docs.rs/wiremock/0.3.0/wiremock/matchers/index.html
 [GitHub repository]: https://github.com/LukeMathWalker/wiremock-rs
 [`mockito`]: https://docs.rs/mockito/

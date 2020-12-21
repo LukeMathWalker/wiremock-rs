@@ -42,14 +42,14 @@
 //!         .await
 //!         .unwrap()
 //!         .status();
-//!     assert_eq!(status.as_u16(), 200);
+//!     assert_eq!(status, 200);
 //!
 //!     // If the request doesn't match any `Mock` mounted on our `MockServer` a 404 is returned.
 //!     let status = surf::get(format!("{}/missing", &mock_server.uri()))
 //!         .await
 //!         .unwrap()
 //!         .status();
-//!     assert_eq!(status.as_u16(), 404);
+//!     assert_eq!(status, 404);
 //! }
 //! ```
 //!
@@ -71,6 +71,15 @@
 //! Expectations are automatically verified during the shutdown of each [`MockServer`] instance,
 //! at the end of your test. A failed verification will trigger a panic.  
 //! By default, no expectations are set on your [`Mock`]s.
+//!
+//! ## Responses
+//!
+//! `wiremock` lets you specify pre-determined responses using [`ResponseTemplate`] and
+//! [`respond_with`].
+//!
+//! You also given the option to have [`Mock`]s that return different responses based on the matched
+//! [`Request`] using the [`Respond`] trait.  
+//! Check [`Respond`]'s documentation for more details and examples.
 //!
 //! ## Test isolation
 //!
@@ -115,6 +124,7 @@
 //!
 //! [`start`]: MockServer::start
 //! [`expect`]: Mock::expect
+//! [`respond_with`]: MockBuilder::respond_with
 //! [GitHub repository]: https://github.com/LukeMathWalker/wiremock-rs
 //! [`mockito`]: https://docs.rs/mockito/
 //! [`httpmock`]: https://docs.rs/httpmock/
@@ -126,10 +136,12 @@ mod mock;
 mod mock_server;
 mod mock_set;
 mod request;
+mod respond;
 mod response_template;
 mod server;
 
 pub use mock::{Match, Mock, MockBuilder, Times};
 pub use mock_server::MockServer;
 pub use request::Request;
+pub use respond::Respond;
 pub use response_template::ResponseTemplate;

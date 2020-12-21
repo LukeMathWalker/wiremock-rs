@@ -36,7 +36,7 @@ async fn hello_surf() {
     let status = surf::get(&mock_server.uri()).await.unwrap().status();
     println!("surf request done");
 
-    assert_eq!(status.as_u16(), 200);
+    assert_eq!(status, 200);
 }
 
 #[actix_rt::test]

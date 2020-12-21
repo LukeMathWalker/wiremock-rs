@@ -1,9 +1,8 @@
 use crate::active_mock::ActiveMock;
-use crate::{Mock, Request};
+use crate::{Mock, Request, ResponseTemplate};
 use futures_timer::Delay;
 use http_types::{Response, StatusCode};
 use log::debug;
-use std::time::Duration;
 
 pub(crate) struct MockSet {
     mocks: Vec<ActiveMock>,
@@ -17,20 +16,18 @@ impl MockSet {
 
     pub(crate) async fn handle_request(&mut self, request: Request) -> Response {
         debug!("Handling request.");
-        let mut response: Option<Response> = None;
-        let mut delay: Option<Duration> = None;
+        let mut response_template: Option<ResponseTemplate> = None;
         for mock in &mut self.mocks {
             if mock.matches(&request) {
-                response = Some(mock.response());
-                delay = mock.delay().to_owned();
+                response_template = Some(mock.response_template(&request));
                 break;
             }
         }
-        if let Some(response) = response {
-            if let Some(delay) = delay {
-                Delay::new(delay).await;
+        if let Some(response_template) = response_template {
+            if let Some(delay) = response_template.delay() {
+                Delay::new(delay.to_owned()).await;
             }
-            response
+            response_template.generate_response()
         } else {
             debug!("Got unexpected request:\n{}", request);
             Response::new(StatusCode::NotFound)

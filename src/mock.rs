@@ -1,16 +1,14 @@
-use crate::response_template::ResponseTemplate;
-use crate::{MockServer, Request};
-use http_types::Response;
+use crate::respond::Respond;
+use crate::{MockServer, Request, ResponseTemplate};
 use std::fmt::{Debug, Formatter};
 use std::ops::{
     Range, RangeBounds, RangeFrom, RangeFull, RangeInclusive, RangeTo, RangeToInclusive,
 };
-use std::time::Duration;
 
 /// Anything that implements `Match` can be used to constrain when a [`Mock`] is activated.
 ///
-/// `Match` is the only trait in the whole `wiremock` crate and can be used to extend
-/// the set of matchers provided out-of-the-box to cater to your specific testing needs:
+/// `Match` can be used to extend the set of matchers provided out-of-the-box by `wiremock` to
+/// cater to your specific testing needs:
 /// ```rust
 /// use wiremock::{Match, MockServer, Mock, Request, ResponseTemplate};
 /// use wiremock::matchers::HeaderExactMatcher;
@@ -41,19 +39,19 @@ use std::time::Duration;
 ///     
 ///     // Even length
 ///     let status = surf::get(&mock_server.uri())
-///         .set_header("custom", "even")
+///         .header("custom", "even")
 ///         .await
 ///         .unwrap()
 ///         .status();
-///     assert_eq!(status.as_u16(), 404);
+///     assert_eq!(status, 404);
 ///
 ///     // Odd length
 ///     let status = surf::get(&mock_server.uri())
-///         .set_header("custom", "odd")
+///         .header("custom", "odd")
 ///         .await
 ///         .unwrap()
 ///         .status();
-///     assert_eq!(status.as_u16(), 200);
+///     assert_eq!(status, 200);
 /// }
 /// ```
 ///
@@ -87,19 +85,19 @@ use std::time::Duration;
 ///     
 ///     // Even length
 ///     let status = surf::get(&mock_server.uri())
-///         .set_header("custom", "even")
+///         .header("custom", "even")
 ///         .await
 ///         .unwrap()
 ///         .status();
-///     assert_eq!(status.as_u16(), 404);
+///     assert_eq!(status, 404);
 ///
 ///     // Odd length
 ///     let status = surf::get(&mock_server.uri())
-///         .set_header("custom", "odd")
+///         .header("custom", "odd")
 ///         .await
 ///         .unwrap()
 ///         .status();
-///     assert_eq!(status.as_u16(), 200);
+///     assert_eq!(status, 200);
 /// }
 /// ```
 pub trait Match: Send + Sync {
@@ -162,7 +160,7 @@ impl Debug for Matcher {
 ///         .await
 ///         .unwrap()
 ///         .status();
-///     assert_eq!(status.as_u16(), 200);
+///     assert_eq!(status, 200);
 ///
 ///     // This would have matched `unregistered_mock`, but we haven't registered it!
 ///     // Hence it returns a 404, the default response when no mocks matched on the mock server.
@@ -170,7 +168,7 @@ impl Debug for Matcher {
 ///         .await
 ///         .unwrap()
 ///         .status();
-///     assert_eq!(status.as_u16(), 404);
+///     assert_eq!(status, 404);
 /// }
 /// ```
 ///
@@ -199,7 +197,7 @@ impl Debug for Matcher {
 ///         .await
 ///         .unwrap()
 ///         .status();
-///     assert_eq!(status.as_u16(), 200);
+///     assert_eq!(status, 200);
 /// }
 /// ```
 ///
@@ -207,10 +205,9 @@ impl Debug for Matcher {
 ///
 /// [`register`]: MockServer::register
 /// [`mount`]: Mock::mount
-#[derive(Debug)]
 pub struct Mock {
     pub(crate) matchers: Vec<Matcher>,
-    pub(crate) response: ResponseTemplate,
+    pub(crate) response: Box<dyn Respond>,
     // Maximum number of times (inclusive) we should return a response from this Mock on
     // matching requests.
     // If `None`, there is no cap and we will respond to all incoming matching requests.
@@ -271,14 +268,14 @@ impl Mock {
     ///         .await
     ///         .unwrap()
     ///         .status();
-    ///     assert_eq!(status.as_u16(), 200);
+    ///     assert_eq!(status, 200);
     ///
     ///     // The second request does NOT match given our `up_to_n_times(1)` setting.
     ///     let status = surf::get(&mock_server.uri())
     ///         .await
     ///         .unwrap()
     ///         .status();
-    ///     assert_eq!(status.as_u16(), 404);
+    ///     assert_eq!(status, 404);
     /// }
     /// ```
     ///
@@ -335,7 +332,7 @@ impl Mock {
     ///         .await
     ///         .unwrap()
     ///         .status();
-    ///     assert_eq!(status.as_u16(), 200);
+    ///     assert_eq!(status, 200);
     ///
     ///     // Assert
     ///     // We made at least one matching request, the expectation is satisfied.
@@ -360,16 +357,10 @@ impl Mock {
         server.register(self).await;
     }
 
-    /// Build an instance of `http_types::Response` from the [`ResponseTemplate`] associated
-    /// with a `Mock`.
-    pub fn response(&self) -> Response {
-        self.response.generate_response()
-    }
-
-    /// Build an instance of `http_types::Response` from the [`ResponseTemplate`] associated
-    /// with a `Mock`.
-    pub(crate) fn delay(&self) -> &Option<Duration> {
-        self.response.delay()
+    /// Given a [`Request`](crate::Request) build an instance a [`ResponseTemplate`] using
+    /// the responder associated with the `Mock`.
+    pub(crate) fn response_template(&self, request: &Request) -> ResponseTemplate {
+        self.response.respond(request)
     }
 }
 
@@ -392,10 +383,10 @@ impl MockBuilder {
     ///
     /// [`register`]: MockServer::register
     /// [`mount`]: Mock::mount
-    pub fn respond_with(self, template: ResponseTemplate) -> Mock {
+    pub fn respond_with<R: Respond + 'static>(self, responder: R) -> Mock {
         Mock {
             matchers: self.matchers,
-            response: template,
+            response: Box::new(responder),
             max_n_matches: None,
             expectation: Times(TimesEnum::Unbounded(RangeFull)),
         }

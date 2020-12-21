@@ -20,7 +20,7 @@ async fn returns_404_if_nothing_matches() {
     let status = surf::get(&mock_server.uri()).await.unwrap().status();
 
     // Assert
-    assert_eq!(status.as_u16(), 404);
+    assert_eq!(status, 404);
 }
 
 #[async_std::test]
@@ -70,7 +70,7 @@ async fn simple_route_mock() {
         .unwrap();
 
     // Assert
-    assert_eq!(response.status().as_u16(), 200);
+    assert_eq!(response.status(), 200);
     assert_eq!(response.body_string().await.unwrap(), "world");
 }
 
@@ -104,8 +104,8 @@ async fn two_route_mocks() {
         .unwrap();
 
     // Assert
-    assert_eq!(first_response.status().as_u16(), 200);
-    assert_eq!(second_response.status().as_u16(), 200);
+    assert_eq!(first_response.status(), 200);
+    assert_eq!(second_response.status(), 200);
 
     assert_eq!(first_response.body_string().await.unwrap(), "aaa");
     assert_eq!(second_response.body_string().await.unwrap(), "bbb");
