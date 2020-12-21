@@ -3,11 +3,45 @@ use crate::{Request, ResponseTemplate};
 /// Anything that implements `Responder` can be used to reply to an incoming request when a
 /// [`Mock`] is activated.
 ///
-/// The simplest `Responder` is `ResponseTemplate`: no matter the request, it will
+/// ## Fixed responses
+///
+/// The simplest `Responder` is [`ResponseTemplate`]: no matter the request, it will
 /// always return itself.
 ///
-/// You can use `Responder`, though, to implement more sophisticated logic.
-/// For example, to propagate a request header back in the response:
+/// ```rust
+/// use wiremock::{MockServer, Mock, ResponseTemplate};
+/// use wiremock::matchers::method;
+///
+/// #[async_std::main]
+/// async fn main() {
+///     // Arrange
+///     let mock_server = MockServer::start().await;
+///     let correlation_id = "1311db4f-fe65-4cb2-b514-1bb47f781aa7";
+///     let template = ResponseTemplate::new(200).insert_header(
+///         "X-Correlation-ID",
+///         correlation_id
+///     );
+///     Mock::given(method("GET"))
+///         .respond_with(template)
+///         .mount(&mock_server)
+///         .await;
+///
+///     // Act
+///     let response = surf::get(&mock_server.uri())
+///         .await
+///         .unwrap();
+///
+///     // Assert
+///     assert_eq!(response.status(), 200);
+///     assert_eq!(response.header("X-Correlation-ID").unwrap().as_str(), correlation_id);
+/// }
+/// ```
+///
+/// ## Dynamic responses
+///
+/// You can use `Responder`, though, to implement responses that depend on the data in
+/// the request matched by a [`Mock`].  
+/// You could, for example, propagate back a request header in the response:
 ///
 /// ```rust
 /// use http_types::headers::HeaderName;
@@ -54,9 +88,15 @@ use crate::{Request, ResponseTemplate};
 /// }
 /// ```
 ///
-/// [`Mock`]: struct.Mock.html
-/// [`Request`]: struct.Request.html
+/// [`Mock`]: crate::Mock
+/// [`ResponseTemplate`]: crate::ResponseTemplate
 pub trait Responder: Send + Sync {
+    /// Given a reference to a [`Request`] return a [`ResponseTemplate`] that will be used
+    /// by the [`MockServer`] as blueprint for the response returned to the client.
+    ///
+    /// [`Request`]: crate::Request
+    /// [`MockServer`]: crate::MockServer
+    /// [`ResponseTemplate`]: crate::ResponseTemplate
     fn respond(&self, request: &Request) -> ResponseTemplate;
 }
 
