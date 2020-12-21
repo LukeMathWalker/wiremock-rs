@@ -58,7 +58,7 @@ Add `wiremock` to your development dependencies:
 ```toml
 [dev-dependencies]
 # ...
-wiremock = "0.3"
+wiremock = "0.4"
 ```
 If you are using [`cargo-edit`](https://github.com/killercup/cargo-edit), run
 ```bash
