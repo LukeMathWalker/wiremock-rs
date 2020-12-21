@@ -133,7 +133,7 @@ Check [`Respond`]'s documentation for more details and examples.
 Each instance of [`MockServer`] is fully isolated: [`start`] takes care of finding a random port
 available on your local machine which is assigned to the new [`MockServer`].
 
-To ensure full isolation and no cross-test interference, [`MockServer`]s shouldn't be 
+To ensure full isolation and no cross-test interference, [`MockServer`]s shouldn't be
 shared between tests. Instead, [`MockServer`]s should be created in the test that they are used.
 
 When a [`MockServer`] instance goes out of scope (e.g. the test finishes), the corresponding
