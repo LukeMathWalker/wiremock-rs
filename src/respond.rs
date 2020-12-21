@@ -100,6 +100,8 @@ pub trait Respond: Send + Sync {
     fn respond(&self, request: &Request) -> ResponseTemplate;
 }
 
+/// A `ResponseTemplate` is the simplest `Respond` implementation: it returns a clone of itself
+/// no matter what the incoming request contains!
 impl Respond for ResponseTemplate {
     fn respond(&self, _request: &Request) -> ResponseTemplate {
         self.clone()
