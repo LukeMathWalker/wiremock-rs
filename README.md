@@ -160,7 +160,7 @@ Check the table below to see how `wiremock` compares to them across the followin
 |           | Test execution strategy | How many APIs can I mock? | Out-of-the-box request matchers | Extensible request maching | API   | Spying | Standalone mode |
 |-----------|-------------------------|---------------------------|---------------------------------|----------------------------|-------|----------|-----------------|
 | mockito   | ❌ Sequential           | ❌ 1                        | ✔                           | ❌                        | Sync  | ✔     | ❌              |
-| httpmock  | ✔ Parallel              | ✔ Unbounded                | ✔                           | ❌                        | Async/Sync  | ✔     | ✔              |
+| httpmock  | ✔ Parallel              | ✔ Unbounded                | ✔                           | ✔                        | Async/Sync  | ✔     | ✔              |
 | wiremock  | ✔ Parallel ️             | ✔ Unbounded                | ✔                           | ✔                       | Async | ✔      | ❌              |
 
 
@@ -174,16 +174,16 @@ Licensed under either of Apache License, Version 2.0 or MIT license at your opti
 Unless you explicitly state otherwise, any contribution intentionally submitted for inclusion in this crate by you, as defined in the Apache-2.0 license, shall be dual licensed as above, without any additional terms or conditions.
 
 
-[`MockServer`]: https://docs.rs/wiremock/0.3.0/wiremock/struct.MockServer.html
-[`Mock`]: https://docs.rs/wiremock/0.3.0/wiremock/struct.Mock.html
-[`ResponseTemplate`]: https://docs.rs/wiremock/0.3.0/wiremock/struct.ResponseTemplate
-[`Request`]: https://docs.rs/wiremock/0.3.0/wiremock/struct.Request
-[`Match`]: https://docs.rs/wiremock/0.3.0/wiremock/trait.Match.html
-[`Respond`]: https://docs.rs/wiremock/0.3.0/wiremock/trait.Respond.html
-[`start`]: https://docs.rs/wiremock/0.3.0/wiremock/struct.MockServer.html#method.start
-[`expect`]: https://docs.rs/wiremock/0.3.0/wiremock/struct.Mock.html#method.expect
-[`respond_with`]: https://docs.rs/wiremock/0.3.0/wiremock/struct.MockBuilder.html#method.respond_with
-[`matchers`]: https://docs.rs/wiremock/0.3.0/wiremock/matchers/index.html
+[`MockServer`]: https://docs.rs/wiremock/0.4.0/wiremock/struct.MockServer.html
+[`Mock`]: https://docs.rs/wiremock/0.4.0/wiremock/struct.Mock.html
+[`ResponseTemplate`]: https://docs.rs/wiremock/0.4.0/wiremock/struct.ResponseTemplate
+[`Request`]: https://docs.rs/wiremock/0.4.0/wiremock/struct.Request
+[`Match`]: https://docs.rs/wiremock/0.4.0/wiremock/trait.Match.html
+[`Respond`]: https://docs.rs/wiremock/0.4.0/wiremock/trait.Respond.html
+[`start`]: https://docs.rs/wiremock/0.4.0/wiremock/struct.MockServer.html#method.start
+[`expect`]: https://docs.rs/wiremock/0.4.0/wiremock/struct.Mock.html#method.expect
+[`respond_with`]: https://docs.rs/wiremock/0.4.0/wiremock/struct.MockBuilder.html#method.respond_with
+[`matchers`]: https://docs.rs/wiremock/0.4.0/wiremock/matchers/index.html
 [GitHub repository]: https://github.com/LukeMathWalker/wiremock-rs
 [`mockito`]: https://docs.rs/mockito/
 [`httpmock`]: https://docs.rs/httpmock/

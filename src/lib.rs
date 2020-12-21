@@ -114,7 +114,7 @@
 //! |           | Test execution strategy | How many APIs can I mock? | Out-of-the-box request matchers | Extensible request maching | API   | Spying | Standalone mode |
 //! |-----------|-------------------------|---------------------------|---------------------------------|----------------------------|-------|----------|-----------------|
 //! | mockito   | ❌ Sequential           | ❌ 1                        | ✔                           | ❌                        | Sync  | ✔     | ❌              |
-//! | httpmock  | ✔ Parallel              | ✔ Unbounded                | ✔                           | ❌                        | Async/Sync  | ✔     | ✔              |
+//! | httpmock  | ✔ Parallel              | ✔ Unbounded                | ✔                           | ✔                        | Async/Sync  | ✔     | ✔              |
 //! | wiremock  | ✔ Parallel ️             | ✔ Unbounded                | ✔                           | ✔                       | Async | ✔      | ❌              |
 //!
 //!
