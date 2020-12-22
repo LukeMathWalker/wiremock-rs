@@ -86,8 +86,8 @@
 //! Each instance of [`MockServer`] is fully isolated: [`start`] takes care of finding a random port
 //! available on your local machine which is assigned to the new [`MockServer`].
 //!
-//! You should use one instance of [`MockServer`] for each test, to ensure full isolation and
-//! no cross-test interference.
+//! To ensure full isolation and no cross-test interference, [`MockServer`]s shouldn't be
+//! shared between tests. Instead, [`MockServer`]s should be created in the test where they are used.
 //!
 //! When a [`MockServer`] instance goes out of scope (e.g. the test finishes), the corresponding
 //! HTTP server running in the background is shut down to free up the port it was using.

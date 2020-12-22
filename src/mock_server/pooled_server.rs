@@ -17,8 +17,8 @@ use std::net::SocketAddr;
 /// You should use one instance of `MockServer` for each REST API that your application interacts
 /// with and needs mocking for testing purposes.
 ///
-/// You should use one instance of `MockServer` for each test, to ensure full isolation and
-/// no cross-test interference.
+/// To ensure full isolation and no cross-test interference, `MockServer`s shouldn't be
+/// shared between tests. Instead, `MockServer`s should be created in the test where they are used.
 ///
 /// You can register as many `Mock`s as your scenario requires on a `MockServer`.
 pub struct MockServer(Object<BareMockServer, Infallible>);
