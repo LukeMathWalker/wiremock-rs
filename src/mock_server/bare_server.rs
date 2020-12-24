@@ -26,9 +26,15 @@ impl BareMockServer {
     /// port available on your local machine, binding it to a `TcpListener` and then
     /// assign it to the new `BareMockServer`.
     pub(crate) async fn start() -> Self {
+        let listener = TcpListener::bind("127.0.0.1:0").expect("Failed to find a free port!");
+        Self::start_on(listener).await
+    }
+
+    /// Start a new instance of a `BareMockServer` listening on the specified
+    /// [`TcpListener`](std::net::TcpListener).
+    pub(crate) async fn start_on(listener: TcpListener) -> Self {
         let (shutdown_trigger, shutdown_receiver) = tokio::sync::oneshot::channel();
         let mock_set = Arc::new(RwLock::new(MockSet::new()));
-        let listener = TcpListener::bind("127.0.0.1:0").expect("Failed to find a free port!");
         let server_address = listener
             .local_addr()
             .expect("Failed to get server address.");
