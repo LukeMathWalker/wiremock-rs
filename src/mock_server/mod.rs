@@ -4,12 +4,15 @@
 //! server running in the background, defined in the `hyper` sub-module.
 //!
 //! `bare_server::BareMockServer` is not exposed directly: crate users only get to interact with
-//! `pooled_server::MockServer`, which is nothing more than a wrapper around a `BareMockServer`
-//! retrieved from an object pool - see the `pool` submodule for more details on our pooling
-//! strategy.
+//! `exposed_server::MockServer`.
+//! `exposed_server::MockServer` is either a wrapper around a `BareMockServer` retrieved from an
+//! object pool or a wrapper around an exclusive `BareMockServer`.
+//! We use the pool when the user does not care about the port the mock server listens to, while
+//! we provision a dedicated one if they specify their own `TcpListener` with `start_on`.
+//! Check the `pool` submodule for more details on our pooling strategy.
 mod bare_server;
+mod exposed_server;
 mod hyper;
 mod pool;
-mod pooled_server;
 
-pub use pooled_server::MockServer;
+pub use exposed_server::MockServer;
