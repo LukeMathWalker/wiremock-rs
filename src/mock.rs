@@ -343,7 +343,7 @@ impl Mock {
     ///         // We expect the mock to be called at least once.
     ///         // If that does not happen, the `MockServer` will panic on shutdown,
     ///         // causing the whole test to fail.
-    ///         .expect(1.., "GET with 200 response should be called at least once")
+    ///         .expect(1.., "We received no GET request")
     ///         .mount(&mock_server)
     ///         .await;
     ///     
