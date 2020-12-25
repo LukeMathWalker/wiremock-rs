@@ -27,6 +27,8 @@ impl Verification {
 }
 
 pub(crate) enum VerificationOutcome {
+    /// All verifications were successful
     Correct,
+    /// Failed verifications
     Incorrect(Vec<Verification>),
 }
