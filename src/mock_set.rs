@@ -1,4 +1,7 @@
-use crate::active_mock::ActiveMock;
+use crate::{
+    active_mock::ActiveMock,
+    verification::{VerificationOutcome, VerificationReport},
+};
 use crate::{Mock, Request, ResponseTemplate};
 use futures_timer::Delay;
 use http_types::{Response, StatusCode};
@@ -42,7 +45,17 @@ impl MockSet {
         self.mocks = vec![];
     }
 
-    pub(crate) fn verify(&self) -> bool {
-        self.mocks.iter().all(|m| m.verify())
+    pub(crate) fn verify(&self) -> VerificationOutcome {
+        let failed_verifications: Vec<VerificationReport> = self
+            .mocks
+            .iter()
+            .map(ActiveMock::verify)
+            .filter(|verification_report| !verification_report.is_satisfied())
+            .collect();
+        if failed_verifications.is_empty() {
+            VerificationOutcome::Success
+        } else {
+            VerificationOutcome::Failure(failed_verifications)
+        }
     }
 }

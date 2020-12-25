@@ -1,4 +1,4 @@
-use crate::{Match, Mock, Request, ResponseTemplate};
+use crate::{verification::VerificationReport, Match, Mock, Request, ResponseTemplate};
 
 /// Given the behaviour specification as a `Mock`, keep track of runtime information concerning
 /// this mock - e.g. how many times it matched on a incoming request.
@@ -43,10 +43,11 @@ impl ActiveMock {
     /// Verify if this mock has verified the expectations set at creation time
     /// over the number of invocations.
     /// Returns true if expectations have been satisfied, false otherwise.
-    pub(crate) fn verify(&self) -> bool {
-        self.specification
-            .expectation
-            .contains(self.n_matched_requests)
+    pub(crate) fn verify(&self) -> VerificationReport {
+        VerificationReport {
+            expectation: self.specification.expectation.clone(),
+            n_matched_requests: self.n_matched_requests,
+        }
     }
 
     pub(crate) fn response_template(&self, request: &Request) -> ResponseTemplate {

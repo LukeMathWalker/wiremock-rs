@@ -214,7 +214,27 @@ pub struct Mock {
     // If `Some(max_n_matches)`, when `max_n_matches` matching incoming requests have been processed,
     // `self.matches` should start returning `false`, regardless of the incoming request.
     pub(crate) max_n_matches: Option<u64>,
-    pub(crate) expectation: Times,
+    pub(crate) expectation: Expectation,
+}
+
+#[derive(Clone)]
+pub(crate) struct Expectation {
+    /// The expectation is satisfied if the number of incoming requests falls within `range`.
+    pub(crate) range: Times,
+    /// Message displayed to the library user when the number of incoming requests
+    /// does not fall within `range`.
+    pub(crate) error_message: String,
+}
+
+impl Default for Expectation {
+    fn default() -> Self {
+        Self {
+            range: Times(TimesEnum::Unbounded(RangeFull)),
+            // No need to specify an error message because the number of requests will
+            // always fall within `range` given that the range is unbounded!
+            error_message: "".to_string(),
+        }
+    }
 }
 
 /// A fluent builder to construct a [`Mock`] instance given matchers and a [`ResponseTemplate`].
@@ -289,7 +309,7 @@ impl Mock {
     /// Set an expectation on the number of times this `Mock` should match in the current
     /// test case.
     /// Expectations are verified when the [`MockServer`] is shutting down: if the expectation
-    /// is not satisfied, the [`MockServer`] will panic.
+    /// is not satisfied, the [`MockServer`] will panic and the `error_message` is shown.
     ///
     /// By default, no expectation is set for `Mock`s.
     ///
@@ -323,7 +343,7 @@ impl Mock {
     ///         // We expect the mock to be called at least once.
     ///         // If that does not happen, the `MockServer` will panic on shutdown,
     ///         // causing the whole test to fail.
-    ///         .expect(1..)
+    ///         .expect(1.., "We received no GET request")
     ///         .mount(&mock_server)
     ///         .await;
     ///     
@@ -339,9 +359,13 @@ impl Mock {
     ///     // The `MockServer` will shutdown peacefully, without panicking.
     /// }
     /// ```
-    pub fn expect<T: Into<Times>>(mut self, r: T) -> Mock {
+    pub fn expect<T: Into<Times>>(mut self, r: T, error_message: &str) -> Mock {
         let range = r.into();
-        self.expectation = range;
+        self.expectation = Expectation {
+            range,
+            error_message: error_message.to_string(),
+        };
+
         self
     }
 
@@ -388,7 +412,7 @@ impl MockBuilder {
             matchers: self.matchers,
             response: Box::new(responder),
             max_n_matches: None,
-            expectation: Times(TimesEnum::Unbounded(RangeFull)),
+            expectation: Expectation::default(),
         }
     }
 }
@@ -419,7 +443,7 @@ impl MockBuilder {
 /// ```
 ///
 /// [`expect`]: Mock::expect
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct Times(TimesEnum);
 
 impl Times {
@@ -462,7 +486,7 @@ impl Times {
 // of the Exact variant.
 // If you can do better, please submit a PR.
 // We keep them enum private to the crate to allow for future refactoring.
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub(crate) enum TimesEnum {
     Exact(u64),
     Unbounded(RangeFull),

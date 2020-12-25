@@ -1,6 +1,6 @@
-use crate::mock::Mock;
 use crate::mock_server::hyper::run_server;
 use crate::mock_set::MockSet;
+use crate::{mock::Mock, verification::VerificationOutcome};
 use std::net::{SocketAddr, TcpListener, TcpStream};
 use std::sync::Arc;
 use std::sync::RwLock;
@@ -90,8 +90,9 @@ impl BareMockServer {
 
     /// Verify that all mounted `Mock`s on this instance of `BareMockServer` have satisfied
     /// their expectations on their number of invocations.
-    pub(crate) fn verify(&self) -> bool {
-        self.mock_set.read().expect("Poisoned lock!").verify()
+    pub(crate) fn verify(&self) -> VerificationOutcome {
+        let mock_set = self.mock_set.read().expect("Poisoned lock!");
+        mock_set.verify()
     }
 
     /// Return the base uri of this running instance of `BareMockServer`, e.g. `http://127.0.0.1:4372`.
