@@ -1,4 +1,4 @@
-use crate::{active_mock::ActiveMock, mock::Expectation};
+use crate::mock::Expectation;
 
 /// A report returned by an `ActiveMock` detailing what the user expectations were and
 /// how many calls were actually received since the mock was mounted on the server.
@@ -10,21 +10,16 @@ pub(crate) struct VerificationReport {
     pub(crate) n_matched_requests: u64,
 }
 
-impl From<&ActiveMock> for VerificationReport {
-    fn from(mock: &ActiveMock) -> Self {
-        Self {
-            expectation: mock.specification().expectation.clone(),
-            n_matched_requests: mock.n_matched_requests(),
-        }
-    }
-}
-
 impl VerificationReport {
     pub(crate) fn error_message(&self) -> String {
         format!(
             "{}. Expected range of matching incoming requests: {:?}, actual: {}",
             self.expectation.error_message, self.expectation.range, self.n_matched_requests
         )
+    }
+
+    pub(crate) fn is_satisfied(&self) -> bool {
+        self.expectation.range.contains(self.n_matched_requests)
     }
 }
 

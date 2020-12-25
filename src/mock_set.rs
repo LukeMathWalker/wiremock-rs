@@ -49,8 +49,8 @@ impl MockSet {
         let failed_verifications: Vec<VerificationReport> = self
             .mocks
             .iter()
-            .filter(|m| !m.verify())
-            .map(VerificationReport::from)
+            .map(ActiveMock::verify)
+            .filter(|verification_report| !verification_report.is_satisfied())
             .collect();
         if failed_verifications.is_empty() {
             VerificationOutcome::Success
