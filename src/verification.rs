@@ -1,5 +1,7 @@
 use crate::{active_mock::ActiveMock, mock::Expectation};
 
+/// A report returned by an `ActiveMock` detailing what the user expectations were and
+/// how many calls were actually received since the mock was mounted on the server.
 #[derive(Clone)]
 pub(crate) struct VerificationReport {
     /// What users specified
