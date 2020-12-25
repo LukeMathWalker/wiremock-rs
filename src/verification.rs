@@ -4,7 +4,7 @@ use crate::{active_mock::ActiveMock, mock::Expectation};
 pub(crate) struct Verification {
     /// What users specified
     pub(crate) expectation: Expectation,
-    /// Actual number of received requests that matched the specifications
+    /// Actual number of received requests that matched the specification
     pub(crate) n_matched_requests: u64,
 }
 
