@@ -1,14 +1,14 @@
 use crate::{active_mock::ActiveMock, mock::Expectation};
 
 #[derive(Clone)]
-pub(crate) struct Verification {
+pub(crate) struct VerificationReport {
     /// What users specified
     pub(crate) expectation: Expectation,
     /// Actual number of received requests that matched the specification
     pub(crate) n_matched_requests: u64,
 }
 
-impl From<&ActiveMock> for Verification {
+impl From<&ActiveMock> for VerificationReport {
     fn from(mock: &ActiveMock) -> Self {
         Self {
             expectation: mock.specification().expectation.clone(),
@@ -17,7 +17,7 @@ impl From<&ActiveMock> for Verification {
     }
 }
 
-impl Verification {
+impl VerificationReport {
     pub(crate) fn error_message(&self) -> String {
         format!(
             "{}. Expected range of matching incoming requests: {:?}, actual: {}",
@@ -30,5 +30,5 @@ pub(crate) enum VerificationOutcome {
     /// All verifications were successful
     Correct,
     /// Failed verifications
-    Incorrect(Vec<Verification>),
+    Incorrect(Vec<VerificationReport>),
 }

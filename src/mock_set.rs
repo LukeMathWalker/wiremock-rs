@@ -1,6 +1,6 @@
 use crate::{
     active_mock::ActiveMock,
-    verification::{Verification, VerificationOutcome},
+    verification::{VerificationOutcome, VerificationReport},
 };
 use crate::{Mock, Request, ResponseTemplate};
 use futures_timer::Delay;
@@ -46,11 +46,11 @@ impl MockSet {
     }
 
     pub(crate) fn verify(&self) -> VerificationOutcome {
-        let failed_verifications: Vec<Verification> = self
+        let failed_verifications: Vec<VerificationReport> = self
             .mocks
             .iter()
             .filter(|m| !m.verify())
-            .map(Verification::from)
+            .map(VerificationReport::from)
             .collect();
         if failed_verifications.is_empty() {
             VerificationOutcome::Correct
