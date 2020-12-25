@@ -221,7 +221,8 @@ pub struct Mock {
 pub(crate) struct Expectation {
     /// The expectation is satisfied if the number of incoming requests falls within `range`.
     pub(crate) range: Times,
-    /// message displayed when `range` expectation is not met.
+    /// Message displayed to the library user when the number of incoming requests
+    /// does not fall within `range`.
     pub(crate) error_message: String,
 }
 
