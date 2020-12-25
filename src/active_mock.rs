@@ -46,10 +46,18 @@ impl ActiveMock {
     pub(crate) fn verify(&self) -> bool {
         self.specification
             .expectation
+            .range
             .contains(self.n_matched_requests)
     }
 
     pub(crate) fn response_template(&self, request: &Request) -> ResponseTemplate {
         self.specification.response_template(request)
+    }
+
+    pub(crate) fn specification(&self) -> &Mock {
+        &self.specification
+    }
+    pub(crate) fn n_matched_requests(&self) -> u64 {
+        self.n_matched_requests
     }
 }
