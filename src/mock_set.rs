@@ -53,9 +53,9 @@ impl MockSet {
             .map(VerificationReport::from)
             .collect();
         if failed_verifications.is_empty() {
-            VerificationOutcome::Correct
+            VerificationOutcome::Success
         } else {
-            VerificationOutcome::Incorrect(failed_verifications)
+            VerificationOutcome::Failure(failed_verifications)
         }
     }
 }

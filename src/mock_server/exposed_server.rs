@@ -259,7 +259,7 @@ impl Drop for MockServer {
     // Clean up when the `MockServer` instance goes out of scope.
     fn drop(&mut self) {
         debug!("Verify mock expectations.");
-        if let VerificationOutcome::Incorrect(failed_verifications) = self.verify() {
+        if let VerificationOutcome::Failure(failed_verifications) = self.verify() {
             let verifications_errors: String = failed_verifications
                 .iter()
                 .map(|m| format!("- {}\n", m.error_message()))

@@ -29,8 +29,9 @@ impl VerificationReport {
 }
 
 pub(crate) enum VerificationOutcome {
-    /// All verifications were successful
-    Correct,
-    /// Failed verifications
-    Incorrect(Vec<VerificationReport>),
+    /// The expectations set on all active mocks were satisfied.
+    Success,
+    /// The expectations set for one or more of the active mocks were not satisfied.
+    /// All failed expectations are returned.
+    Failure(Vec<VerificationReport>),
 }
