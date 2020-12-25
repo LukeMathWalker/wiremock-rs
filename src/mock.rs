@@ -230,6 +230,8 @@ impl Default for Expectation {
     fn default() -> Self {
         Self {
             range: Times(TimesEnum::Unbounded(RangeFull)),
+            // No need to specify an error message because the number of requests will
+            // always fall within `range` given that the range is unbounded!
             error_message: "".to_string(),
         }
     }
