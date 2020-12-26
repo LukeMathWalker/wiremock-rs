@@ -208,11 +208,11 @@ impl Debug for Matcher {
 pub struct Mock {
     pub(crate) matchers: Vec<Matcher>,
     pub(crate) response: Box<dyn Respond>,
-    // Maximum number of times (inclusive) we should return a response from this Mock on
-    // matching requests.
-    // If `None`, there is no cap and we will respond to all incoming matching requests.
-    // If `Some(max_n_matches)`, when `max_n_matches` matching incoming requests have been processed,
-    // `self.matches` should start returning `false`, regardless of the incoming request.
+    /// Maximum number of times (inclusive) we should return a response from this Mock on
+    /// matching requests.
+    /// If `None`, there is no cap and we will respond to all incoming matching requests.
+    /// If `Some(max_n_matches)`, when `max_n_matches` matching incoming requests have been processed,
+    /// [`crate::active_mock::ActiveMock::matches`] should start returning `false`, regardless of the incoming request.
     pub(crate) max_n_matches: Option<u64>,
     pub(crate) expectation: Expectation,
 }
