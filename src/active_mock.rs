@@ -42,7 +42,6 @@ impl ActiveMock {
 
     /// Verify if this mock has verified the expectations set at creation time
     /// over the number of invocations.
-    /// Returns true if expectations have been satisfied, false otherwise.
     pub(crate) fn verify(&self) -> VerificationReport {
         VerificationReport {
             expectation: self.specification.expectation.clone(),
