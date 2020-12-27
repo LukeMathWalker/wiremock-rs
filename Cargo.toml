@@ -8,7 +8,6 @@ license = "MIT/Apache-2.0"
 
 repository = "https://github.com/LukeMathWalker/wiremock-rs"
 documentation = "https://docs.rs/wiremock/"
-readme = "README.md"
 
 description = "HTTP mocking to test Rust applications."
 
