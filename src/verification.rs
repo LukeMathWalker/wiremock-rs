@@ -22,12 +22,12 @@ impl VerificationReport {
     pub(crate) fn error_message(&self) -> String {
         if let Some(ref mock_name) = self.mock_name {
             format!(
-                "{}. Expected range of matching incoming requests: {:?}, actual: {}",
+                "{}.\n\tExpected range of matching incoming requests: {}\n\tNumber of matched incoming requests: {}",
                 mock_name, self.expectation_range, self.n_matched_requests
             )
         } else {
             format!(
-                "Mock #{}. Expected range of matching incoming requests: {:?}, actual: {}",
+                "Mock #{}.\n\tExpected range of matching incoming requests: {}\n\tNumber of matched incoming requests: {}",
                 self.position_in_set, self.expectation_range, self.n_matched_requests
             )
         }

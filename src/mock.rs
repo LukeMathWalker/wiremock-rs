@@ -502,6 +502,20 @@ impl Times {
     }
 }
 
+impl std::fmt::Display for Times {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match &self.0 {
+            TimesEnum::Exact(e) => write!(f, "== {}", e),
+            TimesEnum::Unbounded(_) => write!(f, "0 <= x"),
+            TimesEnum::Range(r) => write!(f, "{} <= x < {}", r.start, r.end),
+            TimesEnum::RangeFrom(r) => write!(f, "{} <= x", r.start),
+            TimesEnum::RangeTo(r) => write!(f, "0 <= x < {}", r.end),
+            TimesEnum::RangeToInclusive(r) => write!(f, "0 <= x <= {}", r.end),
+            TimesEnum::RangeInclusive(r) => write!(f, "{} <= x <= {}", r.start(), r.end()),
+        }
+    }
+}
+
 // Implementation notes: this has gone through a couple of iterations before landing to
 // what you see now.
 //
