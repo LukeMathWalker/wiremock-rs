@@ -44,8 +44,9 @@ impl ActiveMock {
     /// over the number of invocations.
     pub(crate) fn verify(&self) -> VerificationReport {
         VerificationReport {
-            expectation: self.specification.expectation.clone(),
+            mock_name: self.specification.name.clone(),
             n_matched_requests: self.n_matched_requests,
+            expectation_range: self.specification.expectation.range.clone(),
         }
     }
 

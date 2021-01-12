@@ -371,7 +371,7 @@ impl Mock {
     ///
     /// ### Example:
     ///
-    /// ```rust
+    /// ```should_panic
     /// use wiremock::{MockServer, Mock, ResponseTemplate};
     /// use wiremock::matchers::method;
     ///
@@ -400,7 +400,7 @@ impl Mock {
     ///         .expect(1..)
     ///         // We assign a name to the mock - it will be shown in error messages
     ///         // if our expectation is not verified!
-    ///         .named("Root POST ")
+    ///         .named("Root POST")
     ///         .mount(&mock_server)
     ///         .await;
     ///     
