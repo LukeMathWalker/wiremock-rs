@@ -1,25 +1,40 @@
-use crate::mock::Expectation;
+use crate::mock::Times;
 
 /// A report returned by an `ActiveMock` detailing what the user expectations were and
 /// how many calls were actually received since the mock was mounted on the server.
 #[derive(Clone)]
 pub(crate) struct VerificationReport {
+    /// The mock name specified by the user.
+    pub(crate) mock_name: Option<String>,
     /// What users specified
-    pub(crate) expectation: Expectation,
+    pub(crate) expectation_range: Times,
     /// Actual number of received requests that matched the specification
     pub(crate) n_matched_requests: u64,
+    /// The position occupied by the mock that generated the report within its parent
+    /// [`ActiveMockSet`](crate::mock_set::ActiveMockSet) collection of `ActiveMock`s.
+    ///
+    /// E.g. `0` if it is the first mock that we try to match against an incoming request, `1`
+    /// if it is the second, etc.
+    pub(crate) position_in_set: usize,
 }
 
 impl VerificationReport {
     pub(crate) fn error_message(&self) -> String {
-        format!(
-            "{}. Expected range of matching incoming requests: {:?}, actual: {}",
-            self.expectation.error_message, self.expectation.range, self.n_matched_requests
-        )
+        if let Some(ref mock_name) = self.mock_name {
+            format!(
+                "{}.\n\tExpected range of matching incoming requests: {}\n\tNumber of matched incoming requests: {}",
+                mock_name, self.expectation_range, self.n_matched_requests
+            )
+        } else {
+            format!(
+                "Mock #{}.\n\tExpected range of matching incoming requests: {}\n\tNumber of matched incoming requests: {}",
+                self.position_in_set, self.expectation_range, self.n_matched_requests
+            )
+        }
     }
 
     pub(crate) fn is_satisfied(&self) -> bool {
-        self.expectation.range.contains(self.n_matched_requests)
+        self.expectation_range.contains(self.n_matched_requests)
     }
 }
 

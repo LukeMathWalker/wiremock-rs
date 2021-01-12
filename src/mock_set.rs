@@ -7,14 +7,19 @@ use futures_timer::Delay;
 use http_types::{Response, StatusCode};
 use log::debug;
 
-pub(crate) struct MockSet {
+/// The collection of mocks used by a `MockServer` instance to match against
+/// incoming requests.
+///
+/// New mocks are added to `ActiveMockSet` every time [`MockServer::register`](crate::MockServer::register) or
+/// [`Mock::mount`](crate::Mock::mount) are called.
+pub(crate) struct ActiveMockSet {
     mocks: Vec<ActiveMock>,
 }
 
-impl MockSet {
+impl ActiveMockSet {
     /// Create a new instance of MockSet.
-    pub(crate) fn new() -> MockSet {
-        MockSet { mocks: vec![] }
+    pub(crate) fn new() -> ActiveMockSet {
+        ActiveMockSet { mocks: vec![] }
     }
 
     pub(crate) async fn handle_request(&mut self, request: Request) -> Response {
@@ -38,7 +43,9 @@ impl MockSet {
     }
 
     pub(crate) fn register(&mut self, mock: Mock) {
-        self.mocks.push(ActiveMock::new(mock));
+        let n_registered_mocks = self.mocks.len();
+        let active_mock = ActiveMock::new(mock, n_registered_mocks);
+        self.mocks.push(active_mock);
     }
 
     pub(crate) fn reset(&mut self) {

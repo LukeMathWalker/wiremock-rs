@@ -31,10 +31,8 @@ async fn panics_if_the_expectation_is_not_satisfied() {
     let response = ResponseTemplate::new(200);
     Mock::given(method("GET"))
         .respond_with(response)
-        .expect(
-            1..,
-            "panics_if_the_expectation_is_not_satisfied expectation failed",
-        )
+        .expect(1..)
+        .named("panics_if_the_expectation_is_not_satisfied expectation failed")
         .mount(&mock_server)
         .await;
 
@@ -49,10 +47,8 @@ async fn panic_during_expectation_does_not_crash() {
     let response = ResponseTemplate::new(200);
     Mock::given(method("GET"))
         .respond_with(response)
-        .expect(
-            1..,
-            "panic_during_expectation_does_not_crash expectation failed",
-        )
+        .expect(1..)
+        .named("panic_during_expectation_does_not_crash expectation failed")
         .mount(&mock_server)
         .await;
 
@@ -90,6 +86,7 @@ async fn two_route_mocks() {
     Mock::given(method("GET"))
         .and(PathExactMatcher::new("first"))
         .respond_with(response)
+        .named("/first")
         .mount(&mock_server)
         .await;
 
@@ -98,6 +95,7 @@ async fn two_route_mocks() {
     Mock::given(method("GET"))
         .and(PathExactMatcher::new("second"))
         .respond_with(response)
+        .named("/second")
         .mount(&mock_server)
         .await;
 

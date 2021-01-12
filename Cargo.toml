@@ -1,6 +1,6 @@
 [package]
 name = "wiremock"
-version = "0.4.4-alpha.0"
+version = "0.4.4"
 authors = ["Luca Palmieri <rust@lpalmieri.com>"]
 edition = "2018"
 
@@ -26,8 +26,8 @@ serde = "1"
 regex = "1"
 futures-timer = "3.0.2"
 futures = "0.3.5"
-hyper = "0.13.8"
-tokio = { version = "0.2", features = ["rt-core", "rt-util"] }
+hyper = { version = "0.14", features = ["server"] }
+tokio = { version = "1", features = ["rt", "io-util", "time"] }
 deadpool = "0.6.0"
 async-trait = "0.1.42"
 once_cell = "1.5.2"
@@ -35,7 +35,7 @@ once_cell = "1.5.2"
 [dev-dependencies]
 async-std = { version = "1", features = ["attributes"] }
 surf = "2"
-reqwest = "0.10.4"
-tokio = { version = "0.2.18", features = ["macros"] }
-actix-rt = "1.1.1"
+reqwest = "0.11"
+tokio = { version = "1", features = ["macros"] }
+actix-rt = "2.0.0-beta.2"
 isahc = "0.9.14"
