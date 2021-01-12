@@ -46,7 +46,7 @@ impl ActiveMock {
         VerificationReport {
             mock_name: self.specification.name.clone(),
             n_matched_requests: self.n_matched_requests,
-            expectation_range: self.specification.expectation.range.clone(),
+            expectation_range: self.specification.expectation_range.clone(),
         }
     }
 

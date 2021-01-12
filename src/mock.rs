@@ -214,22 +214,11 @@ pub struct Mock {
     /// If `Some(max_n_matches)`, when `max_n_matches` matching incoming requests have been processed,
     /// [`crate::active_mock::ActiveMock::matches`] should start returning `false`, regardless of the incoming request.
     pub(crate) max_n_matches: Option<u64>,
+    /// The friendly mock name specified by the user.  
+    /// Used in diagnostics and error messages if the mock expectations are not satisfied.
     pub(crate) name: Option<String>,
-    pub(crate) expectation: Expectation,
-}
-
-#[derive(Clone)]
-pub(crate) struct Expectation {
-    /// The expectation is satisfied if the number of incoming requests falls within `range`.
-    pub(crate) range: Times,
-}
-
-impl Default for Expectation {
-    fn default() -> Self {
-        Self {
-            range: Times(TimesEnum::Unbounded(RangeFull)),
-        }
-    }
+    /// The expectation is satisfied if the number of incoming requests falls within `expectation_range`.
+    pub(crate) expectation_range: Times,
 }
 
 /// A fluent builder to construct a [`Mock`] instance given matchers and a [`ResponseTemplate`].
@@ -359,7 +348,7 @@ impl Mock {
     /// ```
     pub fn expect<T: Into<Times>>(mut self, r: T) -> Self {
         let range = r.into();
-        self.expectation = Expectation { range };
+        self.expectation_range = range;
 
         self
     }
@@ -465,7 +454,7 @@ impl MockBuilder {
             response: Box::new(responder),
             max_n_matches: None,
             name: None,
-            expectation: Expectation::default(),
+            expectation_range: Times(TimesEnum::Unbounded(RangeFull)),
         }
     }
 }
