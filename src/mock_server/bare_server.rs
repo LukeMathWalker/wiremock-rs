@@ -43,9 +43,8 @@ impl BareMockServer {
         std::thread::spawn(move || {
             let server_future = run_server(listener, server_mock_set, shutdown_receiver);
 
-            let mut runtime = tokio::runtime::Builder::new()
+            let mut runtime = tokio::runtime::Builder::new_current_thread()
                 .enable_all()
-                .basic_scheduler()
                 .build()
                 .expect("Cannot build local tokio runtime");
 

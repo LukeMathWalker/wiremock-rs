@@ -1,7 +1,6 @@
 use futures::AsyncReadExt;
 use http_types::headers::{HeaderName, HeaderValue, HeaderValues};
 use http_types::{Method, Url};
-use hyper::body::Buf;
 use std::{collections::HashMap, fmt};
 
 /// An incoming request to an instance of [`MockServer`].
@@ -87,10 +86,9 @@ impl Request {
             }
         }
 
-        let body = hyper::body::aggregate(body)
+        let body = hyper::body::to_bytes(body)
             .await
             .expect("Failed to read request body.")
-            .bytes()
             .to_vec();
 
         Self {
