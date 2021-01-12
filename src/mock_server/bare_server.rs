@@ -1,5 +1,5 @@
 use crate::mock_server::hyper::run_server;
-use crate::mock_set::MockSet;
+use crate::mock_set::ActiveMockSet;
 use crate::{mock::Mock, verification::VerificationOutcome};
 use std::net::{SocketAddr, TcpListener, TcpStream};
 use std::sync::Arc;
@@ -13,7 +13,7 @@ use tokio::task::LocalSet;
 /// is instead a thin facade over a `BareMockServer` retrieved from a pool - see `get_pooled_server`
 /// for more details.
 pub(crate) struct BareMockServer {
-    mock_set: Arc<RwLock<MockSet>>,
+    mock_set: Arc<RwLock<ActiveMockSet>>,
     server_address: SocketAddr,
     // When `_shutdown_trigger` gets dropped the listening server terminates gracefully.
     _shutdown_trigger: tokio::sync::oneshot::Sender<()>,
@@ -34,7 +34,7 @@ impl BareMockServer {
     /// [`TcpListener`](std::net::TcpListener).
     pub(crate) async fn start_on(listener: TcpListener) -> Self {
         let (shutdown_trigger, shutdown_receiver) = tokio::sync::oneshot::channel();
-        let mock_set = Arc::new(RwLock::new(MockSet::new()));
+        let mock_set = Arc::new(RwLock::new(ActiveMockSet::new()));
         let server_address = listener
             .local_addr()
             .expect("Failed to get server address.");

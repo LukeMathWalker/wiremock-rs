@@ -1,4 +1,4 @@
-use crate::mock_set::MockSet;
+use crate::mock_set::ActiveMockSet;
 use hyper::http;
 use hyper::service::{make_service_fn, service_fn};
 use std::net::TcpListener;
@@ -9,7 +9,7 @@ type DynError = Box<dyn std::error::Error + Send + Sync>;
 /// The actual HTTP server responding to incoming requests according to the specified mocks.
 pub(crate) async fn run_server(
     listener: TcpListener,
-    mock_set: Arc<RwLock<MockSet>>,
+    mock_set: Arc<RwLock<ActiveMockSet>>,
     shutdown_signal: tokio::sync::oneshot::Receiver<()>,
 ) {
     let request_handler = make_service_fn(move |_| {
