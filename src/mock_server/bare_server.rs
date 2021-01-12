@@ -43,12 +43,12 @@ impl BareMockServer {
         std::thread::spawn(move || {
             let server_future = run_server(listener, server_mock_set, shutdown_receiver);
 
-            let mut runtime = tokio::runtime::Builder::new_current_thread()
+            let runtime = tokio::runtime::Builder::new_current_thread()
                 .enable_all()
                 .build()
                 .expect("Cannot build local tokio runtime");
 
-            LocalSet::new().block_on(&mut runtime, server_future)
+            LocalSet::new().block_on(&runtime, server_future)
         });
         for _ in 0..40 {
             if TcpStream::connect_timeout(&server_address, std::time::Duration::from_millis(25))
