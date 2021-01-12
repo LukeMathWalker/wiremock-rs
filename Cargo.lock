@@ -2316,7 +2316,7 @@ dependencies = [
 
 [[package]]
 name = "wiremock"
-version = "0.4.4-alpha.0"
+version = "0.4.4"
 dependencies = [
  "actix-rt",
  "async-std",
