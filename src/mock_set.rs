@@ -38,7 +38,9 @@ impl MockSet {
     }
 
     pub(crate) fn register(&mut self, mock: Mock) {
-        self.mocks.push(ActiveMock::new(mock));
+        let n_registered_mocks = self.mocks.len();
+        let active_mock = ActiveMock::new(mock, n_registered_mocks);
+        self.mocks.push(active_mock);
     }
 
     pub(crate) fn reset(&mut self) {

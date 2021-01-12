@@ -10,6 +10,12 @@ pub(crate) struct VerificationReport {
     pub(crate) expectation_range: Times,
     /// Actual number of received requests that matched the specification
     pub(crate) n_matched_requests: u64,
+    /// The position occupied by the mock that generated the report within its parent
+    /// [`MockSet`](crate::mock_set::MockSet) collection of `ActiveMock`s.
+    ///
+    /// E.g. `0` if it is the first mock that we try to match against an incoming request, `1`
+    /// if it is the second, etc.
+    pub(crate) position_in_set: usize,
 }
 
 impl VerificationReport {
@@ -21,8 +27,8 @@ impl VerificationReport {
             )
         } else {
             format!(
-                "Expected range of matching incoming requests: {:?}, actual: {}",
-                self.expectation_range, self.n_matched_requests
+                "Mock #{}. Expected range of matching incoming requests: {:?}, actual: {}",
+                self.position_in_set, self.expectation_range, self.n_matched_requests
             )
         }
     }

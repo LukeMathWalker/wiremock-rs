@@ -5,13 +5,20 @@ use crate::{verification::VerificationReport, Match, Mock, Request, ResponseTemp
 pub(crate) struct ActiveMock {
     specification: Mock,
     n_matched_requests: u64,
+    /// The position occupied by this mock within the parent [`MockSet`](crate::mock_set::MockSet)
+    /// collection of `ActiveMock`s.
+    ///
+    /// E.g. `0` if this is the first mock that we try to match against an incoming request, `1`
+    /// if it is the second, etc.
+    position_in_set: usize,
 }
 
 impl ActiveMock {
-    pub(crate) fn new(specification: Mock) -> Self {
+    pub(crate) fn new(specification: Mock, position_in_set: usize) -> Self {
         Self {
             specification,
             n_matched_requests: 0,
+            position_in_set,
         }
     }
 
@@ -47,6 +54,7 @@ impl ActiveMock {
             mock_name: self.specification.name.clone(),
             n_matched_requests: self.n_matched_requests,
             expectation_range: self.specification.expectation_range.clone(),
+            position_in_set: self.position_in_set,
         }
     }
 
