@@ -214,6 +214,7 @@ pub struct Mock {
     /// If `Some(max_n_matches)`, when `max_n_matches` matching incoming requests have been processed,
     /// [`crate::active_mock::ActiveMock::matches`] should start returning `false`, regardless of the incoming request.
     pub(crate) max_n_matches: Option<u64>,
+    pub(crate) name: Option<String>,
     pub(crate) expectation: Expectation,
 }
 
@@ -221,18 +222,12 @@ pub struct Mock {
 pub(crate) struct Expectation {
     /// The expectation is satisfied if the number of incoming requests falls within `range`.
     pub(crate) range: Times,
-    /// Message displayed to the library user when the number of incoming requests
-    /// does not fall within `range`.
-    pub(crate) error_message: String,
 }
 
 impl Default for Expectation {
     fn default() -> Self {
         Self {
             range: Times(TimesEnum::Unbounded(RangeFull)),
-            // No need to specify an error message because the number of requests will
-            // always fall within `range` given that the range is unbounded!
-            error_message: "".to_string(),
         }
     }
 }
@@ -343,7 +338,10 @@ impl Mock {
     ///         // We expect the mock to be called at least once.
     ///         // If that does not happen, the `MockServer` will panic on shutdown,
     ///         // causing the whole test to fail.
-    ///         .expect(1.., "We received no GET request")
+    ///         .expect(1..)
+    ///         // We assign a name to the mock - it will be shown in error messages
+    ///         // if our expectation is not verified!
+    ///         .named("Root GET")
     ///         .mount(&mock_server)
     ///         .await;
     ///     
@@ -359,13 +357,67 @@ impl Mock {
     ///     // The `MockServer` will shutdown peacefully, without panicking.
     /// }
     /// ```
-    pub fn expect<T: Into<Times>>(mut self, r: T, error_message: &str) -> Mock {
+    pub fn expect<T: Into<Times>>(mut self, r: T) -> Self {
         let range = r.into();
-        self.expectation = Expectation {
-            range,
-            error_message: error_message.to_string(),
-        };
+        self.expectation = Expectation { range };
 
+        self
+    }
+
+    /// Assign a name to your mock.  
+    ///
+    /// The mock name will be used in error messages (e.g. if the mock expectation
+    /// is not satisfied) and debug logs to help you identify what failed.
+    ///
+    /// ### Example:
+    ///
+    /// ```rust
+    /// use wiremock::{MockServer, Mock, ResponseTemplate};
+    /// use wiremock::matchers::method;
+    ///
+    /// #[async_std::main]
+    /// async fn main() {
+    ///     // Arrange
+    ///     let mock_server = MockServer::start().await;
+    ///
+    ///     // We have two mocks in the same test - how do we find out
+    ///     // which one failed when the test panics?
+    ///     // Assigning a name to each mock with `named` gives us better error
+    ///     // messages and makes it much easier to debug why a test is failing!
+    ///     Mock::given(method("GET"))
+    ///         .respond_with(ResponseTemplate::new(200))
+    ///         .up_to_n_times(2)
+    ///         .expect(1..)
+    ///         // We assign a name to the mock - it will be shown in error messages
+    ///         // if our expectation is not verified!
+    ///         .named("Root GET")
+    ///         .mount(&mock_server)
+    ///         .await;
+    ///
+    ///     Mock::given(method("POST"))
+    ///         .respond_with(ResponseTemplate::new(200))
+    ///         .up_to_n_times(2)
+    ///         .expect(1..)
+    ///         // We assign a name to the mock - it will be shown in error messages
+    ///         // if our expectation is not verified!
+    ///         .named("Root POST ")
+    ///         .mount(&mock_server)
+    ///         .await;
+    ///     
+    ///     // Act
+    ///     let status = surf::get(&mock_server.uri())
+    ///         .await
+    ///         .unwrap()
+    ///         .status();
+    ///     assert_eq!(status, 200);
+    ///
+    ///     // Assert
+    ///     // We did not make a POST request, therefore the expectation on `Root POST`
+    ///     // is not satisfied and the test will panic.
+    /// }
+    /// ```
+    pub fn named<T: Into<String>>(mut self, mock_name: T) -> Self {
+        self.name = Some(mock_name.into());
         self
     }
 
@@ -412,6 +464,7 @@ impl MockBuilder {
             matchers: self.matchers,
             response: Box::new(responder),
             max_n_matches: None,
+            name: None,
             expectation: Expectation::default(),
         }
     }
