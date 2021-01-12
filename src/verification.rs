@@ -11,7 +11,7 @@ pub(crate) struct VerificationReport {
     /// Actual number of received requests that matched the specification
     pub(crate) n_matched_requests: u64,
     /// The position occupied by the mock that generated the report within its parent
-    /// [`MockSet`](crate::mock_set::MockSet) collection of `ActiveMock`s.
+    /// [`ActiveMockSet`](crate::mock_set::ActiveMockSet) collection of `ActiveMock`s.
     ///
     /// E.g. `0` if it is the first mock that we try to match against an incoming request, `1`
     /// if it is the second, etc.

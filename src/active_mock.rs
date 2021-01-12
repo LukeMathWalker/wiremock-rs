@@ -1,11 +1,11 @@
 use crate::{verification::VerificationReport, Match, Mock, Request, ResponseTemplate};
 
-/// Given the behaviour specification as a `Mock`, keep track of runtime information concerning
-/// this mock - e.g. how many times it matched on a incoming request.
+/// Given the behaviour specification as a [`Mock`](crate::Mock), keep track of runtime information
+/// concerning this mock - e.g. how many times it matched on a incoming request.
 pub(crate) struct ActiveMock {
     specification: Mock,
     n_matched_requests: u64,
-    /// The position occupied by this mock within the parent [`MockSet`](crate::mock_set::MockSet)
+    /// The position occupied by this mock within the parent [`ActiveMockSet`](crate::mock_set::ActiveMockSet)
     /// collection of `ActiveMock`s.
     ///
     /// E.g. `0` if this is the first mock that we try to match against an incoming request, `1`
