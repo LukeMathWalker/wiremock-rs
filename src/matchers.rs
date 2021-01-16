@@ -88,6 +88,52 @@ impl Match for MethodExactMatcher {
 }
 
 #[derive(Debug)]
+/// Match all incoming requests, regardless of their method, path, headers or body.  
+///
+/// You can use it to verify that a request has been fired towards the server, without making
+/// any other assertion about it.
+///
+/// ### Example:
+/// ```rust
+/// use wiremock::{MockServer, Mock, ResponseTemplate};
+/// use wiremock::matchers::any;
+///
+/// #[async_std::main]
+/// async fn main() {
+///     // Arrange
+///     let mock_server = MockServer::start().await;
+///
+///     let response = ResponseTemplate::new(200);
+///     // Respond with a `200 OK` to all requests hitting
+///     // the mock server
+///     let mock = Mock::given(any()).respond_with(response);
+///
+///     mock_server.register(mock).await;
+///     
+///     // Act
+///     let status = surf::get(&mock_server.uri())
+///         .await
+///         .unwrap()
+///         .status();
+///     
+///     // Assert
+///     assert_eq!(status, 200);
+/// }
+/// ```
+pub struct AnyMatcher;
+
+/// Shorthand for [`AnyMatcher::new`].
+pub fn any() -> AnyMatcher {
+    AnyMatcher
+}
+
+impl Match for AnyMatcher {
+    fn matches(&self, _request: &Request) -> bool {
+        true
+    }
+}
+
+#[derive(Debug)]
 /// Match **exactly** the path of a request.
 ///
 /// ### Example:
