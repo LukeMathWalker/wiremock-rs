@@ -201,9 +201,21 @@ impl MockServer {
     }
 
     /// Verify that all mounted `Mock`s on this instance of `MockServer` have satisfied
-    /// their expectations on their number of invocations.
-    fn verify(&self) -> VerificationOutcome {
-        self.0.verify()
+    /// their expectations on their number of invocations. Panics otherwise.
+    pub fn verify(&self) {
+        debug!("Verify mock expectations.");
+        if let VerificationOutcome::Failure(failed_verifications) = self.0.verify() {
+            let verifications_errors: String = failed_verifications
+                .iter()
+                .map(|m| format!("- {}\n", m.error_message()))
+                .collect();
+            let error_message = format!("Verifications failed:\n{}", verifications_errors);
+            if std::thread::panicking() {
+                debug!("{}", &error_message);
+            } else {
+                panic!("{}", &error_message);
+            }
+        }
     }
 
     /// Return the base uri of this running instance of `MockServer`, e.g. `http://127.0.0.1:4372`.
@@ -258,19 +270,7 @@ impl MockServer {
 impl Drop for MockServer {
     // Clean up when the `MockServer` instance goes out of scope.
     fn drop(&mut self) {
-        debug!("Verify mock expectations.");
-        if let VerificationOutcome::Failure(failed_verifications) = self.verify() {
-            let verifications_errors: String = failed_verifications
-                .iter()
-                .map(|m| format!("- {}\n", m.error_message()))
-                .collect();
-            let error_message = format!("Verifications failed:\n{}", verifications_errors);
-            if std::thread::panicking() {
-                debug!("{}", &error_message);
-            } else {
-                panic!("{}", &error_message);
-            }
-        }
+        self.verify();
         // The sender half of the channel, `shutdown_trigger`, gets dropped here
         // Triggering the graceful shutdown of the server itself.
     }
