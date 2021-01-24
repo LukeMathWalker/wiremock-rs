@@ -19,11 +19,23 @@ pub(crate) async fn run_server(
                 let mock_set = mock_set.clone();
                 async move {
                     let wiremock_request = crate::Request::from_hyper(request).await;
-                    let response = mock_set
+                    let (response, delay) = mock_set
                         .write()
                         .unwrap()
                         .handle_request(wiremock_request)
                         .await;
+
+                    // We do not wait for the delay within the handler otherwise we would be
+                    // holding on to the write-side of the `RwLock` on `mock_set`.
+                    // Holding on the lock while waiting prevents us from handling other requests until
+                    // we have waited the whole duration specified in the delay.
+                    // In particular, we cannot perform even perform read-only operation -
+                    // e.g. check that mock assumptions have been verified.
+                    // Using long delays in tests without handling the delay as we are doing here
+                    // caused tests to hang (see https://github.com/seanmonstar/reqwest/issues/1147)
+                    if let Some(delay) = delay {
+                        delay.await;
+                    }
 
                     Ok::<_, DynError>(http_types_response_to_hyper_response(response).await)
                 }
