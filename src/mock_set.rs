@@ -22,7 +22,7 @@ impl ActiveMockSet {
         ActiveMockSet { mocks: vec![] }
     }
 
-    pub(crate) async fn handle_request(&mut self, request: Request) -> Response {
+    pub(crate) async fn handle_request(&mut self, request: Request) -> (Response, Option<Delay>) {
         debug!("Handling request.");
         let mut response_template: Option<ResponseTemplate> = None;
         for mock in &mut self.mocks {
@@ -32,13 +32,11 @@ impl ActiveMockSet {
             }
         }
         if let Some(response_template) = response_template {
-            if let Some(delay) = response_template.delay() {
-                Delay::new(delay.to_owned()).await;
-            }
-            response_template.generate_response()
+            let delay = response_template.delay().map(|d| Delay::new(d.to_owned()));
+            (response_template.generate_response(), delay)
         } else {
             debug!("Got unexpected request:\n{}", request);
-            Response::new(StatusCode::NotFound)
+            (Response::new(StatusCode::NotFound), None)
         }
     }
 
