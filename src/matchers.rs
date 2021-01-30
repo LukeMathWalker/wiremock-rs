@@ -669,3 +669,62 @@ impl Match for QueryParamExactMatcher {
             .any(|q| q.0 == self.0.as_str() && q.1 == self.1.as_str())
     }
 }
+
+/// Match the json structure of the body of a request.
+///
+/// ### Example:
+/// ```rust
+/// use wiremock::{MockServer, Mock, ResponseTemplate};
+/// use wiremock::matchers::body_json_structure;
+/// use serde_json::json;
+/// use serde::{Deserialize, Serialize};
+///
+/// #[derive(Deserialize, Serialize)]
+/// struct Greeting {
+///     hello: String,
+/// }
+///
+/// #[async_std::main]
+/// async fn main() {
+///     // Arrange
+///     let mock_server = MockServer::start().await;
+///
+///     Mock::given(body_json_structure::<Greeting>)
+///         .respond_with(ResponseTemplate::new(200))
+///         .mount(&mock_server)
+///         .await;
+///
+///     // both json objects have the same structrue and thus succeed
+///     let success_cases = vec![
+///         json!({"hello": "world!"}),
+///         json!({"hello": "everyone!"}),
+///     ];
+///     for case in success_cases.into_iter() {
+///         let status = surf::post(&mock_server.uri())
+///             .body(case)
+///             .await
+///             .unwrap()
+///             .status();
+///
+///         // Assert
+///         assert_eq!(status, 200);
+///     }
+///
+///     // this json object has a different structure, and thus does not match
+///     let failure_case = json!({"world": "hello!"});
+///     let status = surf::post(&mock_server.uri())
+///         .body(failure_case)
+///         .await
+///         .unwrap()
+///         .status();
+///
+///     // Assert
+///     assert_eq!(status, 404  );
+/// }
+/// ```
+pub fn body_json_structure<T>(request: &Request) -> bool
+where
+    for<'de> T: serde::de::Deserialize<'de>,
+{
+    serde_json::from_slice::<T>(&request.body).is_ok()
+}
