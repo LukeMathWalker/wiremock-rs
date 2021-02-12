@@ -50,7 +50,8 @@ It provides mocking of HTTP responses using request matching and response templa
 7. [Efficiency](#efficiency)
 8. [Prior art](#prior-art)
 9. [Future evolution](#future-evolution)
-10. [License](#license)
+10. [Related projects](#related-projects)
+11. [License](#license)
 
 ## How to install
 
@@ -177,6 +178,10 @@ Check the table below to see how `wiremock` compares to them across the followin
 ## Future evolution
 
 More request matchers can be added to those provided out-of-the-box to handle common usecases.
+
+## Related projects
+
+* [`stubr`](https://github.com/beltram/stubr) for mounting [`Wiremock`](http://wiremock.org/) json stubs in a [`MockServer`]. Also works as a cli.
 
 ## License
 

@@ -131,6 +131,11 @@
 //!
 //! More request matchers can be added to those provided out-of-the-box to handle common usecases.
 //!
+//! ## Related projects
+//!
+//! * [`stubr`](https://github.com/beltram/stubr) for mounting [`Wiremock`](http://wiremock.org/) json stubs in a [`MockServer`]. Also works as a cli.
+//!
+//! [`MockServer`]: MockServer
 //! [`start`]: MockServer::start
 //! [`expect`]: Mock::expect
 //! [`respond_with`]: MockBuilder::respond_with
