@@ -270,6 +270,7 @@ impl MockServer {
     /// ```rust
     /// use wiremock::{MockServer, Mock, ResponseTemplate};
     /// use wiremock::matchers::method;
+    /// use http_types::Method;
     ///
     /// #[async_std::main]
     /// async fn main() {
@@ -286,9 +287,14 @@ impl MockServer {
     ///         .status();
     ///     assert_eq!(status, 200);
     ///
-    ///     // Reset the server
+    ///     // Assert
     ///     let received_requests = mock_server.received_requests().await;
     ///     assert_eq!(received_requests.len(), 1);
+    ///
+    ///     let received_request = &received_requests[0];
+    ///     assert_eq!(received_request.method, Method::Get);
+    ///     assert_eq!(received_request.url.path(), "/");
+    ///     assert!(received_request.body.is_empty());
     /// }
     /// ```
     pub async fn received_requests(&self) -> Vec<Request> {
