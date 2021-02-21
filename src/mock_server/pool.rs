@@ -1,4 +1,5 @@
 use crate::mock_server::bare_server::BareMockServer;
+use crate::MockServer;
 use async_trait::async_trait;
 use deadpool::managed::{Object, Pool};
 use once_cell::sync::Lazy;
@@ -48,7 +49,8 @@ struct MockServerPoolManager;
 #[async_trait]
 impl deadpool::managed::Manager<BareMockServer, Infallible> for MockServerPoolManager {
     async fn create(&self) -> Result<BareMockServer, Infallible> {
-        Ok(BareMockServer::start().await)
+        // All servers in the pool use the default configuration
+        Ok(MockServer::builder().build_bare().await)
     }
 
     async fn recycle(

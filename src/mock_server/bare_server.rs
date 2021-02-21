@@ -21,19 +21,9 @@ pub(crate) struct BareMockServer {
 }
 
 impl BareMockServer {
-    /// Start a new instance of a `BareMockServer`.
-    ///
-    /// Each instance of `BareMockServer` is fully isolated: `start` takes care of finding a random
-    /// port available on your local machine, binding it to a `TcpListener` and then
-    /// assign it to the new `BareMockServer`.
-    pub(crate) async fn start() -> Self {
-        let listener = TcpListener::bind("127.0.0.1:0").expect("Failed to find a free port!");
-        Self::start_on(listener).await
-    }
-
     /// Start a new instance of a `BareMockServer` listening on the specified
     /// [`TcpListener`](std::net::TcpListener).
-    pub(crate) async fn start_on(listener: TcpListener) -> Self {
+    pub(super) async fn start(listener: TcpListener, request_recording: RequestRecording) -> Self {
         let (shutdown_trigger, shutdown_receiver) = tokio::sync::oneshot::channel();
         let mock_set = Arc::new(RwLock::new(ActiveMockSet::new()));
         let received_requests = Arc::new(Mutex::new(Vec::new()));
@@ -120,4 +110,9 @@ impl BareMockServer {
     pub(crate) async fn received_requests(&self) -> Vec<Request> {
         self.received_requests.lock().await.clone()
     }
+}
+
+pub(super) enum RequestRecording {
+    Enabled,
+    Disabled,
 }

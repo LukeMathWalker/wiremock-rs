@@ -1,10 +1,11 @@
 use crate::mock_server::bare_server::BareMockServer;
 use crate::mock_server::pool::get_pooled_mock_server;
+use crate::mock_server::MockServerBuilder;
 use crate::{mock::Mock, verification::VerificationOutcome, Request};
 use deadpool::managed::Object;
 use log::debug;
 use std::convert::Infallible;
-use std::net::{SocketAddr, TcpListener};
+use std::net::SocketAddr;
 use std::ops::Deref;
 
 /// An HTTP web-server running in the background to behave as one of your dependencies using `Mock`s
@@ -31,7 +32,7 @@ pub struct MockServer(InnerServer);
 ///
 /// `InnerServer` implements `Deref<Target=BareMockServer>`, so we never actually have to match
 /// on `InnerServer` in `MockServer` - the compiler does all the boring heavy-lifting for us.
-enum InnerServer {
+pub(super) enum InnerServer {
     Bare(BareMockServer),
     Pooled(Object<BareMockServer, Infallible>),
 }
@@ -48,6 +49,14 @@ impl Deref for InnerServer {
 }
 
 impl MockServer {
+    pub(super) fn new(server: InnerServer) -> Self {
+        Self(server)
+    }
+
+    pub fn builder() -> MockServerBuilder {
+        MockServerBuilder::new()
+    }
+
     /// Start a new instance of a `MockServer` listening on a random port.
     ///
     /// Each instance of `MockServer` is fully isolated: `start` takes care of finding a random port
@@ -93,29 +102,6 @@ impl MockServer {
     /// ```
     pub async fn start() -> Self {
         Self(InnerServer::Pooled(get_pooled_mock_server().await))
-    }
-
-    /// Start a new instance of a `MockServer` listening on the
-    /// [`TcpListener`](std::net::TcpListener) passed as argument.
-    ///
-    /// ### Example:
-    /// ```rust
-    /// use wiremock::MockServer;
-    ///
-    /// #[async_std::main]
-    /// async fn main() {
-    ///     // Arrange
-    ///     let listener = std::net::TcpListener::bind("127.0.0.1:0").unwrap();
-    ///     let expected_server_address = listener
-    ///         .local_addr()
-    ///         .expect("Failed to get server address.");
-    ///     let mock_server = MockServer::start_on(listener).await;
-    ///
-    ///     assert_eq!(&expected_server_address, mock_server.address());
-    /// }
-    /// ```
-    pub async fn start_on(listener: TcpListener) -> Self {
-        Self(InnerServer::Bare(BareMockServer::start_on(listener).await))
     }
 
     /// Register a `Mock` on an instance of `MockServer`.
