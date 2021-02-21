@@ -205,11 +205,29 @@ impl MockServer {
     pub fn verify(&self) {
         debug!("Verify mock expectations.");
         if let VerificationOutcome::Failure(failed_verifications) = self.0.verify() {
+            let received_requests = tokio::runtime::Builder::new_current_thread()
+                .build()
+                .unwrap()
+                .block_on(async { self.0.received_requests().await.clone() });
+            let received_requests_message: String = received_requests
+                .into_iter()
+                .enumerate()
+                .map(|(index, request)| {
+                    format!(
+                        "- Request #{}\n{}",
+                        index + 1,
+                        textwrap::indent(&format!("{}", request), "\t")
+                    )
+                })
+                .collect();
             let verifications_errors: String = failed_verifications
                 .iter()
                 .map(|m| format!("- {}\n", m.error_message()))
                 .collect();
-            let error_message = format!("Verifications failed:\n{}", verifications_errors);
+            let error_message = format!(
+                "Verifications failed:\n{}\nReceived requests:\n{}",
+                verifications_errors, received_requests_message
+            );
             if std::thread::panicking() {
                 debug!("{}", &error_message);
             } else {

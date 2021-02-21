@@ -40,6 +40,24 @@ async fn panics_if_the_expectation_is_not_satisfied() {
 }
 
 #[async_std::test]
+// #[should_panic]
+async fn panics_if_the_expectation_is_not_satisfied_with_an_incoming_request() {
+    // Arrange
+    let mock_server = MockServer::start().await;
+    let response = ResponseTemplate::new(200);
+    Mock::given(method("POST"))
+        .respond_with(response)
+        .expect(1..)
+        .mount(&mock_server)
+        .await;
+
+    // Act - we sent a request that does not match (GET)
+    surf::get(&mock_server.uri()).await.unwrap();
+
+    // Assert - verified on drop
+}
+
+#[async_std::test]
 #[should_panic]
 async fn panic_during_expectation_does_not_crash() {
     // Arrange
