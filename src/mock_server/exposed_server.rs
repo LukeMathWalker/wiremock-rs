@@ -191,24 +191,29 @@ impl MockServer {
     pub async fn verify(&self) {
         debug!("Verify mock expectations.");
         if let VerificationOutcome::Failure(failed_verifications) = self.0.verify().await {
-            let received_requests = self.0.received_requests().await.clone();
-            let received_requests_message: String = if received_requests.is_empty() {
-                "The server did not receive any request.".into()
+            let received_requests_message = if let Some(received_requests) =
+                self.0.received_requests().await
+            {
+                if received_requests.is_empty() {
+                    "The server did not receive any request.".into()
+                } else {
+                    format!(
+                        "Received requests:\n{}",
+                        received_requests
+                            .into_iter()
+                            .enumerate()
+                            .map(|(index, request)| {
+                                format!(
+                                    "- Request #{}\n{}",
+                                    index + 1,
+                                    textwrap::indent(&format!("{}", request), "\t")
+                                )
+                            })
+                            .collect::<String>()
+                    )
+                }
             } else {
-                format!(
-                    "Received requests:\n{}",
-                    received_requests
-                        .into_iter()
-                        .enumerate()
-                        .map(|(index, request)| {
-                            format!(
-                                "- Request #{}\n{}",
-                                index + 1,
-                                textwrap::indent(&format!("{}", request), "\t")
-                            )
-                        })
-                        .collect::<String>()
-                )
+                "Enable request recording on the mock server to get the list of incoming requests as part of the panic message.".into()
             };
             let verifications_errors: String = failed_verifications
                 .iter()
@@ -277,6 +282,9 @@ impl MockServer {
     /// Return a vector with all the requests received by the `MockServer` since it started.  
     /// If no request has been served, it returns an empty vector.
     ///
+    /// If request recording has been disabled using [`MockServerBuilder::disable_recording`],
+    /// it returns `None`.
+    ///
     /// ### Example:
     ///
     /// ```rust
@@ -292,7 +300,7 @@ impl MockServer {
     ///     surf::get(&mock_server.uri()).await.unwrap();
     ///
     ///     // Assert
-    ///     let received_requests = mock_server.received_requests().await;
+    ///     let received_requests = mock_server.received_requests().await.unwrap();
     ///     assert_eq!(received_requests.len(), 1);
     ///
     ///     let received_request = &received_requests[0];
@@ -313,11 +321,27 @@ impl MockServer {
     ///     let mock_server = MockServer::start().await;
     ///     
     ///     // Assert
-    ///     let received_requests = mock_server.received_requests().await;
+    ///     let received_requests = mock_server.received_requests().await.unwrap();
     ///     assert_eq!(received_requests.len(), 0);
     /// }
     /// ```
-    pub async fn received_requests(&self) -> Vec<Request> {
+    ///
+    /// ### Example (Request recording disabled):
+    ///
+    /// ```rust
+    /// use wiremock::MockServer;
+    ///
+    /// #[async_std::main]
+    /// async fn main() {
+    ///     // Arrange
+    ///     let mock_server = MockServer::builder().disable_request_recording().build().await;
+    ///     
+    ///     // Assert
+    ///     let received_requests = mock_server.received_requests().await;
+    ///     assert!(received_requests.is_none());
+    /// }
+    /// ```
+    pub async fn received_requests(&self) -> Option<Vec<Request>> {
         self.0.received_requests().await
     }
 }

@@ -14,7 +14,7 @@ use tokio::task::LocalSet;
 /// for more details.
 pub(crate) struct BareMockServer {
     mock_set: Arc<RwLock<ActiveMockSet>>,
-    received_requests: Arc<Mutex<Vec<Request>>>,
+    received_requests: Option<Arc<Mutex<Vec<Request>>>>,
     server_address: SocketAddr,
     // When `_shutdown_trigger` gets dropped the listening server terminates gracefully.
     _shutdown_trigger: tokio::sync::oneshot::Sender<()>,
@@ -26,7 +26,10 @@ impl BareMockServer {
     pub(super) async fn start(listener: TcpListener, request_recording: RequestRecording) -> Self {
         let (shutdown_trigger, shutdown_receiver) = tokio::sync::oneshot::channel();
         let mock_set = Arc::new(RwLock::new(ActiveMockSet::new()));
-        let received_requests = Arc::new(Mutex::new(Vec::new()));
+        let received_requests = match request_recording {
+            RequestRecording::Enabled => Some(Arc::new(Mutex::new(Vec::new()))),
+            RequestRecording::Disabled => None,
+        };
         let server_address = listener
             .local_addr()
             .expect("Failed to get server address.");
@@ -107,8 +110,14 @@ impl BareMockServer {
 
     /// Return a vector with all the requests received by the `BareMockServer` since it started.  
     /// If no request has been served, it returns an empty vector.
-    pub(crate) async fn received_requests(&self) -> Vec<Request> {
-        self.received_requests.lock().await.clone()
+    ///
+    /// If request recording was disabled, it returns `None`.
+    pub(crate) async fn received_requests(&self) -> Option<Vec<Request>> {
+        if let Some(received_requests) = &self.received_requests {
+            Some(received_requests.lock().await.clone())
+        } else {
+            None
+        }
     }
 }
 

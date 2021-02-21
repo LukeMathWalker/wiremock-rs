@@ -12,7 +12,7 @@ type DynError = Box<dyn std::error::Error + Send + Sync>;
 pub(crate) async fn run_server(
     listener: TcpListener,
     mock_set: Arc<RwLock<ActiveMockSet>>,
-    received_requests: Arc<Mutex<Vec<Request>>>,
+    received_requests: Option<Arc<Mutex<Vec<Request>>>>,
     shutdown_signal: tokio::sync::oneshot::Receiver<()>,
 ) {
     let request_handler = make_service_fn(move |_| {
@@ -24,13 +24,13 @@ pub(crate) async fn run_server(
                 let received_requests = received_requests.clone();
                 async move {
                     let wiremock_request = crate::Request::from_hyper(request).await;
-                    // Record the incoming request by adding it to the `received_requests` stack
-                    {
+                    // If request recording is enabled, record the incoming request
+                    // by adding it to the `received_requests` stack
+                    if let Some(received_requests) = received_requests {
                         received_requests
                             .lock()
                             .await
                             .push(wiremock_request.clone());
-                        // Drop lock.
                     }
                     let (response, delay) = mock_set
                         .write()

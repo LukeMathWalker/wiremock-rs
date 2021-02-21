@@ -34,8 +34,11 @@ impl MockServerBuilder {
     ///     let expected_server_address = listener
     ///         .local_addr()
     ///         .expect("Failed to get server address.");
-    ///     let mock_server = MockServer::start_on(listener).await;
     ///
+    ///     // Act
+    ///     let mock_server = MockServer::builder().listener(listener).build().await;
+    ///
+    ///     // Assert
     ///     assert_eq!(&expected_server_address, mock_server.address());
     /// }
     /// ```
@@ -50,6 +53,24 @@ impl MockServerBuilder {
     /// This can sometimes be undesirable (e.g. a long-lived server serving
     /// high volumes of traffic) - you can disable request recording using
     /// `MockServerBuilder::disable_request_recording`.
+    ///
+    /// ### Example (Request recording disabled):
+    ///
+    /// ```rust
+    /// use wiremock::MockServer;
+    ///
+    /// #[async_std::main]
+    /// async fn main() {
+    ///     // Arrange
+    ///     let mock_server = MockServer::builder().disable_request_recording().build().await;
+    ///
+    ///     // Act
+    ///     let received_requests = mock_server.received_requests().await;
+    ///     
+    ///     // Assert
+    ///     assert!(received_requests.is_none());
+    /// }
+    /// ```
     pub fn disable_request_recording(mut self) -> Self {
         self.record_incoming_requests = false;
         self
