@@ -40,6 +40,52 @@ async fn panics_if_the_expectation_is_not_satisfied() {
 }
 
 #[async_std::test]
+#[should_panic(expected = "Verifications failed:
+- Mock #0.
+\tExpected range of matching incoming requests: 1 <= x
+\tNumber of matched incoming requests: 0
+
+The server did not receive any request.")]
+async fn no_received_request_line_is_printed_in_the_panic_message_if_expectations_are_not_verified()
+{
+    // Arrange
+    let mock_server = MockServer::start().await;
+    let response = ResponseTemplate::new(200);
+    Mock::given(method("GET"))
+        .respond_with(response)
+        .expect(1..)
+        .mount(&mock_server)
+        .await;
+
+    // Act - we never call the mock
+}
+
+#[async_std::test]
+#[should_panic(expected = "Verifications failed:
+- Mock #0.
+\tExpected range of matching incoming requests: 1 <= x
+\tNumber of matched incoming requests: 0
+
+Received requests:
+- Request #1
+\tGET http://localhost/")]
+async fn received_request_are_printed_as_panic_message_if_expectations_are_not_verified() {
+    // Arrange
+    let mock_server = MockServer::start().await;
+    let response = ResponseTemplate::new(200);
+    Mock::given(method("POST"))
+        .respond_with(response)
+        .expect(1..)
+        .mount(&mock_server)
+        .await;
+
+    // Act - we sent a request that does not match (GET)
+    surf::get(&mock_server.uri()).await.unwrap();
+
+    // Assert - verified on drop
+}
+
+#[async_std::test]
 #[should_panic]
 async fn panic_during_expectation_does_not_crash() {
     // Arrange

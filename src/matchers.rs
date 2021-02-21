@@ -122,7 +122,7 @@ impl Match for MethodExactMatcher {
 /// ```
 pub struct AnyMatcher;
 
-/// Shorthand for [`AnyMatcher::new`].
+/// Shorthand for [`AnyMatcher`].
 pub fn any() -> AnyMatcher {
     AnyMatcher
 }

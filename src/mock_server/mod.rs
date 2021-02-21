@@ -11,8 +11,10 @@
 //! we provision a dedicated one if they specify their own `TcpListener` with `start_on`.
 //! Check the `pool` submodule for more details on our pooling strategy.
 mod bare_server;
+mod builder;
 mod exposed_server;
 mod hyper;
 mod pool;
 
+pub use builder::MockServerBuilder;
 pub use exposed_server::MockServer;

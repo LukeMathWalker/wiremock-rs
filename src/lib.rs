@@ -155,7 +155,7 @@ mod response_template;
 mod verification;
 
 pub use mock::{Match, Mock, MockBuilder, Times};
-pub use mock_server::MockServer;
+pub use mock_server::{MockServer, MockServerBuilder};
 pub use request::Request;
 pub use respond::Respond;
 pub use response_template::ResponseTemplate;

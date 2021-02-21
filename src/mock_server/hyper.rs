@@ -1,8 +1,10 @@
 use crate::mock_set::ActiveMockSet;
+use crate::Request;
 use hyper::http;
 use hyper::service::{make_service_fn, service_fn};
 use std::net::TcpListener;
-use std::sync::{Arc, RwLock};
+use std::sync::Arc;
+use tokio::sync::{Mutex, RwLock};
 
 type DynError = Box<dyn std::error::Error + Send + Sync>;
 
@@ -10,18 +12,29 @@ type DynError = Box<dyn std::error::Error + Send + Sync>;
 pub(crate) async fn run_server(
     listener: TcpListener,
     mock_set: Arc<RwLock<ActiveMockSet>>,
+    received_requests: Option<Arc<Mutex<Vec<Request>>>>,
     shutdown_signal: tokio::sync::oneshot::Receiver<()>,
 ) {
     let request_handler = make_service_fn(move |_| {
         let mock_set = mock_set.clone();
+        let received_requests = received_requests.clone();
         async move {
             Ok::<_, DynError>(service_fn(move |request: hyper::Request<hyper::Body>| {
                 let mock_set = mock_set.clone();
+                let received_requests = received_requests.clone();
                 async move {
                     let wiremock_request = crate::Request::from_hyper(request).await;
+                    // If request recording is enabled, record the incoming request
+                    // by adding it to the `received_requests` stack
+                    if let Some(received_requests) = received_requests {
+                        received_requests
+                            .lock()
+                            .await
+                            .push(wiremock_request.clone());
+                    }
                     let (response, delay) = mock_set
                         .write()
-                        .unwrap()
+                        .await
                         .handle_request(wiremock_request)
                         .await;
 

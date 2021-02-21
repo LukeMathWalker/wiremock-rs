@@ -1,17 +1,21 @@
 use crate::mock_server::bare_server::BareMockServer;
 use crate::mock_server::pool::get_pooled_mock_server;
-use crate::{mock::Mock, verification::VerificationOutcome};
+use crate::mock_server::MockServerBuilder;
+use crate::{mock::Mock, verification::VerificationOutcome, Request};
 use deadpool::managed::Object;
 use log::debug;
 use std::convert::Infallible;
-use std::net::{SocketAddr, TcpListener};
+use std::net::SocketAddr;
 use std::ops::Deref;
 
-/// An HTTP web-server running in the background to behave as one of your dependencies using `Mock`s
+/// An HTTP web-server running in the background to behave as one of your dependencies using [`Mock`]s
 /// for testing purposes.
 ///
-/// Each instance of `MockServer` is fully isolated: `start` takes care of finding a random port
+/// Each instance of `MockServer` is fully isolated: [`MockServer::start`] takes care of finding a random port
 /// available on your local machine which is assigned to the new `MockServer`.
+///
+/// You can use [`MockServer::builder`] if you need to specify custom configuration - e.g.
+/// run on a specific port or disable request recording.
 ///
 /// ## Best practices
 ///
@@ -21,7 +25,7 @@ use std::ops::Deref;
 /// To ensure full isolation and no cross-test interference, `MockServer`s shouldn't be
 /// shared between tests. Instead, `MockServer`s should be created in the test where they are used.
 ///
-/// You can register as many `Mock`s as your scenario requires on a `MockServer`.
+/// You can register as many [`Mock`]s as your scenario requires on a `MockServer`.
 pub struct MockServer(InnerServer);
 
 /// `MockServer` is either a wrapper around a `BareMockServer` retrieved from an
@@ -31,7 +35,7 @@ pub struct MockServer(InnerServer);
 ///
 /// `InnerServer` implements `Deref<Target=BareMockServer>`, so we never actually have to match
 /// on `InnerServer` in `MockServer` - the compiler does all the boring heavy-lifting for us.
-enum InnerServer {
+pub(super) enum InnerServer {
     Bare(BareMockServer),
     Pooled(Object<BareMockServer, Infallible>),
 }
@@ -48,6 +52,18 @@ impl Deref for InnerServer {
 }
 
 impl MockServer {
+    pub(super) fn new(server: InnerServer) -> Self {
+        Self(server)
+    }
+
+    /// You can use `MockServer::builder` if you need to specify custom configuration - e.g.
+    /// run on a specific port or disable request recording.
+    ///
+    /// If this is not your case, use [`MockServer::start`].
+    pub fn builder() -> MockServerBuilder {
+        MockServerBuilder::new()
+    }
+
     /// Start a new instance of a `MockServer` listening on a random port.
     ///
     /// Each instance of `MockServer` is fully isolated: `start` takes care of finding a random port
@@ -95,29 +111,6 @@ impl MockServer {
         Self(InnerServer::Pooled(get_pooled_mock_server().await))
     }
 
-    /// Start a new instance of a `MockServer` listening on the
-    /// [`TcpListener`](std::net::TcpListener) passed as argument.
-    ///
-    /// ### Example:
-    /// ```rust
-    /// use wiremock::MockServer;
-    ///
-    /// #[async_std::main]
-    /// async fn main() {
-    ///     // Arrange
-    ///     let listener = std::net::TcpListener::bind("127.0.0.1:0").unwrap();
-    ///     let expected_server_address = listener
-    ///         .local_addr()
-    ///         .expect("Failed to get server address.");
-    ///     let mock_server = MockServer::start_on(listener).await;
-    ///
-    ///     assert_eq!(&expected_server_address, mock_server.address());
-    /// }
-    /// ```
-    pub async fn start_on(listener: TcpListener) -> Self {
-        Self(InnerServer::Bare(BareMockServer::start_on(listener).await))
-    }
-
     /// Register a `Mock` on an instance of `MockServer`.
     ///
     /// Be careful! `Mock`s are not effective until they are `mount`ed or `register`ed on a `MockServer`.
@@ -163,9 +156,11 @@ impl MockServer {
         self.0.register(mock).await
     }
 
-    /// Drop all mounted `Mock`s from an instance of `MockServer`.
+    /// Drop all mounted [`Mock`]s from an instance of [`MockServer`].  
+    /// It also deletes all recorded requests.
     ///
-    /// ### Example:
+    /// ### Example
+    ///
     /// ```rust
     /// use wiremock::{MockServer, Mock, ResponseTemplate};
     /// use wiremock::matchers::method;
@@ -196,20 +191,74 @@ impl MockServer {
     ///     assert_eq!(status, 404);
     /// }
     /// ```
+    ///
+    /// ### Example (Recorded requests are reset)
+    ///
+    /// ```rust
+    /// use wiremock::{MockServer, Mock, ResponseTemplate};
+    /// use wiremock::matchers::method;
+    ///
+    /// #[async_std::main]
+    /// async fn main() {
+    ///     // Arrange
+    ///     let mock_server = MockServer::start().await;
+    ///     
+    ///     // Act
+    ///     surf::get(&mock_server.uri()).await.unwrap();
+    ///
+    ///     // We have recorded the incoming request
+    ///     let received_requests = mock_server.received_requests().await.unwrap();
+    ///     assert!(!received_requests.is_empty());
+    ///
+    ///     // Reset the server
+    ///     mock_server.reset().await;
+    ///
+    ///     // All received requests have been forgotten after the call to `.reset`
+    ///     let received_requests = mock_server.received_requests().await.unwrap();
+    ///     assert!(received_requests.is_empty())
+    /// }
+    /// ```
     pub async fn reset(&self) {
         self.0.reset().await;
     }
 
     /// Verify that all mounted `Mock`s on this instance of `MockServer` have satisfied
     /// their expectations on their number of invocations. Panics otherwise.
-    pub fn verify(&self) {
+    pub async fn verify(&self) {
         debug!("Verify mock expectations.");
-        if let VerificationOutcome::Failure(failed_verifications) = self.0.verify() {
+        if let VerificationOutcome::Failure(failed_verifications) = self.0.verify().await {
+            let received_requests_message = if let Some(received_requests) =
+                self.0.received_requests().await
+            {
+                if received_requests.is_empty() {
+                    "The server did not receive any request.".into()
+                } else {
+                    format!(
+                        "Received requests:\n{}",
+                        received_requests
+                            .into_iter()
+                            .enumerate()
+                            .map(|(index, request)| {
+                                format!(
+                                    "- Request #{}\n{}",
+                                    index + 1,
+                                    textwrap::indent(&format!("{}", request), "\t")
+                                )
+                            })
+                            .collect::<String>()
+                    )
+                }
+            } else {
+                "Enable request recording on the mock server to get the list of incoming requests as part of the panic message.".into()
+            };
             let verifications_errors: String = failed_verifications
                 .iter()
                 .map(|m| format!("- {}\n", m.error_message()))
                 .collect();
-            let error_message = format!("Verifications failed:\n{}", verifications_errors);
+            let error_message = format!(
+                "Verifications failed:\n{}\n{}",
+                verifications_errors, received_requests_message
+            );
             if std::thread::panicking() {
                 debug!("{}", &error_message);
             } else {
@@ -265,12 +314,78 @@ impl MockServer {
     pub fn address(&self) -> &SocketAddr {
         self.0.address()
     }
+
+    /// Return a vector with all the requests received by the `MockServer` since it started.  
+    /// If no request has been served, it returns an empty vector.
+    ///
+    /// If request recording has been disabled using [`MockServerBuilder::disable_request_recording`],
+    /// it returns `None`.
+    ///
+    /// ### Example:
+    ///
+    /// ```rust
+    /// use wiremock::MockServer;
+    /// use http_types::Method;
+    ///
+    /// #[async_std::main]
+    /// async fn main() {
+    ///     // Arrange
+    ///     let mock_server = MockServer::start().await;
+    ///     
+    ///     // Act
+    ///     surf::get(&mock_server.uri()).await.unwrap();
+    ///
+    ///     // Assert
+    ///     let received_requests = mock_server.received_requests().await.unwrap();
+    ///     assert_eq!(received_requests.len(), 1);
+    ///
+    ///     let received_request = &received_requests[0];
+    ///     assert_eq!(received_request.method, Method::Get);
+    ///     assert_eq!(received_request.url.path(), "/");
+    ///     assert!(received_request.body.is_empty());
+    /// }
+    /// ```
+    ///
+    /// ### Example (No request served):
+    ///
+    /// ```rust
+    /// use wiremock::MockServer;
+    ///
+    /// #[async_std::main]
+    /// async fn main() {
+    ///     // Arrange
+    ///     let mock_server = MockServer::start().await;
+    ///     
+    ///     // Assert
+    ///     let received_requests = mock_server.received_requests().await.unwrap();
+    ///     assert_eq!(received_requests.len(), 0);
+    /// }
+    /// ```
+    ///
+    /// ### Example (Request recording disabled):
+    ///
+    /// ```rust
+    /// use wiremock::MockServer;
+    ///
+    /// #[async_std::main]
+    /// async fn main() {
+    ///     // Arrange
+    ///     let mock_server = MockServer::builder().disable_request_recording().start().await;
+    ///     
+    ///     // Assert
+    ///     let received_requests = mock_server.received_requests().await;
+    ///     assert!(received_requests.is_none());
+    /// }
+    /// ```
+    pub async fn received_requests(&self) -> Option<Vec<Request>> {
+        self.0.received_requests().await
+    }
 }
 
 impl Drop for MockServer {
     // Clean up when the `MockServer` instance goes out of scope.
     fn drop(&mut self) {
-        self.verify();
+        futures::executor::block_on(self.verify())
         // The sender half of the channel, `shutdown_trigger`, gets dropped here
         // Triggering the graceful shutdown of the server itself.
     }

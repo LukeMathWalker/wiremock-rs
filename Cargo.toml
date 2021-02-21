@@ -1,6 +1,6 @@
 [package]
 name = "wiremock"
-version = "0.4.10-alpha.0"
+version = "0.5.0-alpha.0"
 authors = ["Luca Palmieri <rust@lpalmieri.com>"]
 edition = "2018"
 
@@ -31,6 +31,7 @@ tokio = { version = "1", features = ["rt", "io-util", "time"] }
 deadpool = "0.7.0"
 async-trait = "0.1.42"
 once_cell = "1.5.2"
+textwrap = "0.13.3"
 
 [dev-dependencies]
 async-std = { version = "1", features = ["attributes"] }
