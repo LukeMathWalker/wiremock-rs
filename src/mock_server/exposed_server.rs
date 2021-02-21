@@ -266,6 +266,31 @@ impl MockServer {
         self.0.address()
     }
 
+    /// ### Example:
+    /// ```rust
+    /// use wiremock::{MockServer, Mock, ResponseTemplate};
+    /// use wiremock::matchers::method;
+    ///
+    /// #[async_std::main]
+    /// async fn main() {
+    ///     // Arrange
+    ///     let mock_server = MockServer::start().await;
+    ///
+    ///     let response = ResponseTemplate::new(200);
+    ///     Mock::given(method("GET")).respond_with(response).mount(&mock_server).await;
+    ///     
+    ///     // Act
+    ///     let status = surf::get(&mock_server.uri())
+    ///         .await
+    ///         .unwrap()
+    ///         .status();
+    ///     assert_eq!(status, 200);
+    ///
+    ///     // Reset the server
+    ///     let received_requests = mock_server.received_requests();
+    ///     assert_eq!(received_requests.len(), 1);
+    /// }
+    /// ```
     pub fn received_requests(&self) -> Vec<Request> {
         todo!()
     }
