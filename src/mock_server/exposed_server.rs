@@ -202,13 +202,10 @@ impl MockServer {
 
     /// Verify that all mounted `Mock`s on this instance of `MockServer` have satisfied
     /// their expectations on their number of invocations. Panics otherwise.
-    pub fn verify(&self) {
+    pub async fn verify(&self) {
         debug!("Verify mock expectations.");
-        if let VerificationOutcome::Failure(failed_verifications) = self.0.verify() {
-            let received_requests = tokio::runtime::Builder::new_current_thread()
-                .build()
-                .unwrap()
-                .block_on(async { self.0.received_requests().await.clone() });
+        if let VerificationOutcome::Failure(failed_verifications) = self.0.verify().await {
+            let received_requests = self.0.received_requests().await.clone();
             let received_requests_message: String = received_requests
                 .into_iter()
                 .enumerate()
@@ -335,7 +332,10 @@ impl MockServer {
 impl Drop for MockServer {
     // Clean up when the `MockServer` instance goes out of scope.
     fn drop(&mut self) {
-        self.verify();
+        tokio::runtime::Builder::new_current_thread()
+            .build()
+            .unwrap()
+            .block_on(self.verify());
         // The sender half of the channel, `shutdown_trigger`, gets dropped here
         // Triggering the graceful shutdown of the server itself.
     }

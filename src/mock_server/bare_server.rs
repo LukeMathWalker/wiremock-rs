@@ -3,8 +3,7 @@ use crate::mock_set::ActiveMockSet;
 use crate::{mock::Mock, verification::VerificationOutcome, Request};
 use std::net::{SocketAddr, TcpListener, TcpStream};
 use std::sync::Arc;
-use std::sync::RwLock;
-use tokio::sync::Mutex;
+use tokio::sync::{Mutex, RwLock};
 use tokio::task::LocalSet;
 
 /// An HTTP web-server running in the background to behave as one of your dependencies using `Mock`s
@@ -83,10 +82,7 @@ impl BareMockServer {
     ///
     /// `register` is an asynchronous method, make sure to `.await` it!
     pub(crate) async fn register(&self, mock: Mock) {
-        self.mock_set
-            .write()
-            .expect("Poisoned lock!")
-            .register(mock);
+        self.mock_set.write().await.register(mock);
     }
 
     /// Drop all mounted `Mock`s from an instance of `BareMockServer`.
@@ -94,13 +90,13 @@ impl BareMockServer {
     /// It *must* be called if you plan to reuse a `BareMockServer` instance (i.e. in our
     /// `MockServerPoolManager`).
     pub(crate) async fn reset(&self) {
-        self.mock_set.write().expect("Poisoned lock!").reset();
+        self.mock_set.write().await.reset();
     }
 
     /// Verify that all mounted `Mock`s on this instance of `BareMockServer` have satisfied
     /// their expectations on their number of invocations.
-    pub(crate) fn verify(&self) -> VerificationOutcome {
-        let mock_set = self.mock_set.read().expect("Poisoned lock!");
+    pub(crate) async fn verify(&self) -> VerificationOutcome {
+        let mock_set = self.mock_set.read().await;
         mock_set.verify()
     }
 
