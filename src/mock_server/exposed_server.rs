@@ -339,10 +339,7 @@ impl MockServer {
 impl Drop for MockServer {
     // Clean up when the `MockServer` instance goes out of scope.
     fn drop(&mut self) {
-        tokio::runtime::Builder::new_current_thread()
-            .build()
-            .unwrap()
-            .block_on(self.verify());
+        futures::executor::block_on(self.verify())
         // The sender half of the channel, `shutdown_trigger`, gets dropped here
         // Triggering the graceful shutdown of the server itself.
     }
