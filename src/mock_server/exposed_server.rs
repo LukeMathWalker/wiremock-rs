@@ -287,12 +287,12 @@ impl MockServer {
     ///     assert_eq!(status, 200);
     ///
     ///     // Reset the server
-    ///     let received_requests = mock_server.received_requests();
+    ///     let received_requests = mock_server.received_requests().await;
     ///     assert_eq!(received_requests.len(), 1);
     /// }
     /// ```
-    pub fn received_requests(&self) -> Vec<Request> {
-        todo!()
+    pub async fn received_requests(&self) -> Vec<Request> {
+        self.0.received_requests().await
     }
 }
 

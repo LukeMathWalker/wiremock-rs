@@ -1,9 +1,10 @@
 use crate::mock_server::hyper::run_server;
 use crate::mock_set::ActiveMockSet;
-use crate::{mock::Mock, verification::VerificationOutcome};
+use crate::{mock::Mock, verification::VerificationOutcome, Request};
 use std::net::{SocketAddr, TcpListener, TcpStream};
 use std::sync::Arc;
 use std::sync::RwLock;
+use tokio::sync::Mutex;
 use tokio::task::LocalSet;
 
 /// An HTTP web-server running in the background to behave as one of your dependencies using `Mock`s
@@ -14,6 +15,7 @@ use tokio::task::LocalSet;
 /// for more details.
 pub(crate) struct BareMockServer {
     mock_set: Arc<RwLock<ActiveMockSet>>,
+    received_requests: Arc<Mutex<Vec<Request>>>,
     server_address: SocketAddr,
     // When `_shutdown_trigger` gets dropped the listening server terminates gracefully.
     _shutdown_trigger: tokio::sync::oneshot::Sender<()>,
@@ -35,13 +37,20 @@ impl BareMockServer {
     pub(crate) async fn start_on(listener: TcpListener) -> Self {
         let (shutdown_trigger, shutdown_receiver) = tokio::sync::oneshot::channel();
         let mock_set = Arc::new(RwLock::new(ActiveMockSet::new()));
+        let received_requests = Arc::new(Mutex::new(Vec::new()));
         let server_address = listener
             .local_addr()
             .expect("Failed to get server address.");
 
         let server_mock_set = mock_set.clone();
+        let server_received_requests = received_requests.clone();
         std::thread::spawn(move || {
-            let server_future = run_server(listener, server_mock_set, shutdown_receiver);
+            let server_future = run_server(
+                listener,
+                server_mock_set,
+                server_received_requests,
+                shutdown_receiver,
+            );
 
             let runtime = tokio::runtime::Builder::new_current_thread()
                 .enable_all()
@@ -61,6 +70,7 @@ impl BareMockServer {
 
         Self {
             mock_set,
+            received_requests,
             server_address,
             _shutdown_trigger: shutdown_trigger,
         }
@@ -107,5 +117,9 @@ impl BareMockServer {
     /// Use this method to interact with the `BareMockServer` using `TcpStream`s.
     pub(crate) fn address(&self) -> &SocketAddr {
         &self.server_address
+    }
+
+    pub(crate) async fn received_requests(&self) -> Vec<Request> {
+        self.received_requests.lock().await.clone()
     }
 }
