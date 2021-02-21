@@ -1,6 +1,6 @@
 use crate::mock_server::bare_server::BareMockServer;
 use crate::mock_server::pool::get_pooled_mock_server;
-use crate::{mock::Mock, verification::VerificationOutcome};
+use crate::{mock::Mock, verification::VerificationOutcome, Request};
 use deadpool::managed::Object;
 use log::debug;
 use std::convert::Infallible;
@@ -264,6 +264,10 @@ impl MockServer {
     /// ```
     pub fn address(&self) -> &SocketAddr {
         self.0.address()
+    }
+
+    pub fn received_requests(&self) -> Vec<Request> {
+        todo!()
     }
 }
 
