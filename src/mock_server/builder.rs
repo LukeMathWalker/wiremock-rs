@@ -36,7 +36,7 @@ impl MockServerBuilder {
     ///         .expect("Failed to get server address.");
     ///
     ///     // Act
-    ///     let mock_server = MockServer::builder().listener(listener).build().await;
+    ///     let mock_server = MockServer::builder().listener(listener).start().await;
     ///
     ///     // Assert
     ///     assert_eq!(&expected_server_address, mock_server.address());
@@ -62,7 +62,7 @@ impl MockServerBuilder {
     /// #[async_std::main]
     /// async fn main() {
     ///     // Arrange
-    ///     let mock_server = MockServer::builder().disable_request_recording().build().await;
+    ///     let mock_server = MockServer::builder().disable_request_recording().start().await;
     ///
     ///     // Act
     ///     let received_requests = mock_server.received_requests().await;
@@ -91,8 +91,8 @@ impl MockServerBuilder {
         BareMockServer::start(listener, recording).await
     }
 
-    /// Finalise the builder to get an instance of a [`MockServer`]!
-    pub async fn build(self) -> MockServer {
+    /// Finalise the builder and launch the [`MockServer`] instance!
+    pub async fn start(self) -> MockServer {
         MockServer::new(InnerServer::Bare(self.build_bare().await))
     }
 }

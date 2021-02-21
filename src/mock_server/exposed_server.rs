@@ -334,7 +334,7 @@ impl MockServer {
     /// #[async_std::main]
     /// async fn main() {
     ///     // Arrange
-    ///     let mock_server = MockServer::builder().disable_request_recording().build().await;
+    ///     let mock_server = MockServer::builder().disable_request_recording().start().await;
     ///     
     ///     // Assert
     ///     let received_requests = mock_server.received_requests().await;
