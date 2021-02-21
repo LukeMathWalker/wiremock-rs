@@ -54,7 +54,6 @@ async fn no_received_request_line_is_printed_in_the_panic_message_if_expectation
     Mock::given(method("GET"))
         .respond_with(response)
         .expect(1..)
-        .named("panics_if_the_expectation_is_not_satisfied expectation failed")
         .mount(&mock_server)
         .await;
 

@@ -206,23 +206,30 @@ impl MockServer {
         debug!("Verify mock expectations.");
         if let VerificationOutcome::Failure(failed_verifications) = self.0.verify().await {
             let received_requests = self.0.received_requests().await.clone();
-            let received_requests_message: String = received_requests
-                .into_iter()
-                .enumerate()
-                .map(|(index, request)| {
-                    format!(
-                        "- Request #{}\n{}",
-                        index + 1,
-                        textwrap::indent(&format!("{}", request), "\t")
-                    )
-                })
-                .collect();
+            let received_requests_message: String = if received_requests.is_empty() {
+                "The server did not receive any request.".into()
+            } else {
+                format!(
+                    "Received requests:\n{}",
+                    received_requests
+                        .into_iter()
+                        .enumerate()
+                        .map(|(index, request)| {
+                            format!(
+                                "- Request #{}\n{}",
+                                index + 1,
+                                textwrap::indent(&format!("{}", request), "\t")
+                            )
+                        })
+                        .collect::<String>()
+                )
+            };
             let verifications_errors: String = failed_verifications
                 .iter()
                 .map(|m| format!("- {}\n", m.error_message()))
                 .collect();
             let error_message = format!(
-                "Verifications failed:\n{}\nReceived requests:\n{}",
+                "Verifications failed:\n{}\n{}",
                 verifications_errors, received_requests_message
             );
             if std::thread::panicking() {
