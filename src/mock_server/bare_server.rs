@@ -119,6 +119,8 @@ impl BareMockServer {
         &self.server_address
     }
 
+    /// Return a vector with all the requests received by the `BareMockServer` since it started.  
+    /// If no request has been served, it returns an empty vector.
     pub(crate) async fn received_requests(&self) -> Vec<Request> {
         self.received_requests.lock().await.clone()
     }
