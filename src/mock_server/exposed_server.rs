@@ -8,11 +8,14 @@ use std::convert::Infallible;
 use std::net::SocketAddr;
 use std::ops::Deref;
 
-/// An HTTP web-server running in the background to behave as one of your dependencies using `Mock`s
+/// An HTTP web-server running in the background to behave as one of your dependencies using [`Mock`]s
 /// for testing purposes.
 ///
-/// Each instance of `MockServer` is fully isolated: `start` takes care of finding a random port
+/// Each instance of `MockServer` is fully isolated: [`MockServer::start`] takes care of finding a random port
 /// available on your local machine which is assigned to the new `MockServer`.
+///
+/// You can use [`MockServer::builder`] if you need to specify custom configuration - e.g.
+/// run on a specific port or disable request recording.
 ///
 /// ## Best practices
 ///
@@ -22,7 +25,7 @@ use std::ops::Deref;
 /// To ensure full isolation and no cross-test interference, `MockServer`s shouldn't be
 /// shared between tests. Instead, `MockServer`s should be created in the test where they are used.
 ///
-/// You can register as many `Mock`s as your scenario requires on a `MockServer`.
+/// You can register as many [`Mock`]s as your scenario requires on a `MockServer`.
 pub struct MockServer(InnerServer);
 
 /// `MockServer` is either a wrapper around a `BareMockServer` retrieved from an
@@ -53,6 +56,10 @@ impl MockServer {
         Self(server)
     }
 
+    /// You can use `MockServer::builder` if you need to specify custom configuration - e.g.
+    /// run on a specific port or disable request recording.
+    ///
+    /// If this is not your case, use [`MockServer::start`].
     pub fn builder() -> MockServerBuilder {
         MockServerBuilder::new()
     }
@@ -149,9 +156,11 @@ impl MockServer {
         self.0.register(mock).await
     }
 
-    /// Drop all mounted `Mock`s from an instance of `MockServer`.
+    /// Drop all mounted [`Mock`]s from an instance of [`MockServer`].  
+    /// It also deletes all recorded requests.
     ///
-    /// ### Example:
+    /// ### Example
+    ///
     /// ```rust
     /// use wiremock::{MockServer, Mock, ResponseTemplate};
     /// use wiremock::matchers::method;
@@ -180,6 +189,33 @@ impl MockServer {
     ///         .unwrap()
     ///         .status();
     ///     assert_eq!(status, 404);
+    /// }
+    /// ```
+    ///
+    /// ### Example (Recorded requests are reset)
+    ///
+    /// ```rust
+    /// use wiremock::{MockServer, Mock, ResponseTemplate};
+    /// use wiremock::matchers::method;
+    ///
+    /// #[async_std::main]
+    /// async fn main() {
+    ///     // Arrange
+    ///     let mock_server = MockServer::start().await;
+    ///     
+    ///     // Act
+    ///     surf::get(&mock_server.uri()).await.unwrap();
+    ///
+    ///     // We have recorded the incoming request
+    ///     let received_requests = mock_server.received_requests().await.unwrap();
+    ///     assert!(!received_requests.is_empty());
+    ///
+    ///     // Reset the server
+    ///     mock_server.reset().await;
+    ///
+    ///     // All received requests have been forgotten after the call to `.reset`
+    ///     let received_requests = mock_server.received_requests().await.unwrap();
+    ///     assert!(received_requests.is_empty())
     /// }
     /// ```
     pub async fn reset(&self) {
