@@ -79,11 +79,15 @@ impl BareMockServer {
     }
 
     /// Drop all mounted `Mock`s from an instance of `BareMockServer`.
+    /// Delete all recorded requests.
     ///
     /// It *must* be called if you plan to reuse a `BareMockServer` instance (i.e. in our
     /// `MockServerPoolManager`).
     pub(crate) async fn reset(&self) {
         self.mock_set.write().await.reset();
+        if let Some(received_requests) = &self.received_requests {
+            received_requests.lock().await.clear();
+        }
     }
 
     /// Verify that all mounted `Mock`s on this instance of `BareMockServer` have satisfied
