@@ -282,7 +282,7 @@ impl MockServer {
     /// Return a vector with all the requests received by the `MockServer` since it started.  
     /// If no request has been served, it returns an empty vector.
     ///
-    /// If request recording has been disabled using [`MockServerBuilder::disable_recording`],
+    /// If request recording has been disabled using [`MockServerBuilder::disable_request_recording`],
     /// it returns `None`.
     ///
     /// ### Example:
