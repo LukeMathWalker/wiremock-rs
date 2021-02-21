@@ -266,26 +266,22 @@ impl MockServer {
         self.0.address()
     }
 
+    /// Return a vector with all the requests received by the `MockServer` since it started.  
+    /// If no request has been served, it returns an empty vector.
+    ///
     /// ### Example:
+    ///
     /// ```rust
-    /// use wiremock::{MockServer, Mock, ResponseTemplate};
-    /// use wiremock::matchers::method;
+    /// use wiremock::MockServer;
     /// use http_types::Method;
     ///
     /// #[async_std::main]
     /// async fn main() {
     ///     // Arrange
     ///     let mock_server = MockServer::start().await;
-    ///
-    ///     let response = ResponseTemplate::new(200);
-    ///     Mock::given(method("GET")).respond_with(response).mount(&mock_server).await;
     ///     
     ///     // Act
-    ///     let status = surf::get(&mock_server.uri())
-    ///         .await
-    ///         .unwrap()
-    ///         .status();
-    ///     assert_eq!(status, 200);
+    ///     surf::get(&mock_server.uri()).await.unwrap();
     ///
     ///     // Assert
     ///     let received_requests = mock_server.received_requests().await;
@@ -295,6 +291,22 @@ impl MockServer {
     ///     assert_eq!(received_request.method, Method::Get);
     ///     assert_eq!(received_request.url.path(), "/");
     ///     assert!(received_request.body.is_empty());
+    /// }
+    /// ```
+    ///
+    /// ### Example (No request served):
+    ///
+    /// ```rust
+    /// use wiremock::MockServer;
+    ///
+    /// #[async_std::main]
+    /// async fn main() {
+    ///     // Arrange
+    ///     let mock_server = MockServer::start().await;
+    ///     
+    ///     // Assert
+    ///     let received_requests = mock_server.received_requests().await;
+    ///     assert_eq!(received_requests.len(), 0);
     /// }
     /// ```
     pub async fn received_requests(&self) -> Vec<Request> {
