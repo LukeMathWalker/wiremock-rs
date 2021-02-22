@@ -670,15 +670,17 @@ impl Match for QueryParamExactMatcher {
     }
 }
 
-/// Match the json structure of the body of a request.
+/// Match an incoming request if its body is encoded as JSON and can be deserialized
+/// according to the specified schema.
 ///
 /// ### Example:
 /// ```rust
 /// use wiremock::{MockServer, Mock, ResponseTemplate};
-/// use wiremock::matchers::body_json_structure;
+/// use wiremock::matchers::body_json_schema;
 /// use serde_json::json;
 /// use serde::{Deserialize, Serialize};
 ///
+/// // The schema we expect the body to conform to.
 /// #[derive(Deserialize, Serialize)]
 /// struct Greeting {
 ///     hello: String,
@@ -689,12 +691,13 @@ impl Match for QueryParamExactMatcher {
 ///     // Arrange
 ///     let mock_server = MockServer::start().await;
 ///
-///     Mock::given(body_json_structure::<Greeting>)
+///     Mock::given(body_json_schema::<Greeting>)
 ///         .respond_with(ResponseTemplate::new(200))
 ///         .mount(&mock_server)
 ///         .await;
 ///
-///     // both json objects have the same structrue and thus succeed
+///     // Both JSON objects have the same fields,
+///     // therefore they'll match.
 ///     let success_cases = vec![
 ///         json!({"hello": "world!"}),
 ///         json!({"hello": "everyone!"}),
@@ -710,7 +713,9 @@ impl Match for QueryParamExactMatcher {
 ///         assert_eq!(status, 200);
 ///     }
 ///
-///     // this json object has a different structure, and thus does not match
+///     // This JSON object cannot be deserialized as `Greeting`
+///     // because it does not have the `hello` field.
+///     // It won't match.
 ///     let failure_case = json!({"world": "hello!"});
 ///     let status = surf::post(&mock_server.uri())
 ///         .body(failure_case)
@@ -719,10 +724,10 @@ impl Match for QueryParamExactMatcher {
 ///         .status();
 ///
 ///     // Assert
-///     assert_eq!(status, 404  );
+///     assert_eq!(status, 404);
 /// }
 /// ```
-pub fn body_json_structure<T>(request: &Request) -> bool
+pub fn body_json_schema<T>(request: &Request) -> bool
 where
     for<'de> T: serde::de::Deserialize<'de>,
 {
