@@ -10,7 +10,7 @@
 //! ```toml
 //! [dev-dependencies]
 //! # ...
-//! wiremock = "0.4"
+//! wiremock = "0.5"
 //! ```
 //! If you are using [`cargo-edit`](https://github.com/killercup/cargo-edit), run
 //! ```bash

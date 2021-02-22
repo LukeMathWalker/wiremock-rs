@@ -59,7 +59,7 @@ Add `wiremock` to your development dependencies:
 ```toml
 [dev-dependencies]
 # ...
-wiremock = "0.4"
+wiremock = "0.5"
 ```
 If you are using [`cargo-edit`](https://github.com/killercup/cargo-edit), run
 ```bash
@@ -189,16 +189,16 @@ Licensed under either of Apache License, Version 2.0 or MIT license at your opti
 Unless you explicitly state otherwise, any contribution intentionally submitted for inclusion in this crate by you, as defined in the Apache-2.0 license, shall be dual licensed as above, without any additional terms or conditions.
 
 
-[`MockServer`]: https://docs.rs/wiremock/0.4.4/wiremock/struct.MockServer.html
-[`Mock`]: https://docs.rs/wiremock/0.4.4/wiremock/struct.Mock.html
-[`ResponseTemplate`]: https://docs.rs/wiremock/0.4.4/wiremock/struct.ResponseTemplate
-[`Request`]: https://docs.rs/wiremock/0.4.4/wiremock/struct.Request
-[`Match`]: https://docs.rs/wiremock/0.4.4/wiremock/trait.Match.html
-[`Respond`]: https://docs.rs/wiremock/0.4.4/wiremock/trait.Respond.html
-[`start`]: https://docs.rs/wiremock/0.4.4/wiremock/struct.MockServer.html#method.start
-[`expect`]: https://docs.rs/wiremock/0.4.4/wiremock/struct.Mock.html#method.expect
-[`respond_with`]: https://docs.rs/wiremock/0.4.4/wiremock/struct.MockBuilder.html#method.respond_with
-[`matchers`]: https://docs.rs/wiremock/0.4.4/wiremock/matchers/index.html
+[`MockServer`]: https://docs.rs/wiremock/0.5.0/wiremock/struct.MockServer.html
+[`Mock`]: https://docs.rs/wiremock/0.5.0/wiremock/struct.Mock.html
+[`ResponseTemplate`]: https://docs.rs/wiremock/0.5.0/wiremock/struct.ResponseTemplate
+[`Request`]: https://docs.rs/wiremock/0.5.0/wiremock/struct.Request
+[`Match`]: https://docs.rs/wiremock/0.5.0/wiremock/trait.Match.html
+[`Respond`]: https://docs.rs/wiremock/0.5.0/wiremock/trait.Respond.html
+[`start`]: https://docs.rs/wiremock/0.5.0/wiremock/struct.MockServer.html#method.start
+[`expect`]: https://docs.rs/wiremock/0.5.0/wiremock/struct.Mock.html#method.expect
+[`respond_with`]: https://docs.rs/wiremock/0.5.0/wiremock/struct.MockBuilder.html#method.respond_with
+[`matchers`]: https://docs.rs/wiremock/0.5.0/wiremock/matchers/index.html
 [GitHub repository]: https://github.com/LukeMathWalker/wiremock-rs
 [`mockito`]: https://docs.rs/mockito/
 [`httpmock`]: https://docs.rs/httpmock/
