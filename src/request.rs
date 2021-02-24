@@ -73,7 +73,13 @@ impl Request {
     pub(crate) async fn from_hyper(request: hyper::Request<hyper::Body>) -> Request {
         let (parts, body) = request.into_parts();
         let method = parts.method.into();
-        let url = format!("http://localhost{}", parts.uri).parse().unwrap();
+        let url = if let Some(port) = parts.uri.port_u16() {
+            format!("http://localhost:{}{}", port, parts.uri)
+        } else {
+            format!("http://localhost{}", parts.uri)
+        }
+        .parse()
+        .unwrap();
 
         let mut headers = HashMap::new();
         for (name, value) in parts.headers {
