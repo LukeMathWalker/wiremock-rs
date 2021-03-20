@@ -1,7 +1,9 @@
+use std::str::FromStr;
+use std::{collections::HashMap, fmt};
+
 use futures::AsyncReadExt;
 use http_types::headers::{HeaderName, HeaderValue, HeaderValues};
 use http_types::{Method, Url};
-use std::{collections::HashMap, fmt};
 
 /// An incoming request to an instance of [`MockServer`].
 ///
@@ -83,12 +85,16 @@ impl Request {
 
         let mut headers = HashMap::new();
         for (name, value) in parts.headers {
-            let value = value.as_bytes().to_owned();
-            let value = HeaderValue::from_bytes(value).unwrap();
             if let Some(name) = name {
                 let name = name.as_str().as_bytes().to_owned();
                 let name = HeaderName::from_bytes(name).unwrap();
-                headers.insert(name, value.into());
+                let value = value.as_bytes().to_owned();
+                let value = HeaderValue::from_bytes(value).unwrap();
+                let value_parts = value.as_str().split(',');
+                let value_parts = value_parts
+                    .map(|it| it.trim())
+                    .filter_map(|it| HeaderValue::from_str(it).ok());
+                headers.insert(name, value_parts.collect());
             }
         }
 

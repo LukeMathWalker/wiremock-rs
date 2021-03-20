@@ -8,7 +8,7 @@
 //!
 //! Check [`Match`]'s documentation for examples.
 use crate::{Match, Request};
-use http_types::headers::{HeaderName, HeaderValue};
+use http_types::headers::{HeaderName, HeaderValue, HeaderValues};
 use http_types::Method;
 use log::debug;
 use regex::Regex;
@@ -303,7 +303,7 @@ impl Match for PathRegexMatcher {
 /// ### Example:
 /// ```rust
 /// use wiremock::{MockServer, Mock, ResponseTemplate};
-/// use wiremock::matchers::header;
+/// use wiremock::matchers::{header, headers};
 ///
 /// #[async_std::main]
 /// async fn main() {
@@ -311,6 +311,7 @@ impl Match for PathRegexMatcher {
 ///     let mock_server = MockServer::start().await;
 ///
 ///     Mock::given(header("custom", "header"))
+///         .and(headers("cache-control", vec!["no-cache", "no-store"]))
 ///         .respond_with(ResponseTemplate::new(200))
 ///         .mount(&mock_server)
 ///         .await;
@@ -318,6 +319,7 @@ impl Match for PathRegexMatcher {
 ///     // Act
 ///     let status = surf::get(&mock_server.uri())
 ///         .header("custom", "header")
+///         .header("cache-control", "no-cache, no-store")
 ///         .await
 ///         .unwrap()
 ///         .status();
@@ -326,7 +328,7 @@ impl Match for PathRegexMatcher {
 ///     assert_eq!(status, 200);
 /// }
 /// ```
-pub struct HeaderExactMatcher(HeaderName, HeaderValue);
+pub struct HeaderExactMatcher(HeaderName, HeaderValues);
 
 /// Shorthand for [`HeaderExactMatcher::new`].
 pub fn header<K, V>(key: K, value: V) -> HeaderExactMatcher
@@ -336,7 +338,22 @@ where
     V: TryInto<HeaderValue>,
     <V as TryInto<HeaderValue>>::Error: std::fmt::Debug,
 {
-    HeaderExactMatcher::new(key, value)
+    HeaderExactMatcher::new(key, value.try_into().map(HeaderValues::from).unwrap())
+}
+
+/// Shorthand for [`HeaderExactMatcher::new`] supporting multi valued headers.
+pub fn headers<K, V>(key: K, values: Vec<V>) -> HeaderExactMatcher
+where
+    K: TryInto<HeaderName>,
+    <K as TryInto<HeaderName>>::Error: std::fmt::Debug,
+    V: TryInto<HeaderValue>,
+    <V as TryInto<HeaderValue>>::Error: std::fmt::Debug,
+{
+    let values = values
+        .into_iter()
+        .filter_map(|v| v.try_into().ok())
+        .collect::<HeaderValues>();
+    HeaderExactMatcher::new(key, values)
 }
 
 impl HeaderExactMatcher {
@@ -344,8 +361,8 @@ impl HeaderExactMatcher {
     where
         K: TryInto<HeaderName>,
         <K as TryInto<HeaderName>>::Error: std::fmt::Debug,
-        V: TryInto<HeaderValue>,
-        <V as TryInto<HeaderValue>>::Error: std::fmt::Debug,
+        V: TryInto<HeaderValues>,
+        <V as TryInto<HeaderValues>>::Error: std::fmt::Debug,
     {
         let key = key.try_into().expect("Failed to convert to header name.");
         let value = value
@@ -360,12 +377,8 @@ impl Match for HeaderExactMatcher {
         match request.headers.get(&self.0) {
             None => false,
             Some(values) => {
-                for value in values {
-                    if value == &self.1 {
-                        return true;
-                    }
-                }
-                false
+                let headers: Vec<&str> = self.1.iter().map(HeaderValue::as_str).collect();
+                values.eq(headers.as_slice())
             }
         }
     }
