@@ -1,10 +1,18 @@
 # Changelog
 
-# `0.5.1`
+# Next
+
+# `0.5.2`
+
 - Features:
     - Support multi-valued headers (by [@beltram])
 - Miscellaneous:
     - Improve README (by [@apiraino])
+
+# `0.5.1`
+
+- Features:
+    - Capture the port in `hyper`'s `Request` into `wiremock::Request::url`  (by [@beltram])
 
 # `0.5.0`
 
