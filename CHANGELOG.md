@@ -1,5 +1,11 @@
 # Changelog
 
+# `0.5.1`
+- Features:
+    - Support multi-valued headers (by [@beltram])
+- Miscellaneous:
+    - Improve README (by [@apiraino])
+
 # `0.5.0`
 
 - Breaking changes:
@@ -15,3 +21,5 @@
 
 [@Michael-J-Ward]: https://github.com/Michael-J-Ward
 [@LukeMathWalker]: https://github.com/LukeMathWalker
+[@beltram]: https://github.com/beltram
+[@apiraino]: https://github.com/apiraino
