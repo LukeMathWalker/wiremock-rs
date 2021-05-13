@@ -239,11 +239,7 @@ impl MockServer {
                             .into_iter()
                             .enumerate()
                             .map(|(index, request)| {
-                                format!(
-                                    "- Request #{}\n{}",
-                                    index + 1,
-                                    textwrap::indent(&format!("{}", request), "\t")
-                                )
+                                format!("- Request #{}\n{}", index + 1, &format!("\t{}", request))
                             })
                             .collect::<String>()
                     )
