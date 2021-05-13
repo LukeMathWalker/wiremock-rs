@@ -135,7 +135,7 @@ impl MockServer {
     ///
     ///     // We won't register this mock instead.
     ///     let unregistered_mock = Mock::given(method("GET")).respond_with(response);
-    ///     
+    ///
     ///     // Act
     ///     let status = surf::get(&mock_server.uri())
     ///         .await
@@ -156,7 +156,7 @@ impl MockServer {
         self.0.register(mock).await
     }
 
-    /// Drop all mounted [`Mock`]s from an instance of [`MockServer`].  
+    /// Drop all mounted [`Mock`]s from an instance of [`MockServer`].
     /// It also deletes all recorded requests.
     ///
     /// ### Example
@@ -172,7 +172,7 @@ impl MockServer {
     ///
     ///     let response = ResponseTemplate::new(200);
     ///     Mock::given(method("GET")).respond_with(response).mount(&mock_server).await;
-    ///     
+    ///
     ///     // Act
     ///     let status = surf::get(&mock_server.uri())
     ///         .await
@@ -202,7 +202,7 @@ impl MockServer {
     /// async fn main() {
     ///     // Arrange
     ///     let mock_server = MockServer::start().await;
-    ///     
+    ///
     ///     // Act
     ///     surf::get(&mock_server.uri()).await.unwrap();
     ///
@@ -315,7 +315,7 @@ impl MockServer {
         self.0.address()
     }
 
-    /// Return a vector with all the requests received by the `MockServer` since it started.  
+    /// Return a vector with all the requests received by the `MockServer` since it started.
     /// If no request has been served, it returns an empty vector.
     ///
     /// If request recording has been disabled using [`MockServerBuilder::disable_request_recording`],
@@ -331,7 +331,7 @@ impl MockServer {
     /// async fn main() {
     ///     // Arrange
     ///     let mock_server = MockServer::start().await;
-    ///     
+    ///
     ///     // Act
     ///     surf::get(&mock_server.uri()).await.unwrap();
     ///
@@ -355,7 +355,7 @@ impl MockServer {
     /// async fn main() {
     ///     // Arrange
     ///     let mock_server = MockServer::start().await;
-    ///     
+    ///
     ///     // Assert
     ///     let received_requests = mock_server.received_requests().await.unwrap();
     ///     assert_eq!(received_requests.len(), 0);
@@ -371,7 +371,7 @@ impl MockServer {
     /// async fn main() {
     ///     // Arrange
     ///     let mock_server = MockServer::builder().disable_request_recording().start().await;
-    ///     
+    ///
     ///     // Assert
     ///     let received_requests = mock_server.received_requests().await;
     ///     assert!(received_requests.is_none());
