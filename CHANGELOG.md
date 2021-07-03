@@ -2,6 +2,16 @@
 
 # Next
 
+# `0.5.4`
+
+- Fixes:
+    - Handle URI authority properly in the mock server (by [@Tuetuopay])
+
+# `0.5.3`
+
+- Miscellaneous:
+    - Remove `textwrap` from the dependency tree (by [@apiraino])
+
 # `0.5.2`
 
 - Features:
@@ -31,3 +41,5 @@
 [@LukeMathWalker]: https://github.com/LukeMathWalker
 [@beltram]: https://github.com/beltram
 [@apiraino]: https://github.com/apiraino
+[@Tuetuopay]: https://github.com/Tuetuopay
+
