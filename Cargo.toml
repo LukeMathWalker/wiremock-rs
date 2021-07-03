@@ -1,6 +1,6 @@
 [package]
 name = "wiremock"
-version = "0.5.4"
+version = "0.5.5-alpha.0"
 authors = ["Luca Palmieri <rust@lpalmieri.com>"]
 edition = "2018"
 
