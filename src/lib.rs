@@ -159,4 +159,4 @@ pub use mock_server::{MockServer, MockServerBuilder};
 pub use request::Request;
 pub use respond::Respond;
 pub use response_template::ResponseTemplate;
-pub use http_types::headers::HeaderName;
+pub use http_types::headers::{HeaderName, HeaderValue};
