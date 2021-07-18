@@ -11,6 +11,12 @@ pub(crate) struct ActiveMock {
     /// E.g. `0` if this is the first mock that we try to match against an incoming request, `1`
     /// if it is the second, etc.
     position_in_set: usize,
+    /// A global is active for as long as the server it is mounted on is running.
+    /// A scoped mock becomes inactive once its guard has been dropped.
+    ///
+    /// When a scoped mock becomes inactive, `matches` returns `false`, regardless of
+    /// the specification and the number of requests that matched with it so far.
+    pub(crate) active: bool,
 }
 
 impl ActiveMock {
@@ -19,6 +25,7 @@ impl ActiveMock {
             specification,
             n_matched_requests: 0,
             position_in_set,
+            active: true,
         }
     }
 
@@ -28,7 +35,9 @@ impl ActiveMock {
     /// after a certain threshold has been crossed (e.g. start returning `false` for all requests
     /// once enough requests have been matched according to `max_n_matches`).
     pub(crate) fn matches(&mut self, request: &Request) -> bool {
-        if Some(self.n_matched_requests) == self.specification.max_n_matches {
+        if !self.active {
+            false
+        } else if Some(self.n_matched_requests) == self.specification.max_n_matches {
             // Skip the actual check if we are already at our maximum of matched requests.
             false
         } else {

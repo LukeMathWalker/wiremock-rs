@@ -6,7 +6,7 @@ use crate::{Mock, Request, ResponseTemplate};
 use futures_timer::Delay;
 use http_types::{Response, StatusCode};
 use log::debug;
-use std::ops::Index;
+use std::ops::{Index, IndexMut};
 
 /// The collection of mocks used by a `MockServer` instance to match against
 /// incoming requests.
@@ -79,6 +79,13 @@ impl ActiveMockSet {
         self.generation += 1;
     }
 
+    /// De-activate one of the mocks in the set. It will stop matching against incoming requests,
+    /// regardless of its specification.
+    pub(crate) fn deactivate(&mut self, mock_id: MockId) {
+        let mock = &mut self[mock_id];
+        mock.active = false;
+    }
+
     /// Verify that expectations have been met for **all** [`ActiveMock`]s in the set.
     pub(crate) fn verify_all(&self) -> VerificationOutcome {
         let failed_verifications: Vec<VerificationReport> = self
@@ -95,14 +102,18 @@ impl ActiveMockSet {
     }
 
     /// Verify that expectations have been met for the [`ActiveMock`] corresponding to the specified [`MockId`].
-    pub(crate) fn verify(&self, mock_id: MockId) -> VerificationOutcome {
+    pub(crate) fn verify(&self, mock_id: MockId) -> VerificationReport {
         let mock = &self[mock_id];
-        let report = mock.verify();
-        if report.is_satisfied() {
-            VerificationOutcome::Success
-        } else {
-            VerificationOutcome::Failure(vec![report])
+        mock.verify()
+    }
+}
+
+impl IndexMut<MockId> for ActiveMockSet {
+    fn index_mut(&mut self, index: MockId) -> &mut Self::Output {
+        if index.generation != self.generation {
+            panic!("The mock you are trying to access is no longer active. It has been deleted from the active set via `reset` - you should not hold on to a `MockId` after you call `reset`!.")
         }
+        &mut self.mocks[index.index]
     }
 }
 
