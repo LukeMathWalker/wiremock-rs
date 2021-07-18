@@ -46,7 +46,7 @@ impl Drop for MockGuard {
 
                 let verifications_error = format!("- {}\n", report.error_message());
                 let error_message = format!(
-                    "Verification failed to the scoped mock:\n{}\n{}",
+                    "Verification failed for a scoped mock:\n{}\n{}",
                     verifications_error, received_requests_message
                 );
                 if std::thread::panicking() {
