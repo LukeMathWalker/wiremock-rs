@@ -148,6 +148,7 @@ mod active_mock;
 pub mod http;
 pub mod matchers;
 mod mock;
+mod mock_guard;
 mod mock_server;
 mod mock_set;
 mod request;
@@ -156,6 +157,7 @@ mod response_template;
 mod verification;
 
 pub use mock::{Match, Mock, MockBuilder, Times};
+pub use mock_guard::MockGuard;
 pub use mock_server::{MockServer, MockServerBuilder};
 pub use request::Request;
 pub use respond::Respond;

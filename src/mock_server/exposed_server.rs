@@ -1,7 +1,7 @@
 use crate::mock_server::bare_server::BareMockServer;
 use crate::mock_server::pool::get_pooled_mock_server;
 use crate::mock_server::MockServerBuilder;
-use crate::{mock::Mock, verification::VerificationOutcome, Request};
+use crate::{mock::Mock, verification::VerificationOutcome, MockGuard, Request};
 use deadpool::managed::Object;
 use log::debug;
 use std::convert::Infallible;
@@ -154,6 +154,56 @@ impl MockServer {
     /// ```
     pub async fn register(&self, mock: Mock) {
         self.0.register(mock).await
+    }
+
+    /// Register a **scoped** `Mock` on an instance of `MockServer`.
+    ///
+    /// When using `register`, your `Mock`s will be active until the `MockServer` is shut down.  
+    /// When using `register_scoped`, your `Mock`s will be active as long as the returned `MockGuard` is not dropped.
+    /// When the returned `MockGuard` is dropped, `MockServer` will verify that the expectations set on the scoped `Mock` were
+    /// verified - if not, it will panic.
+    ///
+    /// `register_scoped` is the ideal solution when you need a `Mock` within a test helper
+    /// but you do not want it to linger around after the end of the function execution.
+    ///
+    /// ### Example:
+    ///
+    /// ```rust
+    /// use wiremock::{MockServer, Mock, ResponseTemplate};
+    /// use wiremock::matchers::method;
+    ///
+    /// async fn my_test_helper(mock_server: &MockServer) {
+    ///     let mock = Mock::given(method("GET"))
+    ///         .respond_with(ResponseTemplate::new(200))
+    ///         .expect(1);
+    ///     let mock_guard = mock_server.register_scoped(mock).await;
+    ///
+    ///     surf::get(&mock_server.uri())
+    ///         .await
+    ///         .unwrap();
+    ///
+    ///     // `mock_guard` is dropped, expectations are verified!
+    /// }
+    ///
+    /// #[async_std::main]
+    /// async fn main() {
+    ///     // Arrange
+    ///     let mock_server = MockServer::start().await;
+    ///     my_test_helper(&mock_server).await;
+    ///
+    ///     // Act
+    ///
+    ///     // This would have returned 200 if the `Mock` in
+    ///     // `my_test_helper` had not been scoped.
+    ///     let status = surf::get(&mock_server.uri())
+    ///         .await
+    ///         .unwrap()
+    ///         .status();
+    ///     assert_eq!(status, 404);
+    /// }
+    /// ```
+    pub async fn register_scoped(&self, mock: Mock) -> MockGuard {
+        self.0.register_scoped(mock).await
     }
 
     /// Drop all mounted [`Mock`]s from an instance of [`MockServer`].

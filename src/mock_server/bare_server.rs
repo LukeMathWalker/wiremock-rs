@@ -1,6 +1,6 @@
 use crate::mock_server::hyper::run_server;
 use crate::mock_set::ActiveMockSet;
-use crate::{mock::Mock, verification::VerificationOutcome, Request};
+use crate::{mock::Mock, verification::VerificationOutcome, MockGuard, Request};
 use std::net::{SocketAddr, TcpListener, TcpStream};
 use std::sync::Arc;
 use tokio::sync::{Mutex, RwLock};
@@ -72,10 +72,19 @@ impl BareMockServer {
     ///
     /// Be careful! `Mock`s are not effective until they are `mount`ed or `register`ed on a
     /// `BareMockServer`.
-    ///
-    /// `register` is an asynchronous method, make sure to `.await` it!
     pub(crate) async fn register(&self, mock: Mock) {
         self.mock_set.write().await.register(mock);
+    }
+
+    /// Register a **scoped** `Mock` on an instance of `MockServer`.
+    ///
+    /// When using `register`, your `Mock`s will be active until the `MockServer` is shut down.  
+    /// When using `register_scoped`, your `Mock`s will be active as long as the returned `MockGuard` is not dropped.
+    /// When the returned `MockGuard` is dropped, `MockServer` will verify that the expectations set on the scoped `Mock` were
+    /// verified - if not, it will panic.
+    pub async fn register_scoped(&self, mock: Mock) -> MockGuard {
+        let mock_id = self.mock_set.write().await.register(mock);
+        MockGuard(mock_id)
     }
 
     /// Drop all mounted `Mock`s from an instance of `BareMockServer`.
