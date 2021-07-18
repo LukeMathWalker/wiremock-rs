@@ -6,6 +6,7 @@ use crate::{Mock, Request, ResponseTemplate};
 use futures_timer::Delay;
 use http_types::{Response, StatusCode};
 use log::debug;
+use std::ops::Index;
 
 /// The collection of mocks used by a `MockServer` instance to match against
 /// incoming requests.
@@ -26,6 +27,7 @@ pub(crate) struct ActiveMockSet {
 /// A `MockId` is an opaque index that uniquely identifies an [`ActiveMock`] inside an [`ActiveMockSet`].  
 ///
 /// The only way to create a `MockId` is calling [`ActiveMockSet::register`].
+#[derive(Copy, Clone)]
 pub(crate) struct MockId {
     index: usize,
     /// The generation of [`ActiveMockSet`] when [`ActiveMockSet::register`] was called.
@@ -77,7 +79,8 @@ impl ActiveMockSet {
         self.generation += 1;
     }
 
-    pub(crate) fn verify(&self) -> VerificationOutcome {
+    /// Verify that expectations have been met for **all** [`ActiveMock`]s in the set.
+    pub(crate) fn verify_all(&self) -> VerificationOutcome {
         let failed_verifications: Vec<VerificationReport> = self
             .mocks
             .iter()
@@ -90,12 +93,35 @@ impl ActiveMockSet {
             VerificationOutcome::Failure(failed_verifications)
         }
     }
+
+    /// Verify that expectations have been met for the [`ActiveMock`] corresponding to the specified [`MockId`].
+    pub(crate) fn verify(&self, mock_id: MockId) -> VerificationOutcome {
+        let mock = &self[mock_id];
+        let report = mock.verify();
+        if report.is_satisfied() {
+            VerificationOutcome::Success
+        } else {
+            VerificationOutcome::Failure(vec![report])
+        }
+    }
+}
+
+impl Index<MockId> for ActiveMockSet {
+    type Output = ActiveMock;
+
+    fn index(&self, index: MockId) -> &Self::Output {
+        if index.generation != self.generation {
+            panic!("The mock you are trying to access is no longer active. It has been deleted from the active set via `reset` - you should not hold on to a `MockId` after you call `reset`!.")
+        }
+        &self.mocks[index.index]
+    }
 }
 
 #[cfg(test)]
 mod tests {
     use crate::mock_set::ActiveMockSet;
 
+    #[test]
     fn generation_is_incremented_for_every_reset() {
         let mut set = ActiveMockSet::new();
         assert_eq!(set.generation, 0);

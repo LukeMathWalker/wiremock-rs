@@ -3,7 +3,7 @@ use crate::mock_set::ActiveMockSet;
 use crate::{mock::Mock, verification::VerificationOutcome, MockGuard, Request};
 use std::net::{SocketAddr, TcpListener, TcpStream};
 use std::sync::Arc;
-use tokio::sync::{Mutex, RwLock};
+use tokio::sync::RwLock;
 use tokio::task::LocalSet;
 
 /// An HTTP web-server running in the background to behave as one of your dependencies using `Mock`s
@@ -13,11 +13,15 @@ use tokio::task::LocalSet;
 /// is instead a thin facade over a `BareMockServer` retrieved from a pool - see `get_pooled_server`
 /// for more details.
 pub(crate) struct BareMockServer {
-    mock_set: Arc<RwLock<ActiveMockSet>>,
-    received_requests: Option<Arc<Mutex<Vec<Request>>>>,
+    state: Arc<RwLock<MockServerState>>,
     server_address: SocketAddr,
     // When `_shutdown_trigger` gets dropped the listening server terminates gracefully.
     _shutdown_trigger: tokio::sync::oneshot::Sender<()>,
+}
+
+pub(crate) struct MockServerState {
+    pub(crate) mock_set: ActiveMockSet,
+    pub(crate) received_requests: Option<Vec<Request>>,
 }
 
 impl BareMockServer {
@@ -25,24 +29,21 @@ impl BareMockServer {
     /// [`TcpListener`](std::net::TcpListener).
     pub(super) async fn start(listener: TcpListener, request_recording: RequestRecording) -> Self {
         let (shutdown_trigger, shutdown_receiver) = tokio::sync::oneshot::channel();
-        let mock_set = Arc::new(RwLock::new(ActiveMockSet::new()));
         let received_requests = match request_recording {
-            RequestRecording::Enabled => Some(Arc::new(Mutex::new(Vec::new()))),
+            RequestRecording::Enabled => Some(Vec::new()),
             RequestRecording::Disabled => None,
         };
+        let state = Arc::new(RwLock::new(MockServerState {
+            mock_set: ActiveMockSet::new(),
+            received_requests,
+        }));
         let server_address = listener
             .local_addr()
             .expect("Failed to get server address.");
 
-        let server_mock_set = mock_set.clone();
-        let server_received_requests = received_requests.clone();
+        let server_state = state.clone();
         std::thread::spawn(move || {
-            let server_future = run_server(
-                listener,
-                server_mock_set,
-                server_received_requests,
-                shutdown_receiver,
-            );
+            let server_future = run_server(listener, server_state, shutdown_receiver);
 
             let runtime = tokio::runtime::Builder::new_current_thread()
                 .enable_all()
@@ -61,8 +62,7 @@ impl BareMockServer {
         }
 
         Self {
-            mock_set,
-            received_requests,
+            state,
             server_address,
             _shutdown_trigger: shutdown_trigger,
         }
@@ -73,7 +73,7 @@ impl BareMockServer {
     /// Be careful! `Mock`s are not effective until they are `mount`ed or `register`ed on a
     /// `BareMockServer`.
     pub(crate) async fn register(&self, mock: Mock) {
-        self.mock_set.write().await.register(mock);
+        self.state.write().await.mock_set.register(mock);
     }
 
     /// Register a **scoped** `Mock` on an instance of `MockServer`.
@@ -83,8 +83,11 @@ impl BareMockServer {
     /// When the returned `MockGuard` is dropped, `MockServer` will verify that the expectations set on the scoped `Mock` were
     /// verified - if not, it will panic.
     pub async fn register_scoped(&self, mock: Mock) -> MockGuard {
-        let mock_id = self.mock_set.write().await.register(mock);
-        MockGuard(mock_id)
+        let mock_id = self.state.write().await.mock_set.register(mock);
+        MockGuard {
+            mock_id,
+            server_state: self.state.clone(),
+        }
     }
 
     /// Drop all mounted `Mock`s from an instance of `BareMockServer`.
@@ -93,17 +96,18 @@ impl BareMockServer {
     /// It *must* be called if you plan to reuse a `BareMockServer` instance (i.e. in our
     /// `MockServerPoolManager`).
     pub(crate) async fn reset(&self) {
-        self.mock_set.write().await.reset();
-        if let Some(received_requests) = &self.received_requests {
-            received_requests.lock().await.clear();
+        let mut state = self.state.write().await;
+        state.mock_set.reset();
+        if let Some(received_requests) = &mut state.received_requests {
+            received_requests.clear();
         }
     }
 
     /// Verify that all mounted `Mock`s on this instance of `BareMockServer` have satisfied
     /// their expectations on their number of invocations.
     pub(crate) async fn verify(&self) -> VerificationOutcome {
-        let mock_set = self.mock_set.read().await;
-        mock_set.verify()
+        let mock_set = &self.state.read().await.mock_set;
+        mock_set.verify_all()
     }
 
     /// Return the base uri of this running instance of `BareMockServer`, e.g. `http://127.0.0.1:4372`.
@@ -126,8 +130,9 @@ impl BareMockServer {
     ///
     /// If request recording was disabled, it returns `None`.
     pub(crate) async fn received_requests(&self) -> Option<Vec<Request>> {
-        if let Some(received_requests) = &self.received_requests {
-            Some(received_requests.lock().await.clone())
+        let state = self.state.read().await;
+        if let Some(received_requests) = &state.received_requests {
+            Some(received_requests.clone())
         } else {
             None
         }
