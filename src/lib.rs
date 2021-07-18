@@ -145,6 +145,7 @@
 //! [`async_std`]: https://docs.rs/async-std/
 //! [`tokio`]: https://docs.rs/tokio/
 mod active_mock;
+pub mod http;
 pub mod matchers;
 mod mock;
 mod mock_server;
