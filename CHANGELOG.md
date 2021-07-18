@@ -2,6 +2,11 @@
 
 # Next
 
+# `0.5.5`
+
+- Miscellaneous:
+    - Added the `http` module to re-export the types from `http-types` that are part of `wiremock`'s public API.
+
 # `0.5.4`
 
 - Fixes:
