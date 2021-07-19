@@ -149,7 +149,7 @@ impl Index<MockId> for MountedMockSet {
 ///
 /// Attaching a state to the mocks in the vector, instead, allows us to ensure id stability while
 /// achieving the desired behaviour.
-#[derive(PartialEq, Copy, Clone)]
+#[derive(Debug, PartialEq, Eq, Copy, Clone)]
 pub(crate) enum MountedMockState {
     InScope,
     OutOfScope
@@ -157,7 +157,7 @@ pub(crate) enum MountedMockState {
 
 #[cfg(test)]
 mod tests {
-    use crate::mock_set::MountedMockSet;
+    use crate::mock_set::{MountedMockSet, MountedMockState};
     use crate::{Mock, ResponseTemplate};
     use crate::matchers::path;
 
@@ -185,5 +185,24 @@ mod tests {
 
         // Assert
         &set[mock_id];
+    }
+
+    #[test]
+    fn deactivating_a_mock_does_not_invalidate_other_ids() {
+        // Assert
+        let mut set = MountedMockSet::new();
+        let first_mock = Mock::given(path("/")).respond_with(ResponseTemplate::new(200));
+        let second_mock = Mock::given(path("/hello")).respond_with(ResponseTemplate::new(500));
+        let first_mock_id = set.register(first_mock);
+        let second_mock_id = set.register(second_mock);
+
+        // Act
+        set.deactivate(first_mock_id);
+
+        // Assert
+        let first_mock = &set[first_mock_id];
+        assert_eq!(first_mock.1, MountedMockState::OutOfScope);
+        let second_mock = &set[second_mock_id];
+        assert_eq!(second_mock.1, MountedMockState::InScope);
     }
 }
