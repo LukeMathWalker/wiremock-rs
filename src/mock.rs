@@ -432,6 +432,18 @@ impl Mock {
     /// `mount_as_scoped` is the ideal solution when you need a `Mock` within a test helper
     /// but you do not want it to linger around after the end of the function execution.
     ///
+    /// # Limitations
+    ///
+    /// When expectations of a scoped `Mock` are not verified, it will trigger a panic - just like a normal `Mock`.
+    /// Due to [limitations](https://internals.rust-lang.org/t/should-drop-glue-use-track-caller/13682) in Rust's `Drop` trait,
+    /// the panic message will not include the filename and the line location
+    /// where the corresponding [`MockGuard`] was dropped - it will point into `wiremock`'s source code.  
+    ///
+    /// This can be an issue when you are using more than one scoped `Mock` in a single test - which of them panicked?  
+    /// To improve your debugging experience it is strongly recommended to use [`MockBuilder::named`] to assign a unique
+    /// identifier to your scoped [`Mock`]s, which will in turn be referenced in the panic message if their expectations are
+    /// not met.
+    ///
     /// # Example:
     ///
     /// - The behaviour of the scoped mock is invisible outside of `my_test_helper`.
