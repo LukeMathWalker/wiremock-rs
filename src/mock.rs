@@ -101,7 +101,7 @@ use std::ops::{
 /// }
 /// ```
 pub trait Match: Send + Sync {
-    /// Given a reference to a `Request`, determine if it should match or not given
+    /// Given a reference to a [`Request`], determine if it should match or not given
     /// a specific criterion.
     fn matches(&self, request: &Request) -> bool;
 }
@@ -208,7 +208,7 @@ impl Debug for Matcher {
 /// }
 /// ```
 ///
-/// # Example (using `mount_as_scoped`):
+/// # Example (using [`mount_as_scoped`]):
 ///
 /// Sometimes you will need a `Mock` to be active within the scope of a function, but not any longer.
 /// You can use [`Mock::mount_as_scoped`] to precisely control how long a `Mock` stays active.
@@ -250,10 +250,9 @@ impl Debug for Matcher {
 /// }
 /// ```
 ///
-/// Both `register` and `mount` are asynchronous methods - don't forget to `.await` them!
-///
 /// [`register`]: MockServer::register
 /// [`mount`]: Mock::mount
+/// [`mount_as_scoped`]: Mock::mount_as_scoped
 pub struct Mock {
     pub(crate) matchers: Vec<Matcher>,
     pub(crate) response: Box<dyn Respond>,
@@ -277,7 +276,7 @@ pub struct MockBuilder {
 }
 
 impl Mock {
-    /// Start building a `Mock` specifying the first matcher.
+    /// Start building a [`Mock`] specifying the first matcher.
     ///
     /// It returns an instance of [`MockBuilder`].
     pub fn given<M: 'static + Match>(matcher: M) -> MockBuilder {
@@ -286,7 +285,7 @@ impl Mock {
         }
     }
 
-    /// Specify an upper limit to the number of times you would like this `Mock` to respond to
+    /// Specify an upper limit to the number of times you would like this [`Mock`] to respond to
     /// incoming requests that satisfy the conditions imposed by your [`matchers`].
     ///
     /// ### Example:
@@ -339,12 +338,12 @@ impl Mock {
         self
     }
 
-    /// Set an expectation on the number of times this `Mock` should match in the current
+    /// Set an expectation on the number of times this [`Mock`] should match in the current
     /// test case.
     /// Expectations are verified when the [`MockServer`] is shutting down: if the expectation
     /// is not satisfied, the [`MockServer`] will panic and the `error_message` is shown.
     ///
-    /// By default, no expectation is set for `Mock`s.
+    /// By default, no expectation is set for [`Mock`]s.
     ///
     /// ### When is this useful?
     ///
@@ -459,10 +458,11 @@ impl Mock {
         self
     }
 
-    /// Mount a `Mock` on an instance of [`MockServer`].
+    /// Mount a [`Mock`] on an instance of [`MockServer`].
+    /// The [`Mock`] will remain active until [`MockServer`] is shut down. If you want to control or limit how
+    /// long your [`Mock`] stays active, check out [`Mock::mount_as_scoped`].
     ///
-    /// Be careful! `Mock`s are not effective until they are [`mount`]ed or [`register`]ed on a [`MockServer`].
-    ///
+    /// Be careful! [`Mock`]s are not effective until they are [`mount`]ed or [`register`]ed on a [`MockServer`].
     /// [`mount`] is an asynchronous method, make sure to `.await` it!
     ///
     /// [`register`]: MockServer::register
@@ -471,24 +471,24 @@ impl Mock {
         server.register(self).await;
     }
 
-    /// Mount a `Mock` as **scoped**  on an instance of `MockServer`.
+    /// Mount a [`Mock`] as **scoped**  on an instance of [`MockServer`].
     ///
-    /// When using [`mount`], your `Mock`s will be active until the `MockServer` is shut down.  
-    /// When using `mount_as_scoped`, your `Mock`s will be active as long as the returned [`MockGuard`] is not dropped.
-    /// When the returned [`MockGuard`] is dropped, [`MockServer`] will verify that the expectations set on the scoped `Mock` were
+    /// When using [`mount`], your [`Mock`]s will be active until the [`MockServer`] is shut down.  
+    /// When using `mount_as_scoped`, your [`Mock`]s will be active as long as the returned [`MockGuard`] is not dropped.
+    /// When the returned [`MockGuard`] is dropped, [`MockServer`] will verify that the expectations set on the scoped [`Mock`] were
     /// verified - if not, it will panic.
     ///
-    /// `mount_as_scoped` is the ideal solution when you need a `Mock` within a test helper
+    /// `mount_as_scoped` is the ideal solution when you need a [`Mock`] within a test helper
     /// but you do not want it to linger around after the end of the function execution.
     ///
     /// # Limitations
     ///
-    /// When expectations of a scoped `Mock` are not verified, it will trigger a panic - just like a normal `Mock`.
-    /// Due to [limitations](https://internals.rust-lang.org/t/should-drop-glue-use-track-caller/13682) in Rust's `Drop` trait,
+    /// When expectations of a scoped [`Mock`] are not verified, it will trigger a panic - just like a normal [`Mock`].
+    /// Due to [limitations](https://internals.rust-lang.org/t/should-drop-glue-use-track-caller/13682) in Rust's [`Drop`](std::ops::Drop) trait,
     /// the panic message will not include the filename and the line location
     /// where the corresponding [`MockGuard`] was dropped - it will point into `wiremock`'s source code.  
     ///
-    /// This can be an issue when you are using more than one scoped `Mock` in a single test - which of them panicked?  
+    /// This can be an issue when you are using more than one scoped [`Mock`] in a single test - which of them panicked?  
     /// To improve your debugging experience it is strongly recommended to use [`Mock::named`] to assign a unique
     /// identifier to your scoped [`Mock`]s, which will in turn be referenced in the panic message if their expectations are
     /// not met.
