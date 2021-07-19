@@ -28,7 +28,7 @@ impl Drop for MockGuard {
                         format!(
                             "Received requests:\n{}",
                             received_requests
-                                .into_iter()
+                                .iter()
                                 .enumerate()
                                 .map(|(index, request)| {
                                     format!(

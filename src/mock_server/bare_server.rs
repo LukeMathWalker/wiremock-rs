@@ -131,11 +131,7 @@ impl BareMockServer {
     /// If request recording was disabled, it returns `None`.
     pub(crate) async fn received_requests(&self) -> Option<Vec<Request>> {
         let state = self.state.read().await;
-        if let Some(received_requests) = &state.received_requests {
-            Some(received_requests.clone())
-        } else {
-            None
-        }
+        state.received_requests.to_owned()
     }
 }
 
