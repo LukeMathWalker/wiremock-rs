@@ -1,5 +1,5 @@
 use crate::respond::Respond;
-use crate::{MockServer, Request, ResponseTemplate};
+use crate::{MockGuard, MockServer, Request, ResponseTemplate};
 use std::fmt::{Debug, Formatter};
 use std::ops::{
     Range, RangeBounds, RangeFrom, RangeFull, RangeInclusive, RangeTo, RangeToInclusive,
@@ -420,6 +420,92 @@ impl Mock {
     /// [`mount`]: Mock::mount
     pub async fn mount(self, server: &MockServer) {
         server.register(self).await;
+    }
+
+    /// Mount a `Mock` as **scoped**  on an instance of `MockServer`.
+    ///
+    /// When using [`mount`], your `Mock`s will be active until the `MockServer` is shut down.  
+    /// When using [`mount_as_scoped`], your `Mock`s will be active as long as the returned [`MockGuard`] is not dropped.
+    /// When the returned [`MockGuard`] is dropped, [`MockServer`] will verify that the expectations set on the scoped `Mock` were
+    /// verified - if not, it will panic.
+    ///
+    /// `mount_as_scoped` is the ideal solution when you need a `Mock` within a test helper
+    /// but you do not want it to linger around after the end of the function execution.
+    ///
+    /// # Example:
+    ///
+    /// - The behaviour of the scoped mock is invisible outside of `my_test_helper`.
+    ///
+    /// ```rust
+    /// use wiremock::{MockServer, Mock, ResponseTemplate};
+    /// use wiremock::matchers::method;
+    ///
+    /// async fn my_test_helper(mock_server: &MockServer) {
+    ///     let mock_guard = Mock::given(method("GET"))
+    ///         .respond_with(ResponseTemplate::new(200))
+    ///         .expect(1)
+    ///         .named("my_test_helper GET /")
+    ///         .mount_as_scoped(mock_server)
+    ///         .await;
+    ///
+    ///     surf::get(&mock_server.uri())
+    ///         .await
+    ///         .unwrap();
+    ///
+    ///     // `mock_guard` is dropped, expectations are verified!
+    /// }
+    ///
+    /// #[async_std::main]
+    /// async fn main() {
+    ///     // Arrange
+    ///     let mock_server = MockServer::start().await;
+    ///     my_test_helper(&mock_server).await;
+    ///
+    ///     // Act
+    ///
+    ///     // This would have returned 200 if the `Mock` in
+    ///     // `my_test_helper` had not been scoped.
+    ///     let status = surf::get(&mock_server.uri())
+    ///         .await
+    ///         .unwrap()
+    ///         .status();
+    ///     assert_eq!(status, 404);
+    /// }
+    /// ```
+    ///
+    /// - The expectations for the scoped mock are not verified, it panics at the end of `my_test_helper`.
+    ///
+    /// ```rust,should_panic
+    /// use wiremock::{MockServer, Mock, ResponseTemplate};
+    /// use wiremock::matchers::method;
+    ///
+    /// async fn my_test_helper(mock_server: &MockServer) {
+    ///     let mock_guard = Mock::given(method("GET"))
+    ///         .respond_with(ResponseTemplate::new(200))
+    ///         .expect(1)
+    ///         .named("my_test_helper GET /")
+    ///         .mount_as_scoped(mock_server)
+    ///         .await;
+    ///     // `mock_guard` is dropped, expectations are NOT verified!
+    ///     // Panic!
+    /// }
+    ///
+    /// #[async_std::main]
+    /// async fn main() {
+    ///     // Arrange
+    ///     let mock_server = MockServer::start().await;
+    ///     my_test_helper(&mock_server).await;
+    ///
+    ///     // Act
+    ///     let status = surf::get(&mock_server.uri())
+    ///         .await
+    ///         .unwrap()
+    ///         .status();
+    ///     assert_eq!(status, 404);
+    /// }
+    /// ```
+    pub async fn mount_as_scoped(self, server: &MockServer) -> MockGuard {
+        server.register_as_scoped(self).await
     }
 
     /// Given a [`Request`](crate::Request) build an instance a [`ResponseTemplate`] using

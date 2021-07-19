@@ -177,7 +177,8 @@ impl MockServer {
     /// async fn my_test_helper(mock_server: &MockServer) {
     ///     let mock = Mock::given(method("GET"))
     ///         .respond_with(ResponseTemplate::new(200))
-    ///         .expect(1);
+    ///         .expect(1)
+    ///         .named("my_test_helper GET /");
     ///     let mock_guard = mock_server.register_as_scoped(mock).await;
     ///
     ///     surf::get(&mock_server.uri())
@@ -214,7 +215,8 @@ impl MockServer {
     /// async fn my_test_helper(mock_server: &MockServer) {
     ///     let mock = Mock::given(method("GET"))
     ///         .respond_with(ResponseTemplate::new(200))
-    ///         .expect(1);
+    ///         .expect(1)
+    ///         .named("my_test_helper GET /");
     ///     let mock_guard = mock_server.register_as_scoped(mock).await;
     ///     // `mock_guard` is dropped, expectations are NOT verified!
     ///     // Panic!
