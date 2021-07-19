@@ -425,7 +425,7 @@ impl Mock {
     /// Mount a `Mock` as **scoped**  on an instance of `MockServer`.
     ///
     /// When using [`mount`], your `Mock`s will be active until the `MockServer` is shut down.  
-    /// When using [`mount_as_scoped`], your `Mock`s will be active as long as the returned [`MockGuard`] is not dropped.
+    /// When using `mount_as_scoped`, your `Mock`s will be active as long as the returned [`MockGuard`] is not dropped.
     /// When the returned [`MockGuard`] is dropped, [`MockServer`] will verify that the expectations set on the scoped `Mock` were
     /// verified - if not, it will panic.
     ///
@@ -440,7 +440,7 @@ impl Mock {
     /// where the corresponding [`MockGuard`] was dropped - it will point into `wiremock`'s source code.  
     ///
     /// This can be an issue when you are using more than one scoped `Mock` in a single test - which of them panicked?  
-    /// To improve your debugging experience it is strongly recommended to use [`MockBuilder::named`] to assign a unique
+    /// To improve your debugging experience it is strongly recommended to use [`Mock::named`] to assign a unique
     /// identifier to your scoped [`Mock`]s, which will in turn be referenced in the panic message if their expectations are
     /// not met.
     ///
@@ -516,6 +516,8 @@ impl Mock {
     ///     assert_eq!(status, 404);
     /// }
     /// ```
+    ///
+    /// [`mount`]: Mock::mount
     pub async fn mount_as_scoped(self, server: &MockServer) -> MockGuard {
         server.register_as_scoped(self).await
     }

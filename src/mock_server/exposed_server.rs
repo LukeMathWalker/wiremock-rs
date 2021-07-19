@@ -174,7 +174,7 @@ impl MockServer {
     /// where the corresponding [`MockGuard`] was dropped - it will point into `wiremock`'s source code.  
     ///
     /// This can be an issue when you are using more than one scoped `Mock` in a single test - which of them panicked?  
-    /// To improve your debugging experience it is strongly recommended to use [`MockBuilder::named`] to assign a unique
+    /// To improve your debugging experience it is strongly recommended to use [`Mock::named`] to assign a unique
     /// identifier to your scoped [`Mock`]s, which will in turn be referenced in the panic message if their expectations are
     /// not met.
     ///
