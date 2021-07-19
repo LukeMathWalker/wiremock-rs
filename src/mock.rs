@@ -135,8 +135,15 @@ impl Debug for Matcher {
 /// Given a set of matchers, a `Mock` instructs an instance of [`MockServer`] to return a pre-determined response if the matching conditions are satisfied.
 ///
 /// `Mock`s have to be mounted (or registered) with a [`MockServer`] to become effective.
+/// You can use:
 ///
-/// ### Example (using [`register`]):
+/// - [`MockServer::register`] or [`Mock::mount`] to activate a **global** `Mock`;
+/// - [`MockServer::register_as_scoped`] or [`Mock::mount_as_scoped`] to activate a **scoped** `Mock`.
+///
+/// Check the respective documentations for more details (or look at the following examples!).
+///
+/// # Example (using [`register`]):
+///
 /// ```rust
 /// use wiremock::{MockServer, Mock, ResponseTemplate};
 /// use wiremock::matchers::method;
@@ -172,7 +179,7 @@ impl Debug for Matcher {
 /// }
 /// ```
 ///
-/// ### Example (using [`mount`]):
+/// # Example (using [`mount`]):
 ///
 /// If you prefer a fluent style, you can use the [`mount`] method on the `Mock` itself
 /// instead of [`register`].
@@ -198,6 +205,48 @@ impl Debug for Matcher {
 ///         .unwrap()
 ///         .status();
 ///     assert_eq!(status, 200);
+/// }
+/// ```
+///
+/// # Example (using `mount_as_scoped`):
+///
+/// Sometimes you will need a `Mock` to be active within the scope of a function, but not any longer.
+/// You can use [`Mock::mount_as_scoped`] to precisely control how long a `Mock` stays active.
+///
+/// ```rust
+/// use wiremock::{MockServer, Mock, ResponseTemplate};
+/// use wiremock::matchers::method;
+///
+/// async fn my_test_helper(mock_server: &MockServer) {
+///     let mock_guard = Mock::given(method("GET"))
+///         .respond_with(ResponseTemplate::new(200))
+///         .expect(1)
+///         .named("my_test_helper GET /")
+///         .mount_as_scoped(mock_server)
+///         .await;
+///
+///     surf::get(&mock_server.uri())
+///         .await
+///         .unwrap();
+///
+///     // `mock_guard` is dropped, expectations are verified!
+/// }
+///
+/// #[async_std::main]
+/// async fn main() {
+///     // Arrange
+///     let mock_server = MockServer::start().await;
+///     my_test_helper(&mock_server).await;
+///
+///     // Act
+///
+///     // This would have returned 200 if the `Mock` in
+///     // `my_test_helper` had not been scoped.
+///     let status = surf::get(&mock_server.uri())
+///         .await
+///         .unwrap()
+///         .status();
+///     assert_eq!(status, 404);
 /// }
 /// ```
 ///

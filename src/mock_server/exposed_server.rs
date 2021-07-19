@@ -25,6 +25,9 @@ use std::ops::Deref;
 /// To ensure full isolation and no cross-test interference, `MockServer`s shouldn't be
 /// shared between tests. Instead, `MockServer`s should be created in the test where they are used.
 ///
+/// When using a [`Mock`] within a test helper function, consider using [`MockServer::register_as_scoped`]
+/// instead of [`MockServer::register`].
+///
 /// You can register as many [`Mock`]s as your scenario requires on a `MockServer`.
 pub struct MockServer(InnerServer);
 
@@ -111,10 +114,11 @@ impl MockServer {
         Self(InnerServer::Pooled(get_pooled_mock_server().await))
     }
 
-    /// Register a `Mock` on an instance of `MockServer`.
+    /// Register a [`Mock`] on an instance of `MockServer`.  
+    /// The [`Mock`] will remain active until `MockServer` is shut down. If you want to control or limit how
+    /// long your [`Mock`] stays active, check out [`MockServer::register_as_scoped`].
     ///
-    /// Be careful! `Mock`s are not effective until they are `mount`ed or `register`ed on a `MockServer`.
-    ///
+    /// Be careful! [`Mock`]s are not effective until they are [`mount`]ed or `register`ed on a `MockServer`.
     /// `register` is an asynchronous method, make sure to `.await` it!
     ///
     /// ### Example:
@@ -152,28 +156,30 @@ impl MockServer {
     ///     assert_eq!(status, 404);
     /// }
     /// ```
+    ///
+    /// [`mount`]: Mock::mount
     pub async fn register(&self, mock: Mock) {
         self.0.register(mock).await
     }
 
-    /// Register a **scoped** `Mock` on an instance of `MockServer`.
+    /// Register a **scoped** [`Mock`] on an instance of `MockServer`.
     ///
-    /// When using `register`, your `Mock`s will be active until the `MockServer` is shut down.  
-    /// When using `register_as_scoped`, your `Mock`s will be active as long as the returned `MockGuard` is not dropped.
-    /// When the returned `MockGuard` is dropped, `MockServer` will verify that the expectations set on the scoped `Mock` were
+    /// When using `register`, your [`Mock`]s will be active until the `MockServer` is shut down.  
+    /// When using `register_as_scoped`, your [`Mock`]s will be active as long as the returned [`MockGuard`] is not dropped.
+    /// When the returned [`MockGuard`] is dropped, `MockServer` will verify that the expectations set on the scoped [`Mock`] were
     /// verified - if not, it will panic.
     ///
-    /// `register_as_scoped` is the ideal solution when you need a `Mock` within a test helper
+    /// `register_as_scoped` is the ideal solution when you need a [`Mock`] within a test helper
     /// but you do not want it to linger around after the end of the function execution.
     ///
     /// # Limitations
     ///
-    /// When expectations of a scoped `Mock` are not verified, it will trigger a panic - just like a normal `Mock`.
+    /// When expectations of a scoped [`Mock`] are not verified, it will trigger a panic - just like a normal [`Mock`].
     /// Due to [limitations](https://internals.rust-lang.org/t/should-drop-glue-use-track-caller/13682) in Rust's `Drop` trait,
     /// the panic message will not include the filename and the line location
     /// where the corresponding [`MockGuard`] was dropped - it will point into `wiremock`'s source code.  
     ///
-    /// This can be an issue when you are using more than one scoped `Mock` in a single test - which of them panicked?  
+    /// This can be an issue when you are using more than one scoped [`Mock`] in a single test - which of them panicked?  
     /// To improve your debugging experience it is strongly recommended to use [`Mock::named`] to assign a unique
     /// identifier to your scoped [`Mock`]s, which will in turn be referenced in the panic message if their expectations are
     /// not met.
@@ -318,7 +324,7 @@ impl MockServer {
         self.0.reset().await;
     }
 
-    /// Verify that all mounted `Mock`s on this instance of `MockServer` have satisfied
+    /// Verify that all mounted [`Mock`]s on this instance of `MockServer` have satisfied
     /// their expectations on their number of invocations. Panics otherwise.
     pub async fn verify(&self) {
         debug!("Verify mock expectations.");
@@ -387,7 +393,7 @@ impl MockServer {
 
     /// Return the socket address of this running instance of `MockServer`, e.g. `127.0.0.1:4372`.
     ///
-    /// Use this method to interact with the `MockServer` using `TcpStream`s.
+    /// Use this method to interact with the `MockServer` using [`TcpStream`]s.
     ///
     /// ### Example:
     /// ```rust
@@ -403,6 +409,8 @@ impl MockServer {
     ///     assert!(TcpStream::connect(mock_server.address()).is_ok());
     /// }
     /// ```
+    ///
+    /// [`TcpStream`]: std::net::TcpStream
     pub fn address(&self) -> &SocketAddr {
         self.0.address()
     }
