@@ -1,6 +1,6 @@
 use crate::mock::Times;
 
-/// A report returned by an `ActiveMock` detailing what the user expectations were and
+/// A report returned by an `MountedMock` detailing what the user expectations were and
 /// how many calls were actually received since the mock was mounted on the server.
 #[derive(Clone)]
 pub(crate) struct VerificationReport {
@@ -11,7 +11,7 @@ pub(crate) struct VerificationReport {
     /// Actual number of received requests that matched the specification
     pub(crate) n_matched_requests: u64,
     /// The position occupied by the mock that generated the report within its parent
-    /// [`ActiveMockSet`](crate::mock_set::ActiveMockSet) collection of `ActiveMock`s.
+    /// [`MountedMockSet`](crate::mock_set::MountedMockSet) collection of `MountedMock`s.
     ///
     /// E.g. `0` if it is the first mock that we try to match against an incoming request, `1`
     /// if it is the second, etc.

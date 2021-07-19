@@ -1,5 +1,5 @@
 use crate::{
-    active_mock::ActiveMock,
+    mounted_mock::MountedMock,
     verification::{VerificationOutcome, VerificationReport},
 };
 use crate::{Mock, Request, ResponseTemplate};
@@ -11,35 +11,35 @@ use std::ops::{Index, IndexMut};
 /// The collection of mocks used by a `MockServer` instance to match against
 /// incoming requests.
 ///
-/// New mocks are added to `ActiveMockSet` every time [`MockServer::register`](crate::MockServer::register),
+/// New mocks are added to `MountedMockSet` every time [`MockServer::register`](crate::MockServer::register),
 /// [`MockServer::register_scoped`](crate::MockServer::register_scoped) or
 /// [`Mock::mount`](crate::Mock::mount) are called.
-pub(crate) struct ActiveMockSet {
-    mocks: Vec<ActiveMock>,
-    /// A counter that keeps track of how many times [`ActiveMockSet::reset`] has been called.
+pub(crate) struct MountedMockSet {
+    mocks: Vec<(MountedMock, MountedMockState)>,
+    /// A counter that keeps track of how many times [`MountedMockSet::reset`] has been called.
     /// It starts at `0` and gets incremented for each invocation.
     ///
-    /// We need `generation` to know if a [`MockId`] points to an [`ActiveMock`] that has been
-    /// removed via [`ActixMockSet::reset`].
+    /// We need `generation` to know if a [`MockId`] points to an [`MountedMock`] that has been
+    /// removed via [`MountedMockSet::reset`].
     generation: u16,
 }
 
-/// A `MockId` is an opaque index that uniquely identifies an [`ActiveMock`] inside an [`ActiveMockSet`].  
+/// A `MockId` is an opaque index that uniquely identifies an [`MountedMock`] inside an [`MountedMockSet`].
 ///
-/// The only way to create a `MockId` is calling [`ActiveMockSet::register`].
+/// The only way to create a `MockId` is calling [`MountedMockSet::register`].
 #[derive(Copy, Clone)]
 pub(crate) struct MockId {
     index: usize,
-    /// The generation of [`ActiveMockSet`] when [`ActiveMockSet::register`] was called.
-    /// It allows [`ActiveMockSet`] to check that the [`ActiveMock`] our [`MockId`] points to is still in
-    /// the set (i.e. the set has not been wiped by a [`ActiveMockSet::reset`] call).
+    /// The generation of [`MountedMockSet`] when [`MountedMockSet::register`] was called.
+    /// It allows [`MountedMockSet`] to check that the [`MountedMock`] our [`MockId`] points to is still in
+    /// the set (i.e. the set has not been wiped by a [`MountedMockSet::reset`] call).
     generation: u16,
 }
 
-impl ActiveMockSet {
+impl MountedMockSet {
     /// Create a new instance of MockSet.
-    pub(crate) fn new() -> ActiveMockSet {
-        ActiveMockSet {
+    pub(crate) fn new() -> MountedMockSet {
+        MountedMockSet {
             mocks: vec![],
             generation: 0,
         }
@@ -48,7 +48,10 @@ impl ActiveMockSet {
     pub(crate) async fn handle_request(&mut self, request: Request) -> (Response, Option<Delay>) {
         debug!("Handling request.");
         let mut response_template: Option<ResponseTemplate> = None;
-        for mock in &mut self.mocks {
+        for (mock, mock_state) in &mut self.mocks {
+            if *mock_state == MountedMockState::OutOfScope {
+                continue;
+            }
             if mock.matches(&request) {
                 response_template = Some(mock.response_template(&request));
                 break;
@@ -65,8 +68,8 @@ impl ActiveMockSet {
 
     pub(crate) fn register(&mut self, mock: Mock) -> MockId {
         let n_registered_mocks = self.mocks.len();
-        let active_mock = ActiveMock::new(mock, n_registered_mocks);
-        self.mocks.push(active_mock);
+        let active_mock = MountedMock::new(mock, n_registered_mocks);
+        self.mocks.push((active_mock, MountedMockState::InScope));
 
         MockId {
             index: self.mocks.len() - 1,
@@ -79,19 +82,21 @@ impl ActiveMockSet {
         self.generation += 1;
     }
 
-    /// De-activate one of the mocks in the set. It will stop matching against incoming requests,
-    /// regardless of its specification.
+    /// Mark one of the mocks in the set as out of scope.
+    ///
+    /// It will stop matching against incoming requests, regardless of its specification.
     pub(crate) fn deactivate(&mut self, mock_id: MockId) {
-        let mock = &mut self[mock_id];
-        mock.active = false;
+        let mut mock = &mut self[mock_id];
+        mock.1 = MountedMockState::OutOfScope;
     }
 
-    /// Verify that expectations have been met for **all** [`ActiveMock`]s in the set.
+    /// Verify that expectations have been met for **all** [`MountedMock`]s in the set.
     pub(crate) fn verify_all(&self) -> VerificationOutcome {
         let failed_verifications: Vec<VerificationReport> = self
             .mocks
             .iter()
-            .map(ActiveMock::verify)
+            .filter(|(_, state)| *state == MountedMockState::InScope)
+            .map(|(m, _)| m.verify())
             .filter(|verification_report| !verification_report.is_satisfied())
             .collect();
         if failed_verifications.is_empty() {
@@ -101,14 +106,14 @@ impl ActiveMockSet {
         }
     }
 
-    /// Verify that expectations have been met for the [`ActiveMock`] corresponding to the specified [`MockId`].
+    /// Verify that expectations have been met for the [`MountedMock`] corresponding to the specified [`MockId`].
     pub(crate) fn verify(&self, mock_id: MockId) -> VerificationReport {
-        let mock = &self[mock_id];
+        let (mock, _) = &self[mock_id];
         mock.verify()
     }
 }
 
-impl IndexMut<MockId> for ActiveMockSet {
+impl IndexMut<MockId> for MountedMockSet {
     fn index_mut(&mut self, index: MockId) -> &mut Self::Output {
         if index.generation != self.generation {
             panic!("The mock you are trying to access is no longer active. It has been deleted from the active set via `reset` - you should not hold on to a `MockId` after you call `reset`!.")
@@ -117,8 +122,8 @@ impl IndexMut<MockId> for ActiveMockSet {
     }
 }
 
-impl Index<MockId> for ActiveMockSet {
-    type Output = ActiveMock;
+impl Index<MockId> for MountedMockSet {
+    type Output = (MountedMock, MountedMockState);
 
     fn index(&self, index: MockId) -> &Self::Output {
         if index.generation != self.generation {
@@ -128,13 +133,35 @@ impl Index<MockId> for ActiveMockSet {
     }
 }
 
+/// A [`MountedMock`] can either be global (i.e. registered using [`crate::MockServer::register`]) or
+/// scoped (i.e. registered using [`crate::MockServer::register_scoped`]).
+///
+/// [`MountedMock`]s must currently be in scope to be matched against incoming requests.
+/// Out of scope [`MountedMock`]s are skipped when trying to match an incoming request.
+///
+/// # Implementation Rationale
+///
+/// An alternative approach would be removing a [`MountedMock`] from the [`MountedMockSet`] when it goes
+/// out of scope.
+/// This would create an issue for the stability of [`MockId`]s: removing an element from the vector
+/// of [`MountedMock`]s in [`MountedMockSet`] would invalidate the ids of all mocks registered after
+/// the removed one.
+///
+/// Attaching a state to the mocks in the vector, instead, allows us to ensure id stability while
+/// achieving the desired behaviour.
+#[derive(PartialEq, Copy, Clone)]
+pub(crate) enum MountedMockState {
+    InScope,
+    OutOfScope
+}
+
 #[cfg(test)]
 mod tests {
-    use crate::mock_set::ActiveMockSet;
+    use crate::mock_set::MountedMockSet;
 
     #[test]
     fn generation_is_incremented_for_every_reset() {
-        let mut set = ActiveMockSet::new();
+        let mut set = MountedMockSet::new();
         assert_eq!(set.generation, 0);
 
         for i in 1..10 {

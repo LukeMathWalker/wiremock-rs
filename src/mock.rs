@@ -212,7 +212,7 @@ pub struct Mock {
     /// matching requests.
     /// If `None`, there is no cap and we will respond to all incoming matching requests.
     /// If `Some(max_n_matches)`, when `max_n_matches` matching incoming requests have been processed,
-    /// [`crate::active_mock::ActiveMock::matches`] should start returning `false`, regardless of the incoming request.
+    /// [`crate::mounted_mock::MountedMock::matches`] should start returning `false`, regardless of the incoming request.
     pub(crate) max_n_matches: Option<u64>,
     /// The friendly mock name specified by the user.  
     /// Used in diagnostics and error messages if the mock expectations are not satisfied.
@@ -531,7 +531,7 @@ impl std::fmt::Display for Times {
 // Not the most expressive representation, but we would have lived with it.
 //
 // We changed once again when we started to update our `MockActor`: we are storing all `Mock`s
-// in a vector. Being generic over `R`, the range type leaked into the overall `Mock` (and `ActiveMock`)
+// in a vector. Being generic over `R`, the range type leaked into the overall `Mock` (and `MountedMock`)
 // type, thus making those generic as well over `R`.
 // To store them in a vector all mocks would have had to use the same range internally, which is
 // obviously an unreasonable restrictions.

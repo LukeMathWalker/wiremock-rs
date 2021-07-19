@@ -1,5 +1,5 @@
 use crate::mock_server::hyper::run_server;
-use crate::mock_set::ActiveMockSet;
+use crate::mock_set::MountedMockSet;
 use crate::{mock::Mock, verification::VerificationOutcome, MockGuard, Request};
 use std::net::{SocketAddr, TcpListener, TcpStream};
 use std::sync::Arc;
@@ -20,7 +20,7 @@ pub(crate) struct BareMockServer {
 }
 
 pub(crate) struct MockServerState {
-    pub(crate) mock_set: ActiveMockSet,
+    pub(crate) mock_set: MountedMockSet,
     pub(crate) received_requests: Option<Vec<Request>>,
 }
 
@@ -34,7 +34,7 @@ impl BareMockServer {
             RequestRecording::Disabled => None,
         };
         let state = Arc::new(RwLock::new(MockServerState {
-            mock_set: ActiveMockSet::new(),
+            mock_set: MountedMockSet::new(),
             received_requests,
         }));
         let server_address = listener
