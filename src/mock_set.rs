@@ -158,6 +158,8 @@ pub(crate) enum MountedMockState {
 #[cfg(test)]
 mod tests {
     use crate::mock_set::MountedMockSet;
+    use crate::{Mock, ResponseTemplate};
+    use crate::matchers::path;
 
     #[test]
     fn generation_is_incremented_for_every_reset() {
@@ -168,5 +170,20 @@ mod tests {
             set.reset();
             assert_eq!(set.generation, i);
         }
+    }
+
+    #[test]
+    #[should_panic]
+    fn accessing_a_mock_id_after_a_reset_triggers_a_panic() {
+        // Assert
+        let mut set = MountedMockSet::new();
+        let mock = Mock::given(path("/")).respond_with(ResponseTemplate::new(200));
+        let mock_id = set.register(mock);
+
+        // Act
+        set.reset();
+
+        // Assert
+        &set[mock_id];
     }
 }
