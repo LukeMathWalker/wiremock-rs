@@ -79,10 +79,10 @@ impl BareMockServer {
     /// Register a **scoped** `Mock` on an instance of `MockServer`.
     ///
     /// When using `register`, your `Mock`s will be active until the `MockServer` is shut down.  
-    /// When using `register_scoped`, your `Mock`s will be active as long as the returned `MockGuard` is not dropped.
+    /// When using `register_as_scoped`, your `Mock`s will be active as long as the returned `MockGuard` is not dropped.
     /// When the returned `MockGuard` is dropped, `MockServer` will verify that the expectations set on the scoped `Mock` were
     /// verified - if not, it will panic.
-    pub async fn register_scoped(&self, mock: Mock) -> MockGuard {
+    pub async fn register_as_scoped(&self, mock: Mock) -> MockGuard {
         let mock_id = self.state.write().await.mock_set.register(mock);
         MockGuard {
             mock_id,

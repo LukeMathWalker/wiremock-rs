@@ -12,7 +12,7 @@ use std::ops::{Index, IndexMut};
 /// incoming requests.
 ///
 /// New mocks are added to `MountedMockSet` every time [`MockServer::register`](crate::MockServer::register),
-/// [`MockServer::register_scoped`](crate::MockServer::register_scoped) or
+/// [`MockServer::register_as_scoped`](crate::MockServer::register_as_scoped) or
 /// [`Mock::mount`](crate::Mock::mount) are called.
 pub(crate) struct MountedMockSet {
     mocks: Vec<(MountedMock, MountedMockState)>,
@@ -134,7 +134,7 @@ impl Index<MockId> for MountedMockSet {
 }
 
 /// A [`MountedMock`] can either be global (i.e. registered using [`crate::MockServer::register`]) or
-/// scoped (i.e. registered using [`crate::MockServer::register_scoped`]).
+/// scoped (i.e. registered using [`crate::MockServer::register_as_scoped`]).
 ///
 /// [`MountedMock`]s must currently be in scope to be matched against incoming requests.
 /// Out of scope [`MountedMock`]s are skipped when trying to match an incoming request.
@@ -152,14 +152,14 @@ impl Index<MockId> for MountedMockSet {
 #[derive(Debug, PartialEq, Eq, Copy, Clone)]
 pub(crate) enum MountedMockState {
     InScope,
-    OutOfScope
+    OutOfScope,
 }
 
 #[cfg(test)]
 mod tests {
+    use crate::matchers::path;
     use crate::mock_set::{MountedMockSet, MountedMockState};
     use crate::{Mock, ResponseTemplate};
-    use crate::matchers::path;
 
     #[test]
     fn generation_is_incremented_for_every_reset() {
