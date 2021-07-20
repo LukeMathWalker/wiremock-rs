@@ -8,7 +8,7 @@ use tokio::sync::RwLock;
 type DynError = Box<dyn std::error::Error + Send + Sync>;
 
 /// The actual HTTP server responding to incoming requests according to the specified mocks.
-pub(crate) async fn run_server(
+pub(super) async fn run_server(
     listener: TcpListener,
     server_state: Arc<RwLock<MockServerState>>,
     shutdown_signal: tokio::sync::oneshot::Receiver<()>,
@@ -20,15 +20,7 @@ pub(crate) async fn run_server(
                 let server_state = server_state.clone();
                 async move {
                     let wiremock_request = crate::Request::from_hyper(request).await;
-                    let (response, delay) = {
-                        let mut state = server_state.write().await;
-                        // If request recording is enabled, record the incoming request
-                        // by adding it to the `received_requests` stack
-                        if let Some(received_requests) = &mut state.received_requests {
-                            received_requests.push(wiremock_request.clone());
-                        }
-                        state.mock_set.handle_request(wiremock_request).await
-                    };
+                    let (response, delay) = server_state.write().await.handle_request(wiremock_request).await;
 
                     // We do not wait for the delay within the handler otherwise we would be
                     // holding on to the write-side of the `RwLock` on `mock_set`.

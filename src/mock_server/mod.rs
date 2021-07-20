@@ -16,6 +16,6 @@ mod exposed_server;
 mod hyper;
 mod pool;
 
-pub(crate) use bare_server::MockServerState;
+pub use bare_server::MockGuard;
 pub use builder::MockServerBuilder;
 pub use exposed_server::MockServer;
