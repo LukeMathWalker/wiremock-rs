@@ -1,5 +1,5 @@
 use crate::respond::Respond;
-use crate::{MockServer, Request, ResponseTemplate};
+use crate::{MockGuard, MockServer, Request, ResponseTemplate};
 use std::fmt::{Debug, Formatter};
 use std::ops::{
     Range, RangeBounds, RangeFrom, RangeFull, RangeInclusive, RangeTo, RangeToInclusive,
@@ -101,7 +101,7 @@ use std::ops::{
 /// }
 /// ```
 pub trait Match: Send + Sync {
-    /// Given a reference to a `Request`, determine if it should match or not given
+    /// Given a reference to a [`Request`], determine if it should match or not given
     /// a specific criterion.
     fn matches(&self, request: &Request) -> bool;
 }
@@ -135,8 +135,15 @@ impl Debug for Matcher {
 /// Given a set of matchers, a `Mock` instructs an instance of [`MockServer`] to return a pre-determined response if the matching conditions are satisfied.
 ///
 /// `Mock`s have to be mounted (or registered) with a [`MockServer`] to become effective.
+/// You can use:
 ///
-/// ### Example (using [`register`]):
+/// - [`MockServer::register`] or [`Mock::mount`] to activate a **global** `Mock`;
+/// - [`MockServer::register_as_scoped`] or [`Mock::mount_as_scoped`] to activate a **scoped** `Mock`.
+///
+/// Check the respective documentations for more details (or look at the following examples!).
+///
+/// # Example (using [`register`]):
+///
 /// ```rust
 /// use wiremock::{MockServer, Mock, ResponseTemplate};
 /// use wiremock::matchers::method;
@@ -172,7 +179,7 @@ impl Debug for Matcher {
 /// }
 /// ```
 ///
-/// ### Example (using [`mount`]):
+/// # Example (using [`mount`]):
 ///
 /// If you prefer a fluent style, you can use the [`mount`] method on the `Mock` itself
 /// instead of [`register`].
@@ -201,10 +208,51 @@ impl Debug for Matcher {
 /// }
 /// ```
 ///
-/// Both `register` and `mount` are asynchronous methods - don't forget to `.await` them!
+/// # Example (using [`mount_as_scoped`]):
+///
+/// Sometimes you will need a `Mock` to be active within the scope of a function, but not any longer.
+/// You can use [`Mock::mount_as_scoped`] to precisely control how long a `Mock` stays active.
+///
+/// ```rust
+/// use wiremock::{MockServer, Mock, ResponseTemplate};
+/// use wiremock::matchers::method;
+///
+/// async fn my_test_helper(mock_server: &MockServer) {
+///     let mock_guard = Mock::given(method("GET"))
+///         .respond_with(ResponseTemplate::new(200))
+///         .expect(1)
+///         .named("my_test_helper GET /")
+///         .mount_as_scoped(mock_server)
+///         .await;
+///
+///     surf::get(&mock_server.uri())
+///         .await
+///         .unwrap();
+///
+///     // `mock_guard` is dropped, expectations are verified!
+/// }
+///
+/// #[async_std::main]
+/// async fn main() {
+///     // Arrange
+///     let mock_server = MockServer::start().await;
+///     my_test_helper(&mock_server).await;
+///
+///     // Act
+///
+///     // This would have returned 200 if the `Mock` in
+///     // `my_test_helper` had not been scoped.
+///     let status = surf::get(&mock_server.uri())
+///         .await
+///         .unwrap()
+///         .status();
+///     assert_eq!(status, 404);
+/// }
+/// ```
 ///
 /// [`register`]: MockServer::register
 /// [`mount`]: Mock::mount
+/// [`mount_as_scoped`]: Mock::mount_as_scoped
 pub struct Mock {
     pub(crate) matchers: Vec<Matcher>,
     pub(crate) response: Box<dyn Respond>,
@@ -212,7 +260,7 @@ pub struct Mock {
     /// matching requests.
     /// If `None`, there is no cap and we will respond to all incoming matching requests.
     /// If `Some(max_n_matches)`, when `max_n_matches` matching incoming requests have been processed,
-    /// [`crate::active_mock::ActiveMock::matches`] should start returning `false`, regardless of the incoming request.
+    /// [`crate::mounted_mock::MountedMock::matches`] should start returning `false`, regardless of the incoming request.
     pub(crate) max_n_matches: Option<u64>,
     /// The friendly mock name specified by the user.  
     /// Used in diagnostics and error messages if the mock expectations are not satisfied.
@@ -228,7 +276,7 @@ pub struct MockBuilder {
 }
 
 impl Mock {
-    /// Start building a `Mock` specifying the first matcher.
+    /// Start building a [`Mock`] specifying the first matcher.
     ///
     /// It returns an instance of [`MockBuilder`].
     pub fn given<M: 'static + Match>(matcher: M) -> MockBuilder {
@@ -237,7 +285,7 @@ impl Mock {
         }
     }
 
-    /// Specify an upper limit to the number of times you would like this `Mock` to respond to
+    /// Specify an upper limit to the number of times you would like this [`Mock`] to respond to
     /// incoming requests that satisfy the conditions imposed by your [`matchers`].
     ///
     /// ### Example:
@@ -290,12 +338,12 @@ impl Mock {
         self
     }
 
-    /// Set an expectation on the number of times this `Mock` should match in the current
+    /// Set an expectation on the number of times this [`Mock`] should match in the current
     /// test case.
     /// Expectations are verified when the [`MockServer`] is shutting down: if the expectation
     /// is not satisfied, the [`MockServer`] will panic and the `error_message` is shown.
     ///
-    /// By default, no expectation is set for `Mock`s.
+    /// By default, no expectation is set for [`Mock`]s.
     ///
     /// ### When is this useful?
     ///
@@ -410,16 +458,117 @@ impl Mock {
         self
     }
 
-    /// Mount a `Mock` on an instance of [`MockServer`].
+    /// Mount a [`Mock`] on an instance of [`MockServer`].
+    /// The [`Mock`] will remain active until [`MockServer`] is shut down. If you want to control or limit how
+    /// long your [`Mock`] stays active, check out [`Mock::mount_as_scoped`].
     ///
-    /// Be careful! `Mock`s are not effective until they are [`mount`]ed or [`register`]ed on a [`MockServer`].
-    ///
+    /// Be careful! [`Mock`]s are not effective until they are [`mount`]ed or [`register`]ed on a [`MockServer`].
     /// [`mount`] is an asynchronous method, make sure to `.await` it!
     ///
     /// [`register`]: MockServer::register
     /// [`mount`]: Mock::mount
     pub async fn mount(self, server: &MockServer) {
         server.register(self).await;
+    }
+
+    /// Mount a [`Mock`] as **scoped**  on an instance of [`MockServer`].
+    ///
+    /// When using [`mount`], your [`Mock`]s will be active until the [`MockServer`] is shut down.  
+    /// When using `mount_as_scoped`, your [`Mock`]s will be active as long as the returned [`MockGuard`] is not dropped.
+    /// When the returned [`MockGuard`] is dropped, [`MockServer`] will verify that the expectations set on the scoped [`Mock`] were
+    /// verified - if not, it will panic.
+    ///
+    /// `mount_as_scoped` is the ideal solution when you need a [`Mock`] within a test helper
+    /// but you do not want it to linger around after the end of the function execution.
+    ///
+    /// # Limitations
+    ///
+    /// When expectations of a scoped [`Mock`] are not verified, it will trigger a panic - just like a normal [`Mock`].
+    /// Due to [limitations](https://internals.rust-lang.org/t/should-drop-glue-use-track-caller/13682) in Rust's [`Drop`](std::ops::Drop) trait,
+    /// the panic message will not include the filename and the line location
+    /// where the corresponding [`MockGuard`] was dropped - it will point into `wiremock`'s source code.  
+    ///
+    /// This can be an issue when you are using more than one scoped [`Mock`] in a single test - which of them panicked?  
+    /// To improve your debugging experience it is strongly recommended to use [`Mock::named`] to assign a unique
+    /// identifier to your scoped [`Mock`]s, which will in turn be referenced in the panic message if their expectations are
+    /// not met.
+    ///
+    /// # Example:
+    ///
+    /// - The behaviour of the scoped mock is invisible outside of `my_test_helper`.
+    ///
+    /// ```rust
+    /// use wiremock::{MockServer, Mock, ResponseTemplate};
+    /// use wiremock::matchers::method;
+    ///
+    /// async fn my_test_helper(mock_server: &MockServer) {
+    ///     let mock_guard = Mock::given(method("GET"))
+    ///         .respond_with(ResponseTemplate::new(200))
+    ///         .expect(1)
+    ///         .named("my_test_helper GET /")
+    ///         .mount_as_scoped(mock_server)
+    ///         .await;
+    ///
+    ///     surf::get(&mock_server.uri())
+    ///         .await
+    ///         .unwrap();
+    ///
+    ///     // `mock_guard` is dropped, expectations are verified!
+    /// }
+    ///
+    /// #[async_std::main]
+    /// async fn main() {
+    ///     // Arrange
+    ///     let mock_server = MockServer::start().await;
+    ///     my_test_helper(&mock_server).await;
+    ///
+    ///     // Act
+    ///
+    ///     // This would have returned 200 if the `Mock` in
+    ///     // `my_test_helper` had not been scoped.
+    ///     let status = surf::get(&mock_server.uri())
+    ///         .await
+    ///         .unwrap()
+    ///         .status();
+    ///     assert_eq!(status, 404);
+    /// }
+    /// ```
+    ///
+    /// - The expectations for the scoped mock are not verified, it panics at the end of `my_test_helper`.
+    ///
+    /// ```rust,should_panic
+    /// use wiremock::{MockServer, Mock, ResponseTemplate};
+    /// use wiremock::matchers::method;
+    ///
+    /// async fn my_test_helper(mock_server: &MockServer) {
+    ///     let mock_guard = Mock::given(method("GET"))
+    ///         .respond_with(ResponseTemplate::new(200))
+    ///         .expect(1)
+    ///         .named("my_test_helper GET /")
+    ///         .mount_as_scoped(mock_server)
+    ///         .await;
+    ///     // `mock_guard` is dropped, expectations are NOT verified!
+    ///     // Panic!
+    /// }
+    ///
+    /// #[async_std::main]
+    /// async fn main() {
+    ///     // Arrange
+    ///     let mock_server = MockServer::start().await;
+    ///     my_test_helper(&mock_server).await;
+    ///
+    ///     // Act
+    ///     let status = surf::get(&mock_server.uri())
+    ///         .await
+    ///         .unwrap()
+    ///         .status();
+    ///     assert_eq!(status, 404);
+    /// }
+    /// ```
+    ///
+    /// [`mount`]: Mock::mount
+    pub async fn mount_as_scoped(self, server: &MockServer) -> MockGuard {
+        server.register_as_scoped(self).await
     }
 
     /// Given a [`Request`](crate::Request) build an instance a [`ResponseTemplate`] using
@@ -531,7 +680,7 @@ impl std::fmt::Display for Times {
 // Not the most expressive representation, but we would have lived with it.
 //
 // We changed once again when we started to update our `MockActor`: we are storing all `Mock`s
-// in a vector. Being generic over `R`, the range type leaked into the overall `Mock` (and `ActiveMock`)
+// in a vector. Being generic over `R`, the range type leaked into the overall `Mock` (and `MountedMock`)
 // type, thus making those generic as well over `R`.
 // To store them in a vector all mocks would have had to use the same range internally, which is
 // obviously an unreasonable restrictions.

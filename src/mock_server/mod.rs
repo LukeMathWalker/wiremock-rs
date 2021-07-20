@@ -16,5 +16,6 @@ mod exposed_server;
 mod hyper;
 mod pool;
 
+pub use bare_server::MockGuard;
 pub use builder::MockServerBuilder;
 pub use exposed_server::MockServer;

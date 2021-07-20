@@ -1,38 +1,26 @@
-use crate::mock_set::ActiveMockSet;
-use crate::Request;
+use crate::mock_server::bare_server::MockServerState;
 use hyper::http;
 use hyper::service::{make_service_fn, service_fn};
 use std::net::TcpListener;
 use std::sync::Arc;
-use tokio::sync::{Mutex, RwLock};
+use tokio::sync::RwLock;
 
 type DynError = Box<dyn std::error::Error + Send + Sync>;
 
 /// The actual HTTP server responding to incoming requests according to the specified mocks.
-pub(crate) async fn run_server(
+pub(super) async fn run_server(
     listener: TcpListener,
-    mock_set: Arc<RwLock<ActiveMockSet>>,
-    received_requests: Option<Arc<Mutex<Vec<Request>>>>,
+    server_state: Arc<RwLock<MockServerState>>,
     shutdown_signal: tokio::sync::oneshot::Receiver<()>,
 ) {
     let request_handler = make_service_fn(move |_| {
-        let mock_set = mock_set.clone();
-        let received_requests = received_requests.clone();
+        let server_state = server_state.clone();
         async move {
             Ok::<_, DynError>(service_fn(move |request: hyper::Request<hyper::Body>| {
-                let mock_set = mock_set.clone();
-                let received_requests = received_requests.clone();
+                let server_state = server_state.clone();
                 async move {
                     let wiremock_request = crate::Request::from_hyper(request).await;
-                    // If request recording is enabled, record the incoming request
-                    // by adding it to the `received_requests` stack
-                    if let Some(received_requests) = received_requests {
-                        received_requests
-                            .lock()
-                            .await
-                            .push(wiremock_request.clone());
-                    }
-                    let (response, delay) = mock_set
+                    let (response, delay) = server_state
                         .write()
                         .await
                         .handle_request(wiremock_request)
