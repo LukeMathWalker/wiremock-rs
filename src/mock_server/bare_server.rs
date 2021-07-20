@@ -20,6 +20,9 @@ pub(crate) struct BareMockServer {
     _shutdown_trigger: tokio::sync::oneshot::Sender<()>,
 }
 
+/// The elements of [`BareMockServer`] that are affected by each incoming request.
+/// By bundling them together, we can expose a unified `handle_request` that ensures
+/// they are kept in sync without having to leak logic across multiple corners of the `wiremock`'s codebase.
 pub(super) struct MockServerState {
     mock_set: MountedMockSet,
     received_requests: Option<Vec<Request>>,
