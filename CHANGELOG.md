@@ -2,10 +2,17 @@
 
 # Next
 
+# `0.5.6`
+
+- Features:
+    - Added support for **scoped** `Mock`s! 
+      Using `MockServer::register_as_scoped` or `Mock::mount_as_scoped` you can now register `Mock`s that go "out of scope" when the returned RAII guard (`MockGuard`) is dropped.
+      Scoped `Mock`s are recommended for usage in test helper functions to ensure proper isolation - check the documentation for more details! (by [@LukeMathWalker])
+
 # `0.5.5`
 
 - Miscellaneous:
-    - Added the `http` module to re-export the types from `http-types` that are part of `wiremock`'s public API.
+    - Added the `http` module to re-export the types from `http-types` that are part of `wiremock`'s public API (by [@LukeMathWalker]).
 
 # `0.5.4`
 
