@@ -20,7 +20,11 @@ pub(super) async fn run_server(
                 let server_state = server_state.clone();
                 async move {
                     let wiremock_request = crate::Request::from_hyper(request).await;
-                    let (response, delay) = server_state.write().await.handle_request(wiremock_request).await;
+                    let (response, delay) = server_state
+                        .write()
+                        .await
+                        .handle_request(wiremock_request)
+                        .await;
 
                     // We do not wait for the delay within the handler otherwise we would be
                     // holding on to the write-side of the `RwLock` on `mock_set`.

@@ -1,8 +1,8 @@
 use crate::mock_server::hyper::run_server;
+use crate::mock_set::MockId;
 use crate::mock_set::MountedMockSet;
 use crate::{mock::Mock, verification::VerificationOutcome, Request};
 use std::net::{SocketAddr, TcpListener, TcpStream};
-use crate::mock_set::MockId;
 use std::sync::Arc;
 use tokio::sync::RwLock;
 use tokio::task::LocalSet;
@@ -29,7 +29,10 @@ pub(super) struct MockServerState {
 }
 
 impl MockServerState {
-    pub(super) async fn handle_request(&mut self, request: Request) -> (http_types::Response, Option<futures_timer::Delay>) {
+    pub(super) async fn handle_request(
+        &mut self,
+        request: Request,
+    ) -> (http_types::Response, Option<futures_timer::Delay>) {
         // If request recording is enabled, record the incoming request
         // by adding it to the `received_requests` stack
         if let Some(received_requests) = &mut self.received_requests {
@@ -155,10 +158,11 @@ pub(super) enum RequestRecording {
     Disabled,
 }
 
-/// You get a `MockGuard` when registering a **scoped** [`Mock`] using [`MockServer::register_as_scoped`] or [`Mock::mount_as_scoped`].
+/// You get a `MockGuard` when registering a **scoped** [`Mock`] using [`MockServer::register_as_scoped`](crate::MockServer::register_as_scoped)
+/// or [`Mock::mount_as_scoped`].
 ///
-/// When the [`MockGuard`] is dropped, the [`MockServer`] verifies that the expectations set on the scoped [`Mock`] were
-/// verified - if not, it will panic.
+/// When the [`MockGuard`] is dropped, the [`MockServer`](crate::MockServer) verifies that the expectations set on the
+/// scoped [`Mock`] were verified - if not, it will panic.
 ///
 /// # Limitations
 ///
@@ -188,7 +192,7 @@ impl Drop for MockGuard {
 
             if !report.is_satisfied() {
                 let received_requests_message = if let Some(received_requests) =
-                &state.received_requests
+                    &state.received_requests
                 {
                     if received_requests.is_empty() {
                         "The server did not receive any request.".into()
