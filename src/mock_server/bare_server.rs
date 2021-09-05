@@ -175,8 +175,7 @@ pub(super) enum RequestRecording {
 /// To improve your debugging experience it is strongly recommended to use [`Mock::named`] to assign a unique
 /// identifier to your scoped [`Mock`]s, which will in turn be referenced in the panic message if their expectations are
 /// not met.
-#[must_use =
-    "All *_scoped methods return a `MockGuard`.
+#[must_use = "All *_scoped methods return a `MockGuard`.
 This guard MUST be bound to a variable (e.g. _mock_guard), \
 otherwise the mock will immediately be unmounted (and its expectations checked).
 Check `wiremock`'s documentation on scoped mocks for more details."]
