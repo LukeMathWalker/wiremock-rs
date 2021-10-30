@@ -41,7 +41,38 @@ use crate::{Request, ResponseTemplate};
 ///
 /// You can use `Respond`, though, to implement responses that depend on the data in
 /// the request matched by a [`Mock`].  
-/// You could, for example, propagate back a request header in the response:
+///
+/// Functions from `Request` to `ResponseTemplate` implement `Respond`, so for simple cases you
+/// can use a closure to build a response dynamically, for instance to echo the request body back:
+///
+/// ```rust
+/// use wiremock::{Match, MockServer, Mock, Request, ResponseTemplate};
+/// use wiremock::matchers::path;
+///
+/// #[async_std::main]
+/// async fn main() {
+///     let mock_server = MockServer::start().await;
+///     let body = "Mock Server!".to_string();
+///
+///     Mock::given(path("/echo"))
+///         .respond_with(|req: &Request| {
+///             let body_string = String::from_utf8(req.body.clone()).unwrap();
+///             ResponseTemplate::new(200).set_body_string(body_string)
+///         })
+///         .mount(&mock_server)
+///         .await;
+///
+///     let mut response = surf::post(format!("{}/echo", &mock_server.uri()))
+///         .body(body.clone())
+///         .await
+///         .unwrap();
+///     assert_eq!(response.status(), 200);
+///     assert_eq!(response.body_string().await.unwrap(), body);
+/// }
+/// ```
+///
+/// For more complex cases you may want to implement `Respond` yourself. As an example, this is a
+/// `Respond` that propagates back a request header in the response:
 ///
 /// ```rust
 /// use http_types::headers::HeaderName;
@@ -105,5 +136,14 @@ pub trait Respond: Send + Sync {
 impl Respond for ResponseTemplate {
     fn respond(&self, _request: &Request) -> ResponseTemplate {
         self.clone()
+    }
+}
+
+impl<F> Respond for F
+where
+    F: Send + Sync + Fn(&Request) -> ResponseTemplate,
+{
+    fn respond(&self, request: &Request) -> ResponseTemplate {
+        (self)(request)
     }
 }
