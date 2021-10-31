@@ -2,10 +2,15 @@
 
 # Next
 
-# `0.5.6`
+# `0.5.8`
 
 - Features:
     - Functions from `&Request` to `ResponseTemplate` can now be passed to `MockBuilder::respond_with`. You do not have to write a struct with a `Respond` implementation for simple manipulation of request data! (by [@RoGryza])
+
+# `0.5.7`
+
+- Fixes:
+    - `MockGuard` is now marked as `must_use`, ensuring that a compiler warning is raised if the guard for a scoped mock is not bound to a variable.
 
 # `0.5.6`
 
