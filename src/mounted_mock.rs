@@ -3,7 +3,7 @@ use crate::{verification::VerificationReport, Match, Mock, Request, ResponseTemp
 /// Given the behaviour specification as a [`Mock`](crate::Mock), keep track of runtime information
 /// concerning this mock - e.g. how many times it matched on a incoming request.
 pub(crate) struct MountedMock {
-    specification: Mock,
+    pub(crate) specification: Mock,
     n_matched_requests: u64,
     /// The position occupied by this mock within the parent [`MountedMockSet`](crate::mock_set::MountedMockSet)
     /// collection of `MountedMock`s.
