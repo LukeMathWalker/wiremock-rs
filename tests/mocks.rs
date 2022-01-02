@@ -1,5 +1,8 @@
+use http_types::StatusCode;
+use serde::Serialize;
+use serde_json::json;
 use std::net::TcpStream;
-use wiremock::matchers::{method, PathExactMatcher};
+use wiremock::matchers::{body_json, body_partial_json, method, PathExactMatcher};
 use wiremock::{Mock, MockServer, ResponseTemplate};
 
 #[async_std::test]
@@ -159,4 +162,50 @@ async fn two_route_mocks() {
 
     assert_eq!(first_response.body_string().await.unwrap(), "aaa");
     assert_eq!(second_response.body_string().await.unwrap(), "bbb");
+}
+
+#[async_std::test]
+async fn body_json_matches_independent_of_key_ordering() {
+    #[derive(Serialize)]
+    struct X {
+        b: u8,
+        a: u8,
+    }
+
+    // Arrange
+    let expected_body = json!({ "a": 1, "b": 2 });
+    let body = serde_json::to_string(&X { a: 1, b: 2 }).unwrap();
+
+    let mock_server = MockServer::start().await;
+    let response = ResponseTemplate::new(200);
+    let mock = Mock::given(method("POST"))
+        .and(body_json(expected_body))
+        .respond_with(response);
+    mock_server.register(mock).await;
+
+    // Act
+    let response = surf::post(mock_server.uri()).body(body).await.unwrap();
+
+    // Assert
+    assert_eq!(response.status(), StatusCode::Ok);
+}
+
+#[async_std::test]
+async fn body_json_partial_matches_a_part_of_response_json() {
+    // Arrange
+    let expected_body = json!({ "a": 1, "c": { "e": 2 } });
+    let body = json!({ "a": 1, "b": 2, "c": { "d": 1, "e": 2 } });
+
+    let mock_server = MockServer::start().await;
+    let response = ResponseTemplate::new(200);
+    let mock = Mock::given(method("POST"))
+        .and(body_partial_json(expected_body))
+        .respond_with(response);
+    mock_server.register(mock).await;
+
+    // Act
+    let response = surf::post(mock_server.uri()).body(body).await.unwrap();
+
+    // Assert
+    assert_eq!(response.status(), StatusCode::Ok);
 }
