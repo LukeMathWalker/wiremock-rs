@@ -262,7 +262,11 @@ pub struct Mock {
     /// If `Some(max_n_matches)`, when `max_n_matches` matching incoming requests have been processed,
     /// [`crate::mounted_mock::MountedMock::matches`] should start returning `false`, regardless of the incoming request.
     pub(crate) max_n_matches: Option<u64>,
-    /// The friendly mock name specified by the user.  
+    /// Allows prioritizing a Mock over another one.
+    /// `1` is the highest priority, `255` the lowest, default to `5`.
+    /// When priority is the same, it fallbacks to insertion order.
+    pub(crate) priority: u8,
+    /// The friendly mock name specified by the user.
     /// Used in diagnostics and error messages if the mock expectations are not satisfied.
     pub(crate) name: Option<String>,
     /// The expectation is satisfied if the number of incoming requests falls within `expectation_range`.
@@ -335,6 +339,57 @@ impl Mock {
     pub fn up_to_n_times(mut self, n: u64) -> Mock {
         assert!(n > 0, "n must be strictly greater than 0!");
         self.max_n_matches = Some(n);
+        self
+    }
+
+    /// Specify a priority for this [`Mock`].
+    /// Use this when you mount many [`Mock`] in a [`MockServer`]
+    /// and those mocks have interlaced request matching conditions
+    /// e.g. `mock A` accepts path `/abcd` and `mock B` a path regex `[a-z]{4}`
+    /// It is recommended to set the highest priority (1) for mocks with exact conditions (`mock A` in this case)
+    /// `1` is the highest priority, `255` the lowest, default to `5`
+    /// If two mocks have the same priority, priority is defined by insertion order (first one mounted has precedence over the others).
+    ///
+    /// ### Example:
+    ///
+    /// ```rust
+    /// use wiremock::{MockServer, Mock, ResponseTemplate};
+    /// use wiremock::matchers::{method, path, path_regex};
+    ///
+    /// #[async_std::main]
+    /// async fn main() {
+    ///     // Arrange
+    ///     let mock_server = MockServer::start().await;
+    ///
+    ///     Mock::given(method("GET"))
+    ///         .and(path("abcd"))
+    ///         .respond_with(ResponseTemplate::new(200))
+    ///         .with_priority(1) // highest priority
+    ///         .mount(&mock_server)
+    ///         .await;
+    ///
+    ///     Mock::given(method("GET"))
+    ///         .and(path_regex("[a-z]{4}"))
+    ///         .respond_with(ResponseTemplate::new(201))
+    ///         .with_priority(2)
+    ///         .mount(&mock_server)
+    ///         .await;
+    ///
+    ///     // Act
+    ///
+    ///     // The request with highest priority, as expected.
+    ///     let status = surf::get(&format!("{}/abcd", mock_server.uri()))
+    ///         .await
+    ///         .unwrap()
+    ///         .status();
+    ///     assert_eq!(status, 200);
+    /// }
+    /// ```
+    ///
+    /// [`matchers`]: crate::matchers
+    pub fn with_priority(mut self, p: u8) -> Mock {
+        assert!(p > 0, "priority must be strictly greater than 0!");
+        self.priority = p;
         self
     }
 
@@ -602,6 +657,7 @@ impl MockBuilder {
             matchers: self.matchers,
             response: Box::new(responder),
             max_n_matches: None,
+            priority: 5,
             name: None,
             expectation_range: Times(TimesEnum::Unbounded(RangeFull)),
         }
