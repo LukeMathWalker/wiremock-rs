@@ -696,13 +696,12 @@ pub struct BodyPartialJsonMatcher(Value);
 impl BodyPartialJsonMatcher {
     /// Specify the part of the body that should be matched as a string.
     pub fn json<T: Serialize>(body: T) -> Self {
-        let s = serde_json::to_string(&body).expect("Could not serialize to string");
-        Self::json_string(s)
+        Self(serde_json::to_value(body).expect("Can't serialize to JSON"))
     }
 
     /// Specify the part of the body that should be matched as a string.
     pub fn json_string(body: impl AsRef<str>) -> Self {
-        Self(serde_json::from_str(body.as_ref()).unwrap())
+        Self(serde_json::from_str(body.as_ref()).expect("Can't deserialize JSON"))
     }
 }
 
