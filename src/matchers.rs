@@ -505,48 +505,12 @@ impl Match for HeaderExistsMatcher {
 ///     assert_eq!(status, 200);
 /// }
 /// ```
-///
-/// ### Example (partial json):
-/// ```rust
-/// use wiremock::{MockServer, Mock, ResponseTemplate};
-/// use wiremock::matchers::body_partial_json;
-/// use serde_json::json;
-///
-/// #[async_std::main]
-/// async fn main() {
-///     // Arrange
-///     let mock_server = MockServer::start().await;
-///
-///     let expected_body = json!({
-///         "hello": "world!"
-///     });
-///     Mock::given(body_partial_json(&expected_body))
-///         .respond_with(ResponseTemplate::new(200))
-///         .mount(&mock_server)
-///         .await;
-///
-///     // Act
-///     let body = json!({
-///         "hello": "world!",
-///         "foo": "bar"
-///     });
-///     let status = surf::post(&mock_server.uri())
-///         .body(body)
-///         .await
-///         .unwrap()
-///         .status();
-///
-///     // Assert
-///     assert_eq!(status, 200);
-/// }
-/// ```
 pub struct BodyExactMatcher(Body);
 
 #[derive(Debug)]
 enum Body {
     Bytes(Vec<u8>),
     Json(Value),
-    PartialJson(Value),
 }
 
 impl BodyExactMatcher {
@@ -572,18 +536,6 @@ impl BodyExactMatcher {
     pub fn json_string(body: impl AsRef<[u8]>) -> Self {
         let body = serde_json::from_slice(body.as_ref()).expect("Failed to parse JSON string");
         Self(Body::Json(body))
-    }
-
-    /// Specify something JSON-serializable as the expected partial body.
-    pub fn partial_json<T: Serialize>(body: T) -> Self {
-        let bytes = serde_json::to_vec(&body).expect("Failed to serialize JSON body");
-        Self::partial_json_string(bytes)
-    }
-
-    /// Specify a JSON string as the expected partial body.
-    pub fn partial_json_string(body: impl AsRef<[u8]>) -> Self {
-        let body = serde_json::from_slice(body.as_ref()).expect("Failed to parse JSON string");
-        Self(Body::PartialJson(body))
     }
 }
 
@@ -616,19 +568,6 @@ pub fn body_json_string(body: impl AsRef<[u8]>) -> BodyExactMatcher {
     BodyExactMatcher::json_string(body)
 }
 
-/// Shorthand for [`BodyExactMatcher::partial_json`].
-pub fn body_partial_json<T>(body: T) -> BodyExactMatcher
-where
-    T: Serialize,
-{
-    BodyExactMatcher::partial_json(body)
-}
-
-/// Shorthand for [`BodyExactMatcher::partial_json_string`].
-pub fn body_partial_json_string(body: impl AsRef<[u8]>) -> BodyExactMatcher {
-    BodyExactMatcher::partial_json_string(body)
-}
-
 impl Match for BodyExactMatcher {
     fn matches(&self, request: &Request) -> bool {
         match &self.0 {
@@ -636,14 +575,6 @@ impl Match for BodyExactMatcher {
             Body::Json(json) => {
                 if let Ok(body) = serde_json::from_slice::<Value>(&request.body) {
                     body == *json
-                } else {
-                    false
-                }
-            }
-            Body::PartialJson(partial_json) => {
-                if let Ok(body) = serde_json::from_slice::<Value>(&request.body) {
-                    let config = assert_json_diff::Config::new(CompareMode::Inclusive);
-                    assert_json_matches_no_panic(&body, &partial_json, config).is_ok()
                 } else {
                     false
                 }
@@ -720,6 +651,79 @@ impl Match for BodyContainsMatcher {
         };
 
         body.contains(part)
+    }
+}
+
+#[derive(Debug)]
+/// Match part JSON body of a request.
+///
+/// ### Example:
+/// ```rust
+/// use wiremock::{MockServer, Mock, ResponseTemplate};
+/// use wiremock::matchers::body_partial_json;
+/// use serde_json::json;
+///
+/// #[async_std::main]
+/// async fn main() {
+///     // Arrange
+///     let mock_server = MockServer::start().await;
+///
+///     let expected_body = json!({
+///         "hello": "world!"
+///     });
+///     Mock::given(body_partial_json(&expected_body))
+///         .respond_with(ResponseTemplate::new(200))
+///         .mount(&mock_server)
+///         .await;
+///
+///     // Act
+///     let body = json!({
+///         "hello": "world!",
+///         "foo": "bar"
+///     });
+///     let status = surf::post(&mock_server.uri())
+///         .body(body)
+///         .await
+///         .unwrap()
+///         .status();
+///
+///     // Assert
+///     assert_eq!(status, 200);
+/// }
+/// ```
+pub struct BodyPartialJsonMatcher(Value);
+
+impl BodyPartialJsonMatcher {
+    /// Specify the part of the body that should be matched as a string.
+    pub fn json<T: Serialize>(body: T) -> Self {
+        let s = serde_json::to_string(&body).expect("Could not serialize to string");
+        Self::json_string(s)
+    }
+
+    /// Specify the part of the body that should be matched as a string.
+    pub fn json_string<T: AsRef<str>>(body: T) -> Self {
+        Self(serde_json::from_str(body.as_ref()).unwrap())
+    }
+}
+
+/// Shorthand for [`BodyPartialJsonMatcher::json`].
+pub fn body_partial_json<T: Serialize>(body: T) -> BodyPartialJsonMatcher {
+    BodyPartialJsonMatcher::json(body)
+}
+
+/// Shorthand for [`BodyPartialJsonMatcher::json_string`].
+pub fn body_partial_json_string(body: impl AsRef<str>) -> BodyPartialJsonMatcher {
+    BodyPartialJsonMatcher::json_string(body)
+}
+
+impl Match for BodyPartialJsonMatcher {
+    fn matches(&self, request: &Request) -> bool {
+        if let Ok(body) = serde_json::from_slice::<Value>(&request.body) {
+            let config = assert_json_diff::Config::new(CompareMode::Inclusive);
+            assert_json_matches_no_panic(&body, &self.0, config).is_ok()
+        } else {
+            false
+        }
     }
 }
 
