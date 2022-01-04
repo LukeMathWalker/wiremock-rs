@@ -701,7 +701,7 @@ impl BodyPartialJsonMatcher {
     }
 
     /// Specify the part of the body that should be matched as a string.
-    pub fn json_string<T: AsRef<str>>(body: T) -> Self {
+    pub fn json_string(body: impl AsRef<str>) -> Self {
         Self(serde_json::from_str(body.as_ref()).unwrap())
     }
 }
