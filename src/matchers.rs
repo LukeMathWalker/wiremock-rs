@@ -694,7 +694,7 @@ impl Match for BodyContainsMatcher {
 pub struct BodyPartialJsonMatcher(Value);
 
 impl BodyPartialJsonMatcher {
-    /// Specify the part of the body that should be matched as a string.
+    /// Specify the part of the body that should be matched as a JSON value.
     pub fn json<T: Serialize>(body: T) -> Self {
         Self(serde_json::to_value(body).expect("Can't serialize to JSON"))
     }
