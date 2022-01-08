@@ -185,7 +185,7 @@ mod tests {
         set.reset();
 
         // Assert
-        &set[mock_id];
+        let _ = &set[mock_id];
     }
 
     #[test]
