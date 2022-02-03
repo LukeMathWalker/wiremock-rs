@@ -783,6 +783,66 @@ impl Match for QueryParamExactMatcher {
     }
 }
 
+#[derive(Debug)]
+/// Only match requests that do **not** contain a specified query parameter.
+///
+/// ### Example:
+/// ```rust
+/// use wiremock::{MockServer, Mock, ResponseTemplate};
+/// use wiremock::matchers::{method, query_param_missing};
+///
+/// #[async_std::main]
+/// async fn main() {
+///     // Arrange
+///     let mock_server = MockServer::start().await;
+///
+///     Mock::given(method("GET"))
+///         .and(query_param_missing("unexpected"))
+///         .respond_with(ResponseTemplate::new(200))
+///         .mount(&mock_server)
+///         .await;
+///
+///     // Act
+///     let ok_status = surf::get(mock_server.uri().to_string())
+///         .await
+///         .unwrap()
+///         .status();
+///
+///     // Assert
+///     assert_eq!(ok_status, 200);
+///
+///     // Act
+///     let err_status = surf::get(format!("{}?unexpected=foo", mock_server.uri()))
+///     .await.
+///     unwrap().status();
+///
+///     // Assert
+///     assert_eq!(err_status, 404);
+/// }
+/// ```
+pub struct QueryParamMissingMatcher(String);
+
+impl QueryParamMissingMatcher {
+    /// Specify the query parameter that is expected to not exist.
+    pub fn new<K: Into<String>>(key: K) -> Self {
+        let key = key.into();
+        Self(key)
+    }
+}
+
+/// Shorthand for [`QueryParamMissingMatcher::new`].
+pub fn query_param_missing<K>(key: K) -> QueryParamMissingMatcher
+where
+    K: Into<String>,
+{
+    QueryParamMissingMatcher::new(key)
+}
+
+impl Match for QueryParamMissingMatcher {
+    fn matches(&self, request: &Request) -> bool {
+        !request.url.query_pairs().any(|(k, _)| k == self.0)
+    }
+}
 /// Match an incoming request if its body is encoded as JSON and can be deserialized
 /// according to the specified schema.
 ///
