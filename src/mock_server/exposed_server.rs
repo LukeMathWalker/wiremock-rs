@@ -1,5 +1,5 @@
 use crate::mock_server::bare_server::BareMockServer;
-use crate::mock_server::pool::{PooledMockServer, get_pooled_mock_server};
+use crate::mock_server::pool::{get_pooled_mock_server, PooledMockServer};
 use crate::mock_server::MockServerBuilder;
 use crate::{mock::Mock, verification::VerificationOutcome, MockGuard, Request};
 use log::debug;
