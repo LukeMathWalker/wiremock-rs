@@ -22,17 +22,22 @@ use std::convert::Infallible;
 /// It is also marginally faster to get a pooled `BareMockServer` than to create a new one, but
 /// the absolute time is so small (<1 ms) that it does not make a material difference in a real
 /// world test suite.
-static MOCK_SERVER_POOL: Lazy<Pool<BareMockServer, Infallible>> = Lazy::new(|| {
+static MOCK_SERVER_POOL: Lazy<Pool<MockServerPoolManager>> = Lazy::new(|| {
     // We are choosing an arbitrarily high max_size because we never want a test to "wait" for
     // a `BareMockServer` instance to become available.
     //
     // We might expose in the future a way for a crate user to tune this value.
-    Pool::new(MockServerPoolManager, 1000)
+    Pool::builder(MockServerPoolManager)
+        .max_size(1000)
+        .build()
+        .expect("Building a server pool is not expected to fail. Please report an issue")
 });
+
+pub(crate) type PooledMockServer = Object<MockServerPoolManager>;
 
 /// Retrieve a `BareMockServer` from the pool.
 /// The operation should never fail.
-pub(crate) async fn get_pooled_mock_server() -> Object<BareMockServer, Infallible> {
+pub(crate) async fn get_pooled_mock_server() -> PooledMockServer {
     MOCK_SERVER_POOL
         .get()
         .await
@@ -44,10 +49,13 @@ pub(crate) async fn get_pooled_mock_server() -> Object<BareMockServer, Infallibl
 /// It:
 /// - creates a new `BareMockServer` if there is none to borrow from the pool;
 /// - "cleans up" used `BareMockServer`s before making them available again for other tests to use.
-struct MockServerPoolManager;
+pub(crate) struct MockServerPoolManager;
 
 #[async_trait]
-impl deadpool::managed::Manager<BareMockServer, Infallible> for MockServerPoolManager {
+impl deadpool::managed::Manager for MockServerPoolManager {
+    type Error = Infallible;
+    type Type = BareMockServer;
+
     async fn create(&self) -> Result<BareMockServer, Infallible> {
         // All servers in the pool use the default configuration
         Ok(MockServer::builder().build_bare().await)

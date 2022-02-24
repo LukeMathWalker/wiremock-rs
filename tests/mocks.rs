@@ -102,7 +102,7 @@ async fn panic_during_expectation_does_not_crash() {
         .await;
 
     // Act - start a panic
-    assert!(false);
+    panic!("forced panic")
 }
 
 #[async_std::test]
