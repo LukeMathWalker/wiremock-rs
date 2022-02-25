@@ -1,10 +1,8 @@
 use crate::mock_server::bare_server::BareMockServer;
-use crate::mock_server::pool::get_pooled_mock_server;
+use crate::mock_server::pool::{get_pooled_mock_server, PooledMockServer};
 use crate::mock_server::MockServerBuilder;
 use crate::{mock::Mock, verification::VerificationOutcome, MockGuard, Request};
-use deadpool::managed::Object;
 use log::debug;
-use std::convert::Infallible;
 use std::net::SocketAddr;
 use std::ops::Deref;
 
@@ -40,7 +38,7 @@ pub struct MockServer(InnerServer);
 /// on `InnerServer` in `MockServer` - the compiler does all the boring heavy-lifting for us.
 pub(super) enum InnerServer {
     Bare(BareMockServer),
-    Pooled(Object<BareMockServer, Infallible>),
+    Pooled(PooledMockServer),
 }
 
 impl Deref for InnerServer {
