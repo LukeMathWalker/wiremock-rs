@@ -1,4 +1,4 @@
-use wiremock::matchers::{header, headers, method};
+use wiremock::matchers::{header, header_regex, headers, method};
 use wiremock::{Mock, MockServer, ResponseTemplate};
 
 #[async_std::test]
@@ -113,4 +113,98 @@ async fn should_not_match_multi_request_header_upon_incomplete_values() {
 
     // Assert
     assert_eq!(should_fail_incomplete_values.status(), 404);
+}
+
+#[async_std::test]
+async fn should_match_regex_single_header_value() {
+    // Arrange
+    let mock_server = MockServer::start().await;
+    let mock = Mock::given(method("GET"))
+        .and(header_regex("cache-control", &[r"no-(cache|store)"]))
+        .respond_with(ResponseTemplate::new(200));
+    mock_server.register(mock).await;
+
+    // Act
+    let should_match = surf::get(mock_server.uri())
+        .header("cache-control", "no-cache")
+        .await
+        .unwrap();
+
+    // Assert
+    assert_eq!(should_match.status(), 200);
+}
+
+#[async_std::test]
+async fn should_match_regex_multiple_header_values() {
+    // Arrange
+    let mock_server = MockServer::start().await;
+    let mock = Mock::given(method("GET"))
+        .and(header_regex("cache-control", &[r"no-(cache|store)"]))
+        .respond_with(ResponseTemplate::new(200));
+    mock_server.register(mock).await;
+
+    // Act
+    let should_match = surf::get(mock_server.uri())
+        .header("cache-control", "no-cache")
+        .header("cache-control", "no-store")
+        .await
+        .unwrap();
+
+    // Assert
+    assert_eq!(should_match.status(), 200);
+}
+
+#[async_std::test]
+async fn should_not_match_regex_with_wrong_header_value() {
+    // Arrange
+    let mock_server = MockServer::start().await;
+    let mock = Mock::given(method("GET"))
+        .and(header_regex("cache-control", &[r"no-(cache|store)"]))
+        .respond_with(ResponseTemplate::new(200));
+    mock_server.register(mock).await;
+
+    // Act
+    let should_fail_wrong_value = surf::get(mock_server.uri())
+        .header("cache-control", "no-junk")
+        .await
+        .unwrap();
+
+    // Assert
+    assert_eq!(should_fail_wrong_value.status(), 404);
+}
+
+#[async_std::test]
+async fn should_not_match_regex_with_at_least_one_wrong_header_value() {
+    // Arrange
+    let mock_server = MockServer::start().await;
+    let mock = Mock::given(method("GET"))
+        .and(header_regex("cache-control", &[r"no-(cache|store)"]))
+        .respond_with(ResponseTemplate::new(200));
+    mock_server.register(mock).await;
+
+    // Act
+    let should_fail_wrong_value = surf::get(mock_server.uri())
+        .header("cache-control", "no-cache")
+        .header("cache-control", "no-junk")
+        .await
+        .unwrap();
+
+    // Assert
+    assert_eq!(should_fail_wrong_value.status(), 404);
+}
+
+#[async_std::test]
+async fn should_not_match_regex_with_no_values_for_header() {
+    // Arrange
+    let mock_server = MockServer::start().await;
+    let mock = Mock::given(method("GET"))
+        .and(header_regex("cache-control", &[r"no-(cache|store)"]))
+        .respond_with(ResponseTemplate::new(200));
+    mock_server.register(mock).await;
+
+    // Act
+    let should_fail_wrong_value = surf::get(mock_server.uri()).await.unwrap();
+
+    // Assert
+    assert_eq!(should_fail_wrong_value.status(), 404);
 }
