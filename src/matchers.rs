@@ -789,7 +789,7 @@ impl Match for QueryParamExactMatcher {
 /// ### Example:
 /// ```rust
 /// use wiremock::{MockServer, Mock, ResponseTemplate};
-/// use wiremock::matchers::{method, query_param_missing};
+/// use wiremock::matchers::{method, query_param_is_missing};
 ///
 /// #[async_std::main]
 /// async fn main() {
@@ -797,7 +797,7 @@ impl Match for QueryParamExactMatcher {
 ///     let mock_server = MockServer::start().await;
 ///
 ///     Mock::given(method("GET"))
-///         .and(query_param_missing("unexpected"))
+///         .and(query_param_is_missing("unexpected"))
 ///         .respond_with(ResponseTemplate::new(200))
 ///         .mount(&mock_server)
 ///         .await;
@@ -820,9 +820,9 @@ impl Match for QueryParamExactMatcher {
 ///     assert_eq!(err_status, 404);
 /// }
 /// ```
-pub struct QueryParamMissingMatcher(String);
+pub struct QueryParamIsMissingMatcher(String);
 
-impl QueryParamMissingMatcher {
+impl QueryParamIsMissingMatcher {
     /// Specify the query parameter that is expected to not exist.
     pub fn new<K: Into<String>>(key: K) -> Self {
         let key = key.into();
@@ -830,15 +830,15 @@ impl QueryParamMissingMatcher {
     }
 }
 
-/// Shorthand for [`QueryParamMissingMatcher::new`].
-pub fn query_param_missing<K>(key: K) -> QueryParamMissingMatcher
+/// Shorthand for [`QueryParamIsMissingMatcher::new`].
+pub fn query_param_is_missing<K>(key: K) -> QueryParamIsMissingMatcher
 where
     K: Into<String>,
 {
-    QueryParamMissingMatcher::new(key)
+    QueryParamIsMissingMatcher::new(key)
 }
 
-impl Match for QueryParamMissingMatcher {
+impl Match for QueryParamIsMissingMatcher {
     fn matches(&self, request: &Request) -> bool {
         !request.url.query_pairs().any(|(k, _)| k == self.0)
     }
