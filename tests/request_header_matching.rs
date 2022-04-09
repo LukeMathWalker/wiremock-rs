@@ -120,7 +120,7 @@ async fn should_match_regex_single_header_value() {
     // Arrange
     let mock_server = MockServer::start().await;
     let mock = Mock::given(method("GET"))
-        .and(header_regex("cache-control", &[r"no-(cache|store)"]))
+        .and(header_regex("cache-control", r"no-(cache|store)"))
         .respond_with(ResponseTemplate::new(200));
     mock_server.register(mock).await;
 
@@ -139,7 +139,7 @@ async fn should_match_regex_multiple_header_values() {
     // Arrange
     let mock_server = MockServer::start().await;
     let mock = Mock::given(method("GET"))
-        .and(header_regex("cache-control", &[r"no-(cache|store)"]))
+        .and(header_regex("cache-control", r"no-(cache|store)"))
         .respond_with(ResponseTemplate::new(200));
     mock_server.register(mock).await;
 
@@ -159,7 +159,7 @@ async fn should_not_match_regex_with_wrong_header_value() {
     // Arrange
     let mock_server = MockServer::start().await;
     let mock = Mock::given(method("GET"))
-        .and(header_regex("cache-control", &[r"no-(cache|store)"]))
+        .and(header_regex("cache-control", r"no-(cache|store)"))
         .respond_with(ResponseTemplate::new(200));
     mock_server.register(mock).await;
 
@@ -178,7 +178,7 @@ async fn should_not_match_regex_with_at_least_one_wrong_header_value() {
     // Arrange
     let mock_server = MockServer::start().await;
     let mock = Mock::given(method("GET"))
-        .and(header_regex("cache-control", &[r"no-(cache|store)"]))
+        .and(header_regex("cache-control", r"no-(cache|store)"))
         .respond_with(ResponseTemplate::new(200));
     mock_server.register(mock).await;
 
@@ -198,7 +198,7 @@ async fn should_not_match_regex_with_no_values_for_header() {
     // Arrange
     let mock_server = MockServer::start().await;
     let mock = Mock::given(method("GET"))
-        .and(header_regex("cache-control", &[r"no-(cache|store)"]))
+        .and(header_regex("cache-control", r"no-(cache|store)"))
         .respond_with(ResponseTemplate::new(200));
     mock_server.register(mock).await;
 

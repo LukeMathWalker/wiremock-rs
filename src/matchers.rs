@@ -12,7 +12,7 @@ use assert_json_diff::{assert_json_matches_no_panic, CompareMode};
 use http_types::headers::{HeaderName, HeaderValue, HeaderValues};
 use http_types::Method;
 use log::debug;
-use regex::{Regex, RegexSet};
+use regex::Regex;
 use serde::Serialize;
 use serde_json::Value;
 use std::convert::TryInto;
@@ -446,7 +446,7 @@ impl Match for HeaderExistsMatcher {
 }
 
 #[derive(Debug)]
-/// Match the value of a specific header of a request against a regular expression set.
+/// Match the value of a specific header of a request against a regular expression.
 /// All header values received for a header name must match, and at least one must be provided.
 ///
 /// ### Example:
@@ -459,7 +459,7 @@ impl Match for HeaderExistsMatcher {
 ///     // Arrange
 ///     let mock_server = MockServer::start().await;
 ///
-///     Mock::given(header_regex("custom", &[r"header"]))
+///     Mock::given(header_regex("custom", r"header"))
 ///         .respond_with(ResponseTemplate::new(200))
 ///         .mount(&mock_server)
 ///         .await;
@@ -475,10 +475,10 @@ impl Match for HeaderExistsMatcher {
 ///     assert_eq!(status, 200);
 /// }
 /// ```
-pub struct HeaderRegexMatcher(HeaderName, RegexSet);
+pub struct HeaderRegexMatcher(HeaderName, Regex);
 
 /// Shorthand for [`HeaderRegexMatcher::new`].
-pub fn header_regex<K>(key: K, value: &[&str]) -> HeaderRegexMatcher
+pub fn header_regex<K>(key: K, value: &str) -> HeaderRegexMatcher
 where
     K: TryInto<HeaderName>,
     <K as TryInto<HeaderName>>::Error: std::fmt::Debug,
@@ -487,13 +487,13 @@ where
 }
 
 impl HeaderRegexMatcher {
-    pub fn new<K>(key: K, value: &[&str]) -> Self
+    pub fn new<K>(key: K, value: &str) -> Self
     where
         K: TryInto<HeaderName>,
         <K as TryInto<HeaderName>>::Error: std::fmt::Debug,
     {
         let key = key.try_into().expect("Failed to convert to header name.");
-        let value_matcher = RegexSet::new(value).expect("Failed to create regex for value matcher");
+        let value_matcher = Regex::new(value).expect("Failed to create regex for value matcher");
         Self(key, value_matcher)
     }
 }
