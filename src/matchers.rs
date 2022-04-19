@@ -446,6 +446,72 @@ impl Match for HeaderExistsMatcher {
 }
 
 #[derive(Debug)]
+/// Match the value of a header using a regular expression.
+/// If the header is multi-valued, all values must satisfy the regular expression. 
+/// If the header is missing, the mock will not match.
+///
+/// ### Example:
+/// ```rust
+/// use wiremock::{MockServer, Mock, ResponseTemplate};
+/// use wiremock::matchers::header_regex;
+///
+/// #[async_std::main]
+/// async fn main() {
+///     // Arrange
+///     let mock_server = MockServer::start().await;
+///
+///     Mock::given(header_regex("custom", "header"))
+///         .respond_with(ResponseTemplate::new(200))
+///         .mount(&mock_server)
+///         .await;
+///
+///     // Act
+///     let status = surf::get(&mock_server.uri())
+///         .header("custom", "headers are fun to match on with a regex")
+///         .await
+///         .unwrap()
+///         .status();
+///
+///     // Assert
+///     assert_eq!(status, 200);
+/// }
+/// ```
+pub struct HeaderRegexMatcher(HeaderName, Regex);
+
+/// Shorthand for [`HeaderRegexMatcher::new`].
+pub fn header_regex<K>(key: K, value: &str) -> HeaderRegexMatcher
+where
+    K: TryInto<HeaderName>,
+    <K as TryInto<HeaderName>>::Error: std::fmt::Debug,
+{
+    HeaderRegexMatcher::new(key, value)
+}
+
+impl HeaderRegexMatcher {
+    pub fn new<K>(key: K, value: &str) -> Self
+    where
+        K: TryInto<HeaderName>,
+        <K as TryInto<HeaderName>>::Error: std::fmt::Debug,
+    {
+        let key = key.try_into().expect("Failed to convert to header name.");
+        let value_matcher = Regex::new(value).expect("Failed to create regex for value matcher");
+        Self(key, value_matcher)
+    }
+}
+
+impl Match for HeaderRegexMatcher {
+    fn matches(&self, request: &Request) -> bool {
+        match request.headers.get(&self.0) {
+            None => false,
+            Some(values) => {
+                let has_values = values.iter().next().is_some();
+                has_values && values.iter().all(|v| self.1.is_match(v.as_str()))
+            }
+        }
+    }
+}
+
+#[derive(Debug)]
 /// Match **exactly** the body of a request.
 ///
 /// ### Example (string):
