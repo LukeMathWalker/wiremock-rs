@@ -446,7 +446,7 @@ impl Match for HeaderExistsMatcher {
 }
 
 #[derive(Debug)]
-/// Match the value of a specific header of a request against a regular expression.
+/// Match the value of a header using a regular expression.
 /// All header values received for a header name must match, and at least one must be provided.
 ///
 /// ### Example:
