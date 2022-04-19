@@ -447,7 +447,8 @@ impl Match for HeaderExistsMatcher {
 
 #[derive(Debug)]
 /// Match the value of a header using a regular expression.
-/// All header values received for a header name must match, and at least one must be provided.
+/// If the header is multi-valued, all values must satisfy the regular expression. 
+/// If the header is missing, the mock will not match.
 ///
 /// ### Example:
 /// ```rust
