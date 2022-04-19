@@ -460,7 +460,7 @@ impl Match for HeaderExistsMatcher {
 ///     // Arrange
 ///     let mock_server = MockServer::start().await;
 ///
-///     Mock::given(header_regex("custom", r"header"))
+///     Mock::given(header_regex("custom", "header"))
 ///         .respond_with(ResponseTemplate::new(200))
 ///         .mount(&mock_server)
 ///         .await;
