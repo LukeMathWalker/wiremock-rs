@@ -2280,6 +2280,7 @@ dependencies = [
  "assert-json-diff",
  "async-std",
  "async-trait",
+ "base64 0.13.0",
  "deadpool",
  "futures",
  "futures-timer",

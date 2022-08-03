@@ -1,4 +1,4 @@
-use wiremock::matchers::{header, header_regex, headers, method};
+use wiremock::matchers::{basic_auth, bearer_token, header, header_regex, headers, method};
 use wiremock::{Mock, MockServer, ResponseTemplate};
 
 #[async_std::test]
@@ -207,4 +207,76 @@ async fn should_not_match_regex_with_no_values_for_header() {
 
     // Assert
     assert_eq!(should_fail_wrong_value.status(), 404);
+}
+
+#[async_std::test]
+async fn should_match_basic_auth_header() {
+    // Arrange
+    let mock_server = MockServer::start().await;
+    let mock = Mock::given(method("GET"))
+        .and(basic_auth("Aladdin", "open sesame"))
+        .respond_with(ResponseTemplate::new(200));
+    mock_server.register(mock).await;
+
+    // Act
+    let should_match = surf::get(mock_server.uri())
+        .header("Authorization", "Basic QWxhZGRpbjpvcGVuIHNlc2FtZQ==")
+        .await
+        .unwrap();
+    // Assert
+    assert_eq!(should_match.status(), 200);
+}
+
+#[async_std::test]
+async fn should_not_match_bad_basic_auth_header() {
+    // Arrange
+    let mock_server = MockServer::start().await;
+    let mock = Mock::given(method("GET"))
+        .and(basic_auth("Aladdin", "close sesame"))
+        .respond_with(ResponseTemplate::new(200));
+    mock_server.register(mock).await;
+
+    // Act
+    let should_not_match = surf::get(mock_server.uri())
+        .header("Authorization", "Basic QWxhZGRpbjpvcGVuIHNlc2FtZQ==")
+        .await
+        .unwrap();
+    // Assert
+    assert_eq!(should_not_match.status(), 404);
+}
+
+#[async_std::test]
+async fn should_match_bearer_token_header() {
+    // Arrange
+    let mock_server = MockServer::start().await;
+    let mock = Mock::given(method("GET"))
+        .and(bearer_token("delightful"))
+        .respond_with(ResponseTemplate::new(200));
+    mock_server.register(mock).await;
+
+    // Act
+    let should_match = surf::get(mock_server.uri())
+        .header("Authorization", "Bearer delightful")
+        .await
+        .unwrap();
+    // Assert
+    assert_eq!(should_match.status(), 200);
+}
+
+#[async_std::test]
+async fn should_not_match_bearer_token_header() {
+    // Arrange
+    let mock_server = MockServer::start().await;
+    let mock = Mock::given(method("GET"))
+        .and(bearer_token("expired"))
+        .respond_with(ResponseTemplate::new(200));
+    mock_server.register(mock).await;
+
+    // Act
+    let should_not_match = surf::get(mock_server.uri())
+        .header("Authorization", "Bearer delightful")
+        .await
+        .unwrap();
+    // Assert
+    assert_eq!(should_not_match.status(), 404);
 }

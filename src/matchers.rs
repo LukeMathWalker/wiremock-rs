@@ -16,6 +16,7 @@ use regex::Regex;
 use serde::Serialize;
 use serde_json::Value;
 use std::convert::TryInto;
+use std::ops::Deref;
 use std::str;
 
 /// Implement the `Match` trait for all closures, out of the box,
@@ -971,4 +972,63 @@ where
     for<'de> T: serde::de::Deserialize<'de>,
 {
     serde_json::from_slice::<T>(&request.body).is_ok()
+}
+
+#[derive(Debug)]
+pub struct BasicAuthMatcher(HeaderExactMatcher);
+
+impl BasicAuthMatcher {
+    pub fn from_credentials(username: impl AsRef<str>, password: impl AsRef<str>) -> Self {
+        Self::from_token(base64::encode(format!(
+            "{}:{}",
+            username.as_ref(),
+            password.as_ref()
+        )))
+    }
+
+    pub fn from_token(token: impl AsRef<str>) -> Self {
+        Self(header(
+            "Authorization",
+            format!("Basic {}", token.as_ref()).deref(),
+        ))
+    }
+}
+
+pub fn basic_auth<U, P>(username: U, password: P) -> BasicAuthMatcher
+where
+    U: AsRef<str>,
+    P: AsRef<str>,
+{
+    BasicAuthMatcher::from_credentials(username, password)
+}
+
+impl Match for BasicAuthMatcher {
+    fn matches(&self, request: &Request) -> bool {
+        self.0.matches(request)
+    }
+}
+
+#[derive(Debug)]
+pub struct BearerTokenMatcher(HeaderExactMatcher);
+
+impl BearerTokenMatcher {
+    pub fn from_token(token: impl AsRef<str>) -> Self {
+        Self(header(
+            "Authorization",
+            format!("Bearer {}", token.as_ref()).deref(),
+        ))
+    }
+}
+
+impl Match for BearerTokenMatcher {
+    fn matches(&self, request: &Request) -> bool {
+        self.0.matches(request)
+    }
+}
+
+pub fn bearer_token<T>(token: T) -> BearerTokenMatcher
+where
+    T: AsRef<str>,
+{
+    BearerTokenMatcher::from_token(token)
 }
