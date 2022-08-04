@@ -16,6 +16,7 @@ use regex::Regex;
 use serde::Serialize;
 use serde_json::Value;
 use std::convert::TryInto;
+use std::ops::Deref;
 use std::str;
 
 /// Implement the `Match` trait for all closures, out of the box,
@@ -971,4 +972,136 @@ where
     for<'de> T: serde::de::Deserialize<'de>,
 {
     serde_json::from_slice::<T>(&request.body).is_ok()
+}
+
+#[derive(Debug)]
+/// Match an incoming request if it contains the basic authentication header with the username and password
+/// as per [RFC 7617](https://datatracker.ietf.org/doc/html/rfc7617).
+///
+/// ### Example:
+/// ```rust
+/// use wiremock::{MockServer, Mock, ResponseTemplate};
+/// use wiremock::matchers::basic_auth;
+/// use serde::{Deserialize, Serialize};
+/// use http_types::auth::BasicAuth;
+/// use std::convert::TryInto;
+///
+/// #[async_std::main]
+/// async fn main() {
+///     // Arrange
+///     let mock_server = MockServer::start().await;
+///
+///
+///     Mock::given(basic_auth("username", "password"))
+///         .respond_with(ResponseTemplate::new(200))
+///         .mount(&mock_server)
+///         .await;
+///         
+///     let auth = BasicAuth::new("username", "password");
+///     let client: surf::Client = surf::Config::new()
+///         .set_base_url(surf::Url::parse(&mock_server.uri()).unwrap())
+///         .add_header(auth.name(), auth.value()).unwrap()
+///         .try_into().unwrap();
+///
+///     // Act
+///     let status = client.get("/")
+///         .await
+///         .unwrap()
+///         .status();
+///     
+///     // Assert
+///     assert_eq!(status, 200);
+/// }
+/// ```
+pub struct BasicAuthMatcher(HeaderExactMatcher);
+
+impl BasicAuthMatcher {
+    /// Match basic authentication header using the given username and password.
+    pub fn from_credentials(username: impl AsRef<str>, password: impl AsRef<str>) -> Self {
+        Self::from_token(base64::encode(format!(
+            "{}:{}",
+            username.as_ref(),
+            password.as_ref()
+        )))
+    }
+
+    /// Match basic authentication header with the exact token given.
+    pub fn from_token(token: impl AsRef<str>) -> Self {
+        Self(header(
+            "Authorization",
+            format!("Basic {}", token.as_ref()).deref(),
+        ))
+    }
+}
+
+/// Shorthand for [`BasicAuthMatcher::from_credentials`].
+pub fn basic_auth<U, P>(username: U, password: P) -> BasicAuthMatcher
+where
+    U: AsRef<str>,
+    P: AsRef<str>,
+{
+    BasicAuthMatcher::from_credentials(username, password)
+}
+
+impl Match for BasicAuthMatcher {
+    fn matches(&self, request: &Request) -> bool {
+        self.0.matches(request)
+    }
+}
+
+#[derive(Debug)]
+/// Match an incoming request if it contains the bearer token header
+/// as per [RFC 6750](https://datatracker.ietf.org/doc/html/rfc6750).
+///
+/// ### Example:
+/// ```rust
+/// use wiremock::{MockServer, Mock, ResponseTemplate};
+/// use wiremock::matchers::bearer_token;
+/// use serde::{Deserialize, Serialize};
+/// use http_types::auth::BasicAuth;
+///
+/// #[async_std::main]
+/// async fn main() {
+///     // Arrange
+///     let mock_server = MockServer::start().await;
+///
+///     Mock::given(bearer_token("token"))
+///         .respond_with(ResponseTemplate::new(200))
+///         .mount(&mock_server)
+///         .await;
+///
+///     // Act
+///     let status = surf::get(&mock_server.uri())
+///         .header("Authorization", "Bearer token")
+///         .await
+///         .unwrap()
+///         .status();
+///     
+///     // Assert
+///     assert_eq!(status, 200);
+/// }
+/// ```
+pub struct BearerTokenMatcher(HeaderExactMatcher);
+
+impl BearerTokenMatcher {
+    pub fn from_token(token: impl AsRef<str>) -> Self {
+        Self(header(
+            "Authorization",
+            format!("Bearer {}", token.as_ref()).deref(),
+        ))
+    }
+}
+
+impl Match for BearerTokenMatcher {
+    fn matches(&self, request: &Request) -> bool {
+        self.0.matches(request)
+    }
+}
+
+/// Shorthand for [`BearerTokenMatcher::from_token`].
+pub fn bearer_token<T>(token: T) -> BearerTokenMatcher
+where
+    T: AsRef<str>,
+{
+    BearerTokenMatcher::from_token(token)
 }
