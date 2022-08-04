@@ -2264,7 +2264,7 @@ dependencies = [
 
 [[package]]
 name = "wiremock"
-version = "0.5.13"
+version = "0.5.14"
 dependencies = [
  "actix-rt",
  "assert-json-diff",
