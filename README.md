@@ -191,8 +191,8 @@ Unless you explicitly state otherwise, any contribution intentionally submitted 
 
 [`MockServer`]: https://docs.rs/wiremock/latest/wiremock/struct.MockServer.html
 [`Mock`]: https://docs.rs/wiremock/latest/wiremock/struct.Mock.html
-[`ResponseTemplate`]: https://docs.rs/wiremock/latest/wiremock/struct.ResponseTemplate
-[`Request`]: https://docs.rs/wiremock/latest/wiremock/struct.Request
+[`ResponseTemplate`]: https://docs.rs/wiremock/latest/wiremock/struct.ResponseTemplate.html
+[`Request`]: https://docs.rs/wiremock/latest/wiremock/struct.Request.html
 [`Match`]: https://docs.rs/wiremock/latest/wiremock/trait.Match.html
 [`Respond`]: https://docs.rs/wiremock/latest/wiremock/trait.Respond.html
 [`start`]: https://docs.rs/wiremock/latest/wiremock/struct.MockServer.html#method.start
