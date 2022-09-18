@@ -61,7 +61,7 @@ Add `wiremock` to your development dependencies by editing the `Cargo.toml` file
 # ...
 wiremock = "0.5"
 ```
-or by running:
+Or by running:
 ```bash
 cargo add wiremock --dev
 ```
