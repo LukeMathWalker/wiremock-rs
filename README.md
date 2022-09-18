@@ -55,13 +55,13 @@ It provides mocking of HTTP responses using request matching and response templa
 
 ## How to install
 
-Add `wiremock` to your development dependencies:
+Add `wiremock` to your development dependencies by editing the `Cargo.toml` file:
 ```toml
 [dev-dependencies]
 # ...
 wiremock = "0.5"
 ```
-If you are using [`cargo-edit`](https://github.com/killercup/cargo-edit), run
+or by running:
 ```bash
 cargo add wiremock --dev
 ```
