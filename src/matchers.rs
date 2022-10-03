@@ -207,6 +207,10 @@ impl PathExactMatcher {
     pub fn new<T: Into<String>>(path: T) -> Self {
         let path = path.into();
 
+        if path.contains('?') {
+            panic!("Wiremock can't match the path `{}` because it contains a `?`. Use `wiremock::matchers::query_param` instead.", path)
+        }
+
         // Prepend "/" to the path if missing.
         if path.starts_with('/') {
             Self(path)
