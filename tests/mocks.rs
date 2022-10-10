@@ -209,3 +209,53 @@ async fn body_json_partial_matches_a_part_of_response_json() {
     // Assert
     assert_eq!(response.status(), StatusCode::Ok);
 }
+
+#[async_std::test]
+async fn use_mock_guard_to_verify_requests_from_mock() {
+    // Arrange
+    let mock_server = MockServer::start().await;
+
+    let first = mock_server
+        .register_as_scoped(
+            Mock::given(method("POST"))
+                .and(PathExactMatcher::new("first"))
+                .respond_with(ResponseTemplate::new(200)),
+        )
+        .await;
+
+    let second = mock_server
+        .register_as_scoped(
+            Mock::given(method("POST"))
+                .and(PathExactMatcher::new("second"))
+                .respond_with(ResponseTemplate::new(200)),
+        )
+        .await;
+
+    // Act
+    let uri = mock_server.uri();
+    let response = surf::post(format!("{uri}/first"))
+        .body(json!({ "attempt": 1}))
+        .await
+        .unwrap();
+    assert_eq!(response.status(), StatusCode::Ok);
+
+    let response = surf::post(format!("{uri}/first"))
+        .body(json!({ "attempt": 2}))
+        .await
+        .unwrap();
+    assert_eq!(response.status(), StatusCode::Ok);
+
+    let response = surf::post(format!("{uri}/second"))
+        .body(json!({ "attempt": 99}))
+        .await
+        .unwrap();
+    assert_eq!(response.status(), StatusCode::Ok);
+
+    // Assert
+    let all_requests_to_first = first.received_requests().await;
+    assert_eq!(all_requests_to_first.len(), 2);
+
+    let value: serde_json::Value = second.received_requests().await[0].body_json().unwrap();
+
+    assert_eq!(value, json!({"attempt": 99}));
+}

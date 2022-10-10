@@ -2,6 +2,7 @@ use std::str::FromStr;
 use std::{collections::HashMap, fmt};
 
 use futures::AsyncReadExt;
+use http_types::convert::DeserializeOwned;
 use http_types::headers::{HeaderName, HeaderValue, HeaderValues};
 use http_types::{Method, Url};
 
@@ -47,6 +48,10 @@ impl fmt::Display for Request {
 }
 
 impl Request {
+    pub fn body_json<T: DeserializeOwned>(&self) -> Result<T, serde_json::Error> {
+        serde_json::from_slice(&self.body)
+    }
+
     pub async fn from(mut request: http_types::Request) -> Request {
         let method = request.method();
         let url = request.url().to_owned();
