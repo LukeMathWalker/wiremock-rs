@@ -11,6 +11,9 @@ pub(crate) struct MountedMock {
     /// E.g. `0` if this is the first mock that we try to match against an incoming request, `1`
     /// if it is the second, etc.
     position_in_set: usize,
+
+    // matched requests:
+    matched_requests: Vec<crate::Request>,
 }
 
 impl MountedMock {
@@ -19,6 +22,7 @@ impl MountedMock {
             specification,
             n_matched_requests: 0,
             position_in_set,
+            matched_requests: Vec::new(),
         }
     }
 
@@ -41,6 +45,8 @@ impl MountedMock {
             if matched {
                 // Increase match count
                 self.n_matched_requests += 1;
+                // Keep track of request
+                self.matched_requests.push(request.clone())
             }
 
             matched
@@ -60,5 +66,9 @@ impl MountedMock {
 
     pub(crate) fn response_template(&self, request: &Request) -> ResponseTemplate {
         self.specification.response_template(request)
+    }
+
+    pub(crate) fn received_requests(&self) -> Vec<crate::Request> {
+        self.matched_requests.clone()
     }
 }

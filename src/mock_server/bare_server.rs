@@ -184,6 +184,14 @@ pub struct MockGuard {
     server_state: Arc<RwLock<MockServerState>>,
 }
 
+impl MockGuard {
+    pub async fn received_requests(&self) -> Vec<crate::Request> {
+        let state = self.server_state.read().await;
+        let (mounted_mock, _) = &state.mock_set[self.mock_id];
+        mounted_mock.received_requests()
+    }
+}
+
 impl Drop for MockGuard {
     fn drop(&mut self) {
         let future = async move {
