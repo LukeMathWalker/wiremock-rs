@@ -2,7 +2,7 @@ use http_types::StatusCode;
 use serde::Serialize;
 use serde_json::json;
 use std::net::TcpStream;
-use wiremock::matchers::{body_json, body_partial_json, method, PathExactMatcher};
+use wiremock::matchers::{body_json, body_partial_json, method, path, PathExactMatcher};
 use wiremock::{Mock, MockServer, ResponseTemplate};
 
 #[async_std::test]
@@ -208,6 +208,12 @@ async fn body_json_partial_matches_a_part_of_response_json() {
 
     // Assert
     assert_eq!(response.status(), StatusCode::Ok);
+}
+
+#[should_panic]
+#[async_std::test]
+async fn query_parameter_is_not_accepted_in_path() {
+    Mock::given(method("GET")).and(path("abcd?"));
 }
 
 #[async_std::test]
