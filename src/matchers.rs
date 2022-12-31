@@ -208,7 +208,7 @@ impl PathExactMatcher {
         let path = path.into();
 
         if path.contains('?') {
-            panic!("Wiremock can't match the path `{}` because it contains a `?`. Use `wiremock::matchers::query_param` instead.", path)
+            panic!("Wiremock can't match the path `{}` because it contains a `?`. You must use `wiremock::matchers::query_param` to match on query parameters (the part of the path after the `?`).", path)
         }
 
         // Prepend "/" to the path if missing.
