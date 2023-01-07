@@ -228,9 +228,9 @@ impl ResponseTemplate {
     /// By default the [`MockServer`] tries to fulfill incoming requests as fast as possible.
     ///
     /// You can use `set_delay` to introduce an artificial delay to simulate the behaviour of
-    /// a real server with a non-neglibible latency.
+    /// a real server with a non-negligible latency.
     ///
-    /// In particular, you can use it to test the behaviour of your timeout policies.  
+    /// In particular, you can use it to test the behaviour of your timeout policies.
     ///
     /// ### Example:
     /// ```rust
