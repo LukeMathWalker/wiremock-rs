@@ -120,7 +120,7 @@
 //! - Spying (e.g. verify that a mock has/hasn't been called in a test);
 //! - Standalone mode (i.e. can I launch an HTTP mock server outside of a test suite?).
 //!
-//! |           | Test execution strategy | How many APIs can I mock? | Out-of-the-box request matchers | Extensible request maching | API   | Spying | Standalone mode |
+//! |           | Test execution strategy | How many APIs can I mock? | Out-of-the-box request matchers | Extensible request matching | API   | Spying | Standalone mode |
 //! |-----------|-------------------------|---------------------------|---------------------------------|----------------------------|-------|----------|-----------------|
 //! | mockito   | ❌ Sequential           | ❌ 1                        | ✔                           | ❌                        | Sync  | ✔     | ❌              |
 //! | httpmock  | ✔ Parallel              | ✔ Unbounded                | ✔                           | ✔                        | Async/Sync  | ✔     | ✔              |

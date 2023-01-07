@@ -3,7 +3,7 @@ use wiremock::matchers::{method, path};
 use wiremock::{Mock, MockServer, ResponseTemplate};
 
 // regression tests for https://github.com/LukeMathWalker/wiremock-rs/issues/7
-// running both tests will _sometimes_ trigger a hang if the runtimes arent separated correctly
+// running both tests will _sometimes_ trigger a hang if the runtimes aren't separated correctly
 
 #[tokio::test]
 async fn hello_reqwest() {
