@@ -210,10 +210,18 @@ async fn body_json_partial_matches_a_part_of_response_json() {
     assert_eq!(response.status(), StatusCode::Ok);
 }
 
-#[should_panic]
+#[should_panic(expected = "\
+Wiremock can't match the path `abcd?` because it contains a `?`. You must use `wiremock::matchers::query_param` to match on query parameters (the part of the path after the `?`).")]
 #[async_std::test]
 async fn query_parameter_is_not_accepted_in_path() {
     Mock::given(method("GET")).and(path("abcd?"));
+}
+
+#[should_panic(expected = "\
+Wiremock can't match the path `https://domain.com/abcd` because it contains the host `domain.com`. You don't have to specify the host - wiremock knows it. Try replacing your path with `path(\"/abcd\")`")]
+#[async_std::test]
+async fn host_is_not_accepted_in_path() {
+    Mock::given(method("GET")).and(path("https://domain.com/abcd"));
 }
 
 #[async_std::test]

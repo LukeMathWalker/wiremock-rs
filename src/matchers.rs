@@ -10,7 +10,7 @@
 use crate::{Match, Request};
 use assert_json_diff::{assert_json_matches_no_panic, CompareMode};
 use http_types::headers::{HeaderName, HeaderValue, HeaderValues};
-use http_types::Method;
+use http_types::{Method, Url};
 use log::debug;
 use regex::Regex;
 use serde::Serialize;
@@ -49,13 +49,13 @@ where
 ///     let mock = Mock::given(method("GET")).respond_with(response);
 ///
 ///     mock_server.register(mock).await;
-///     
+///
 ///     // Act
 ///     let status = surf::get(&mock_server.uri())
 ///         .await
 ///         .unwrap()
 ///         .status();
-///     
+///
 ///     // Assert
 ///     assert_eq!(status, 200);
 /// }
@@ -91,7 +91,7 @@ impl Match for MethodExactMatcher {
 }
 
 #[derive(Debug)]
-/// Match all incoming requests, regardless of their method, path, headers or body.  
+/// Match all incoming requests, regardless of their method, path, headers or body.
 ///
 /// You can use it to verify that a request has been fired towards the server, without making
 /// any other assertion about it.
@@ -112,13 +112,13 @@ impl Match for MethodExactMatcher {
 ///     let mock = Mock::given(any()).respond_with(response);
 ///
 ///     mock_server.register(mock).await;
-///     
+///
 ///     // Act
 ///     let status = surf::get(&mock_server.uri())
 ///         .await
 ///         .unwrap()
 ///         .status();
-///     
+///
 ///     // Assert
 ///     assert_eq!(status, 200);
 /// }
@@ -153,13 +153,13 @@ impl Match for AnyMatcher {
 ///     let mock = Mock::given(path("/hello")).respond_with(response);
 ///
 ///     mock_server.register(mock).await;
-///     
+///
 ///     // Act
 ///     let status = surf::get(format!("{}/hello", &mock_server.uri()))
 ///         .await
 ///         .unwrap()
 ///         .status();
-///     
+///
 ///     // Assert
 ///     assert_eq!(status, 200);
 /// }
@@ -182,13 +182,13 @@ impl Match for AnyMatcher {
 ///     let mock = Mock::given(path("/hello")).respond_with(response);
 ///
 ///     mock_server.register(mock).await;
-///     
+///
 ///     // Act
 ///     let status = surf::get(format!("{}/hello?a_parameter=some_value", &mock_server.uri()))
 ///         .await
 ///         .unwrap()
 ///         .status();
-///     
+///
 ///     // Assert
 ///     assert_eq!(status, 200);
 /// }
@@ -208,7 +208,13 @@ impl PathExactMatcher {
         let path = path.into();
 
         if path.contains('?') {
-            panic!("Wiremock can't match the path `{}` because it contains a `?`. You must use `wiremock::matchers::query_param` to match on query parameters (the part of the path after the `?`).", path)
+            panic!("Wiremock can't match the path `{}` because it contains a `?`. You must use `wiremock::matchers::query_param` to match on query parameters (the part of the path after the `?`).", path);
+        }
+
+        if let Ok(url) = Url::parse(&path) {
+            if let Some(host) = url.host_str() {
+                panic!("Wiremock can't match the path `{}` because it contains the host `{}`. You don't have to specify the host - wiremock knows it. Try replacing your path with `path(\"{}\")`", path, host, url.path());
+            }
         }
 
         // Prepend "/" to the path if missing.
@@ -322,7 +328,7 @@ impl Match for PathRegexMatcher {
 ///         .respond_with(ResponseTemplate::new(200))
 ///         .mount(&mock_server)
 ///         .await;
-///     
+///
 ///     // Act
 ///     let status = surf::get(&mock_server.uri())
 ///         .header("custom", "header")
@@ -330,7 +336,7 @@ impl Match for PathRegexMatcher {
 ///         .await
 ///         .unwrap()
 ///         .status();
-///     
+///
 ///     // Assert
 ///     assert_eq!(status, 200);
 /// }
@@ -1000,7 +1006,7 @@ where
 ///         .respond_with(ResponseTemplate::new(200))
 ///         .mount(&mock_server)
 ///         .await;
-///         
+///
 ///     let auth = BasicAuth::new("username", "password");
 ///     let client: surf::Client = surf::Config::new()
 ///         .set_base_url(surf::Url::parse(&mock_server.uri()).unwrap())
@@ -1012,7 +1018,7 @@ where
 ///         .await
 ///         .unwrap()
 ///         .status();
-///     
+///
 ///     // Assert
 ///     assert_eq!(status, 200);
 /// }
@@ -1080,7 +1086,7 @@ impl Match for BasicAuthMatcher {
 ///         .await
 ///         .unwrap()
 ///         .status();
-///     
+///
 ///     // Assert
 ///     assert_eq!(status, 200);
 /// }
