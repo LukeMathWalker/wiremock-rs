@@ -9,7 +9,7 @@
 //! Check [`Match`]'s documentation for examples.
 use crate::{Match, Request};
 use assert_json_diff::{assert_json_matches_no_panic, CompareMode};
-use base64::prelude::*;
+use base64::prelude::{Engine as _, BASE64_STANDARD};
 use http_types::headers::{HeaderName, HeaderValue, HeaderValues};
 use http_types::{Method, Url};
 use log::debug;
