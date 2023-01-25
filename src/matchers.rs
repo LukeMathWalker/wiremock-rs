@@ -9,6 +9,7 @@
 //! Check [`Match`]'s documentation for examples.
 use crate::{Match, Request};
 use assert_json_diff::{assert_json_matches_no_panic, CompareMode};
+use base64::prelude::{Engine as _, BASE64_STANDARD};
 use http_types::headers::{HeaderName, HeaderValue, HeaderValues};
 use http_types::{Method, Url};
 use log::debug;
@@ -1028,7 +1029,7 @@ pub struct BasicAuthMatcher(HeaderExactMatcher);
 impl BasicAuthMatcher {
     /// Match basic authentication header using the given username and password.
     pub fn from_credentials(username: impl AsRef<str>, password: impl AsRef<str>) -> Self {
-        Self::from_token(base64::encode(format!(
+        Self::from_token(BASE64_STANDARD.encode(format!(
             "{}:{}",
             username.as_ref(),
             password.as_ref()
