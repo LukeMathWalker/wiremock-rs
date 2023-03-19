@@ -245,7 +245,7 @@ impl ResponseTemplate {
     ///     // Arrange
     ///     let mock_server = MockServer::start().await;
     ///     let delay = Duration::from_secs(1);
-    ///     let template = ResponseTemplate::new(200).set_delay(delay.clone());
+    ///     let template = ResponseTemplate::new(200).set_delay(delay);
     ///     Mock::given(method("GET"))
     ///         .respond_with(template)
     ///         .mount(&mock_server)
