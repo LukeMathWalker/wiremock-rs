@@ -1,3 +1,4 @@
+use hyper::HeaderMap;
 use wiremock::matchers::{basic_auth, bearer_token, header, header_regex, headers, method};
 use wiremock::{Mock, MockServer, ResponseTemplate};
 
@@ -68,6 +69,32 @@ async fn should_match_multi_request_header() {
     // Act
     let should_match = surf::get(mock_server.uri())
         .header("cache-control", "no-cache, no-store")
+        .await
+        .unwrap();
+
+    // Assert
+    assert_eq!(should_match.status(), 200);
+}
+
+#[tokio::test]
+async fn should_match_multi_request_header_x() {
+    // Arrange
+    let mock_server = MockServer::start().await;
+    let header_matcher = headers("cache-control", vec!["no-cache", "no-store"]);
+    let mock = Mock::given(method("GET"))
+        .and(header_matcher)
+        .respond_with(ResponseTemplate::new(200))
+        .expect(1);
+    mock_server.register(mock).await;
+
+    // Act
+    let mut header_map = HeaderMap::new();
+    header_map.append("cache-control", "no-cache".parse().unwrap());
+    header_map.append("cache-control", "no-store".parse().unwrap());
+    let should_match = reqwest::Client::new()
+        .get(mock_server.uri())
+        .headers(header_map)
+        .send()
         .await
         .unwrap();
 

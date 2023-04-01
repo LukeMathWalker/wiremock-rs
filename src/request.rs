@@ -1,3 +1,4 @@
+use std::iter::FromIterator;
 use std::str::FromStr;
 use std::{collections::HashMap, fmt};
 
@@ -88,17 +89,23 @@ impl Request {
         .unwrap();
 
         let mut headers = HashMap::new();
-        for (name, value) in parts.headers {
-            if let Some(name) = name {
-                let name = name.as_str().as_bytes().to_owned();
-                let name = HeaderName::from_bytes(name).unwrap();
+        for name in parts.headers.keys() {
+            let name = name.as_str().as_bytes().to_owned();
+            let name = HeaderName::from_bytes(name).unwrap();
+            let values = parts.headers.get_all(name.as_str());
+            for value in values {
                 let value = value.as_bytes().to_owned();
                 let value = HeaderValue::from_bytes(value).unwrap();
                 let value_parts = value.as_str().split(',');
                 let value_parts = value_parts
                     .map(|it| it.trim())
                     .filter_map(|it| HeaderValue::from_str(it).ok());
-                headers.insert(name, value_parts.collect());
+                headers
+                    .entry(name.clone())
+                    .and_modify(|values: &mut HeaderValues| {
+                        values.append(&mut HeaderValues::from_iter(value_parts.clone()))
+                    })
+                    .or_insert_with(|| value_parts.collect());
             }
         }
 
