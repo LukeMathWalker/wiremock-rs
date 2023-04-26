@@ -43,19 +43,24 @@ impl Default for ResponseTemplate {
 // Same principle applies to allocation/cloning, freely used where convenient.
 impl ResponseTemplate {
     /// Start building a `ResponseTemplate` specifying the status code of the response.
-    pub fn new<S>(s: S) -> Self
-    where
-        S: TryInto<StatusCode>,
-        <S as TryInto<StatusCode>>::Error: std::fmt::Debug,
+    pub fn new<StatusLike>(status: StatusLike) -> Self
+        where
+            StatusLike: TryInto<StatusCode>,
+            <StatusLike as TryInto<StatusCode>>::Error: std::fmt::Debug,
     {
-        let status_code = s.try_into().expect("Failed to convert into status code.");
-        Self {
-            status_code,
-            headers: HashMap::new(),
-            mime: None,
-            body: None,
-            delay: None,
-        }
+        Self::default().set_status_code(status)
+    }
+
+    /// Set the response's [`status code`](StatusCode).
+    pub fn set_status_code<StatusLike>(mut self, status: StatusLike) -> Self
+        where
+            StatusLike: TryInto<StatusCode>,
+            <StatusLike as TryInto<StatusCode>>::Error: std::fmt::Debug,
+    {
+        self.status_code = status
+            .try_into()
+            .expect("Failed to convert into status code.");
+        self
     }
 
     /// Append a header `value` to list of headers with `key` as header name.
