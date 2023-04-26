@@ -19,6 +19,20 @@ pub struct ResponseTemplate {
     delay: Option<Duration>,
 }
 
+impl Default for ResponseTemplate {
+    /// Create an "empty" response with `wiremock`'s
+    /// default status of [`404: Not Found`](StatusCode::NotFound).
+    fn default() -> Self {
+        Self {
+            status_code: StatusCode::NotFound,
+            headers: HashMap::new(),
+            mime: None,
+            body: None,
+            delay: None,
+        }
+    }
+}
+
 // `wiremock` is a crate meant for testing - failures are most likely not handled/temporary mistakes.
 // Hence we prefer to panic and provide an easier API than to use `Result`s thus pushing
 // the burden of "correctness" (and conversions) on the user.
