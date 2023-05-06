@@ -96,7 +96,7 @@ impl BareMockServer {
 
     /// Register a **scoped** `Mock` on an instance of `MockServer`.
     ///
-    /// When using `register`, your `Mock`s will be active until the `MockServer` is shut down.  
+    /// When using `register`, your `Mock`s will be active until the `MockServer` is shut down.
     /// When using `register_as_scoped`, your `Mock`s will be active as long as the returned `MockGuard` is not dropped.
     /// When the returned `MockGuard` is dropped, `MockServer` will verify that the expectations set on the scoped `Mock` were
     /// verified - if not, it will panic.
@@ -143,7 +143,7 @@ impl BareMockServer {
         &self.server_address
     }
 
-    /// Return a vector with all the requests received by the `BareMockServer` since it started.  
+    /// Return a vector with all the requests received by the `BareMockServer` since it started.
     /// If no request has been served, it returns an empty vector.
     ///
     /// If request recording was disabled, it returns `None`.
@@ -163,6 +163,26 @@ pub(super) enum RequestRecording {
 ///
 /// When the [`MockGuard`] is dropped, the [`MockServer`](crate::MockServer) verifies that the expectations set on the
 /// scoped [`Mock`] were verified - if not, it will panic.
+///
+/// It is possible to check whether the expectations have been verified by using [`MockGuard::is_satisfied`]. This can be
+/// useful when it isn't known how long it will take for the expected requests to be made. For example:
+///
+/// ```rust
+/// use std::time::Duration;
+/// use tokio::time::sleep;
+/// use wiremock::MockGuard;
+///
+/// /// Wait up to 100ms for the mock to be satisfied.
+/// async fn wait_until_satisfied(guard: MockGuard) {
+///     for _ in [1..=10] {
+///         sleep(Duration::from_millis(10)).await;
+///         if guard.is_satisfied().await {
+///             return
+///         }
+///     }
+///     // If not satisfied, `guard` gets dropped here and panics.
+/// }
+/// ```
 ///
 /// # Limitations
 ///
@@ -189,6 +209,16 @@ impl MockGuard {
         let state = self.server_state.read().await;
         let (mounted_mock, _) = &state.mock_set[self.mock_id];
         mounted_mock.received_requests()
+    }
+
+    pub async fn is_satisfied(&self) -> bool {
+        let MockGuard {
+            mock_id,
+            server_state,
+        } = self;
+        let state = server_state.read().await;
+        let report = state.mock_set.verify(*mock_id);
+        report.is_satisfied()
     }
 }
 

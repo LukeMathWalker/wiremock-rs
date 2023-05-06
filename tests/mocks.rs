@@ -11,7 +11,7 @@ async fn new_starts_the_server() {
     let mock_server = MockServer::start().await;
 
     // Assert
-    assert!(TcpStream::connect(&mock_server.address()).is_ok())
+    assert!(TcpStream::connect(mock_server.address()).is_ok())
 }
 
 #[async_std::test]
@@ -272,4 +272,51 @@ async fn use_mock_guard_to_verify_requests_from_mock() {
     let value: serde_json::Value = second.received_requests().await[0].body_json().unwrap();
 
     assert_eq!(value, json!({"attempt": 99}));
+}
+
+#[async_std::test]
+async fn use_mock_guard_to_check_satisfaction_readiness() {
+    // Arrange
+    let mock_server = MockServer::start().await;
+
+    let satisfy = mock_server
+        .register_as_scoped(
+            Mock::given(method("POST"))
+                .and(PathExactMatcher::new("satisfy"))
+                .respond_with(ResponseTemplate::new(200))
+                .expect(1),
+        )
+        .await;
+
+    let eventually_satisfy = mock_server
+        .register_as_scoped(
+            Mock::given(method("POST"))
+                .and(PathExactMatcher::new("eventually_satisfy"))
+                .respond_with(ResponseTemplate::new(200))
+                .expect(1),
+        )
+        .await;
+
+    // Act one
+    let uri = mock_server.uri();
+    let response = surf::post(format!("{uri}/satisfy")).await.unwrap();
+    assert_eq!(response.status(), StatusCode::Ok);
+
+    // Assert
+    let satisfied = satisfy.is_satisfied().await;
+    assert!(satisfied);
+
+    let disappointed = !eventually_satisfy.is_satisfied().await;
+    assert!(disappointed);
+
+    // Act two
+    let uri = mock_server.uri();
+    let response = surf::post(format!("{uri}/eventually_satisfy"))
+        .await
+        .unwrap();
+    assert_eq!(response.status(), StatusCode::Ok);
+
+    // Assert
+    let satisfied = eventually_satisfy.is_satisfied().await;
+    assert!(satisfied);
 }
