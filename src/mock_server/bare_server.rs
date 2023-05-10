@@ -144,6 +144,7 @@ impl BareMockServer {
     }
 
     /// Return a vector with all the requests received by the `BareMockServer` since it started.
+    ///
     /// If no request has been served, it returns an empty vector.
     ///
     /// If request recording was disabled, it returns `None`.
@@ -211,6 +212,24 @@ impl MockGuard {
         mounted_mock.received_requests()
     }
 
+    /// Have the expectations been satisfied for the [`Mock`] being guarded?
+    ///
+    /// ```rust
+    /// use std::time::Duration;
+    /// use tokio::time::sleep;
+    /// use wiremock::MockGuard;
+    ///
+    /// /// Wait up to 100ms for the mock to be satisfied.
+    /// async fn wait_until_satisfied(guard: MockGuard) {
+    ///     for _ in [1..=10] {
+    ///         sleep(Duration::from_millis(10)).await;
+    ///         if guard.is_satisfied().await {
+    ///             return
+    ///         }
+    ///     }
+    ///     // If not satisfied, `guard` gets dropped here and panics.
+    /// }
+    /// ```
     pub async fn is_satisfied(&self) -> bool {
         let MockGuard {
             mock_id,
