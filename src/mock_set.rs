@@ -6,7 +6,11 @@ use crate::{Mock, Request, ResponseTemplate};
 use futures_timer::Delay;
 use http_types::{Response, StatusCode};
 use log::debug;
-use std::ops::{Index, IndexMut};
+use std::{
+    ops::{Index, IndexMut},
+    sync::{atomic::AtomicBool, Arc},
+};
+use tokio::sync::Notify;
 
 /// The collection of mocks used by a `MockServer` instance to match against
 /// incoming requests.
@@ -67,15 +71,18 @@ impl MountedMockSet {
         }
     }
 
-    pub(crate) fn register(&mut self, mock: Mock) -> MockId {
+    pub(crate) fn register(&mut self, mock: Mock) -> (Arc<(Notify, AtomicBool)>, MockId) {
         let n_registered_mocks = self.mocks.len();
         let active_mock = MountedMock::new(mock, n_registered_mocks);
+        let notify = active_mock.notify();
         self.mocks.push((active_mock, MountedMockState::InScope));
-
-        MockId {
-            index: self.mocks.len() - 1,
-            generation: self.generation,
-        }
+        (
+            notify,
+            MockId {
+                index: self.mocks.len() - 1,
+                generation: self.generation,
+            },
+        )
     }
 
     pub(crate) fn reset(&mut self) {
@@ -179,7 +186,7 @@ mod tests {
         // Assert
         let mut set = MountedMockSet::new();
         let mock = Mock::given(path("/")).respond_with(ResponseTemplate::new(200));
-        let mock_id = set.register(mock);
+        let (_, mock_id) = set.register(mock);
 
         // Act
         set.reset();
@@ -194,8 +201,8 @@ mod tests {
         let mut set = MountedMockSet::new();
         let first_mock = Mock::given(path("/")).respond_with(ResponseTemplate::new(200));
         let second_mock = Mock::given(path("/hello")).respond_with(ResponseTemplate::new(500));
-        let first_mock_id = set.register(first_mock);
-        let second_mock_id = set.register(second_mock);
+        let (_, first_mock_id) = set.register(first_mock);
+        let (_, second_mock_id) = set.register(second_mock);
 
         // Act
         set.deactivate(first_mock_id);

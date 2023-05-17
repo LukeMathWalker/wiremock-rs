@@ -1,7 +1,9 @@
+use futures::FutureExt;
 use http_types::StatusCode;
 use serde::Serialize;
 use serde_json::json;
 use std::net::TcpStream;
+use std::time::Duration;
 use wiremock::matchers::{body_json, body_partial_json, method, path, PathExactMatcher};
 use wiremock::{Mock, MockServer, ResponseTemplate};
 
@@ -272,4 +274,68 @@ async fn use_mock_guard_to_verify_requests_from_mock() {
     let value: serde_json::Value = second.received_requests().await[0].body_json().unwrap();
 
     assert_eq!(value, json!({"attempt": 99}));
+}
+
+#[async_std::test]
+async fn use_mock_guard_to_await_satisfaction_readiness() {
+    // Arrange
+    let mock_server = MockServer::start().await;
+
+    let satisfy = mock_server
+        .register_as_scoped(
+            Mock::given(method("POST"))
+                .and(PathExactMatcher::new("satisfy"))
+                .respond_with(ResponseTemplate::new(200))
+                .expect(1),
+        )
+        .await;
+
+    let eventually_satisfy = mock_server
+        .register_as_scoped(
+            Mock::given(method("POST"))
+                .and(PathExactMatcher::new("eventually_satisfy"))
+                .respond_with(ResponseTemplate::new(200))
+                .expect(1),
+        )
+        .await;
+
+    // Act one
+    let uri = mock_server.uri();
+    let response = surf::post(format!("{uri}/satisfy")).await.unwrap();
+    assert_eq!(response.status(), StatusCode::Ok);
+
+    // Assert
+    satisfy
+        .satisfied()
+        .now_or_never()
+        .expect("should be satisfied immediately");
+
+    eventually_satisfy
+        .satisfied()
+        .now_or_never()
+        .ok_or(())
+        .expect_err("should not be satisfied yet");
+
+    // Act two
+    async_std::task::spawn(async move {
+        async_std::task::sleep(Duration::from_millis(50)).await;
+        let response = surf::post(format!("{uri}/eventually_satisfy"))
+            .await
+            .unwrap();
+        assert_eq!(response.status(), StatusCode::Ok);
+    });
+
+    // Assert
+    eventually_satisfy
+        .satisfied()
+        .now_or_never()
+        .ok_or(())
+        .expect_err("should not be satisfied yet");
+
+    async_std::io::timeout(
+        Duration::from_millis(100),
+        eventually_satisfy.satisfied().map(Ok),
+    )
+    .await
+    .expect("should be satisfied");
 }

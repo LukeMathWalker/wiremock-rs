@@ -3,7 +3,9 @@ use crate::mock_set::MockId;
 use crate::mock_set::MountedMockSet;
 use crate::{mock::Mock, verification::VerificationOutcome, Request};
 use std::net::{SocketAddr, TcpListener, TcpStream};
+use std::sync::atomic::AtomicBool;
 use std::sync::Arc;
+use tokio::sync::Notify;
 use tokio::sync::RwLock;
 use tokio::task::LocalSet;
 
@@ -101,8 +103,9 @@ impl BareMockServer {
     /// When the returned `MockGuard` is dropped, `MockServer` will verify that the expectations set on the scoped `Mock` were
     /// verified - if not, it will panic.
     pub async fn register_as_scoped(&self, mock: Mock) -> MockGuard {
-        let mock_id = self.state.write().await.mock_set.register(mock);
+        let (notify, mock_id) = self.state.write().await.mock_set.register(mock);
         MockGuard {
+            notify,
             mock_id,
             server_state: self.state.clone(),
         }
@@ -182,6 +185,7 @@ Check `wiremock`'s documentation on scoped mocks for more details."]
 pub struct MockGuard {
     mock_id: MockId,
     server_state: Arc<RwLock<MockServerState>>,
+    notify: Arc<(Notify, AtomicBool)>,
 }
 
 impl MockGuard {
@@ -189,6 +193,35 @@ impl MockGuard {
         let state = self.server_state.read().await;
         let (mounted_mock, _) = &state.mock_set[self.mock_id];
         mounted_mock.received_requests()
+    }
+
+    pub async fn satisfied(&self) {
+        let MockGuard {
+            mock_id,
+            server_state,
+            notify,
+        } = self;
+        let notification = notify.0.notified();
+        tokio::pin!(notification); // std::pin::pin was added in 1.68.0
+        if notification.as_mut().enable() {
+            // reraise a signal just in case
+            notify.0.notify_waiters();
+            return;
+        }
+
+        if self.notify.1.load(std::sync::atomic::Ordering::Acquire) {
+            return;
+        }
+
+        let state = server_state.read().await;
+        let report = state.mock_set.verify(*mock_id);
+        if report.is_satisfied() {
+            // reraise a signal just in case another waiter joined the queue
+            notify.0.notify_waiters();
+            return;
+        }
+
+        notification.await
     }
 }
 
@@ -198,6 +231,7 @@ impl Drop for MockGuard {
             let MockGuard {
                 mock_id,
                 server_state,
+                ..
             } = self;
             let mut state = server_state.write().await;
             let report = state.mock_set.verify(*mock_id);
