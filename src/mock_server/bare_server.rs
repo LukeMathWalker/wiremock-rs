@@ -3,6 +3,7 @@ use crate::mock_set::MockId;
 use crate::mock_set::MountedMockSet;
 use crate::{mock::Mock, verification::VerificationOutcome, Request};
 use std::net::{SocketAddr, TcpListener, TcpStream};
+use std::pin::pin;
 use std::sync::atomic::AtomicBool;
 use std::sync::Arc;
 use tokio::sync::Notify;
@@ -195,32 +196,19 @@ impl MockGuard {
         mounted_mock.received_requests()
     }
 
-    pub async fn satisfied(&self) {
-        let MockGuard {
-            mock_id,
-            server_state,
-            notify,
-        } = self;
-        let notification = notify.0.notified();
-        tokio::pin!(notification); // std::pin::pin was added in 1.68.0
-        if notification.as_mut().enable() {
-            // reraise a signal just in case
-            notify.0.notify_waiters();
+    pub async fn wait_until_satisfied(&self) {
+        let (notify, flag) = &*self.notify;
+        let mut notification = pin!(notify.notified());
+
+        // listen for events of satisfaction.
+        notification.as_mut().enable();
+
+        // check if satisfaction has previously been recorded
+        if flag.load(std::sync::atomic::Ordering::Acquire) {
             return;
         }
 
-        if self.notify.1.load(std::sync::atomic::Ordering::Acquire) {
-            return;
-        }
-
-        let state = server_state.read().await;
-        let report = state.mock_set.verify(*mock_id);
-        if report.is_satisfied() {
-            // reraise a signal just in case another waiter joined the queue
-            notify.0.notify_waiters();
-            return;
-        }
-
+        // await event
         notification.await
     }
 }

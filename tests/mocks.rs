@@ -306,12 +306,12 @@ async fn use_mock_guard_to_await_satisfaction_readiness() {
 
     // Assert
     satisfy
-        .satisfied()
+        .wait_until_satisfied()
         .now_or_never()
         .expect("should be satisfied immediately");
 
     eventually_satisfy
-        .satisfied()
+        .wait_until_satisfied()
         .now_or_never()
         .ok_or(())
         .expect_err("should not be satisfied yet");
@@ -327,14 +327,14 @@ async fn use_mock_guard_to_await_satisfaction_readiness() {
 
     // Assert
     eventually_satisfy
-        .satisfied()
+        .wait_until_satisfied()
         .now_or_never()
         .ok_or(())
         .expect_err("should not be satisfied yet");
 
     async_std::io::timeout(
         Duration::from_millis(100),
-        eventually_satisfy.satisfied().map(Ok),
+        eventually_satisfy.wait_until_satisfied().map(Ok),
     )
     .await
     .expect("should be satisfied");

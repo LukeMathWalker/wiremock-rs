@@ -56,11 +56,8 @@ impl MountedMock {
                 self.matched_requests.push(request.clone());
 
                 // notification of satisfaction
-                if self
-                    .specification
-                    .expectation_range
-                    .contains(self.n_matched_requests)
-                {
+                if self.verify().is_satisfied() {
+                    // always set the satisfaction flag **before** raising the event
                     self.notify
                         .1
                         .store(true, std::sync::atomic::Ordering::Release);
