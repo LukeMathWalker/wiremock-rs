@@ -318,7 +318,7 @@ async fn use_mock_guard_to_await_satisfaction_readiness() {
 
     // Act two
     async_std::task::spawn(async move {
-        async_std::task::sleep(Duration::from_millis(50)).await;
+        async_std::task::sleep(Duration::from_millis(100)).await;
         let response = surf::post(format!("{uri}/eventually_satisfy"))
             .await
             .unwrap();
@@ -333,7 +333,7 @@ async fn use_mock_guard_to_await_satisfaction_readiness() {
         .expect_err("should not be satisfied yet");
 
     async_std::io::timeout(
-        Duration::from_millis(100),
+        Duration::from_millis(1000),
         eventually_satisfy.wait_until_satisfied().map(Ok),
     )
     .await
