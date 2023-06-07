@@ -1,3 +1,7 @@
+use std::sync::{atomic::AtomicBool, Arc};
+
+use tokio::sync::Notify;
+
 use crate::{verification::VerificationReport, Match, Mock, Request, ResponseTemplate};
 
 /// Given the behaviour specification as a [`Mock`](crate::Mock), keep track of runtime information
@@ -14,6 +18,8 @@ pub(crate) struct MountedMock {
 
     // matched requests:
     matched_requests: Vec<crate::Request>,
+
+    notify: Arc<(Notify, AtomicBool)>,
 }
 
 impl MountedMock {
@@ -23,6 +29,7 @@ impl MountedMock {
             n_matched_requests: 0,
             position_in_set,
             matched_requests: Vec::new(),
+            notify: Arc::new((Notify::new(), AtomicBool::new(false))),
         }
     }
 
@@ -46,7 +53,16 @@ impl MountedMock {
                 // Increase match count
                 self.n_matched_requests += 1;
                 // Keep track of request
-                self.matched_requests.push(request.clone())
+                self.matched_requests.push(request.clone());
+
+                // notification of satisfaction
+                if self.verify().is_satisfied() {
+                    // always set the satisfaction flag **before** raising the event
+                    self.notify
+                        .1
+                        .store(true, std::sync::atomic::Ordering::Release);
+                    self.notify.0.notify_waiters();
+                }
             }
 
             matched
@@ -70,5 +86,9 @@ impl MountedMock {
 
     pub(crate) fn received_requests(&self) -> Vec<crate::Request> {
         self.matched_requests.clone()
+    }
+
+    pub(crate) fn notify(&self) -> Arc<(Notify, AtomicBool)> {
+        self.notify.clone()
     }
 }
