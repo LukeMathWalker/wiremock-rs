@@ -190,12 +190,58 @@ pub struct MockGuard {
 }
 
 impl MockGuard {
+    /// Return all the requests that have been matched by the corresponding
+    /// scoped [`Mock`] since it was mounted.  
+    /// The requests are returned in the order they were received.
+    ///
+    /// It returns an empty vector if no request has been matched.
     pub async fn received_requests(&self) -> Vec<crate::Request> {
         let state = self.server_state.read().await;
         let (mounted_mock, _) = &state.mock_set[self.mock_id];
         mounted_mock.received_requests()
     }
 
+    /// This method doesn't return until the expectations set on the
+    /// corresponding scoped [`Mock`] are satisfied.
+    ///
+    /// It can be useful when you are testing asynchronous flows (e.g. a
+    /// message queue consumer) and you don't have a good event that can be used
+    /// to trigger the verification of the expectations set on the scoped [`Mock`].
+    ///
+    /// # Timeouts
+    ///
+    /// There is no default timeout for this method, so it will end up waiting
+    /// **forever** if your expectations are never met. Probably not what you
+    /// want.
+    ///
+    /// It is strongly recommended that you set your own timeout using the
+    /// appropriate timers from your chosen async runtime.  
+    /// Since `wiremock` is runtime-agnostic, it cannot provide a default
+    /// timeout mechanism that would work for all users.
+    ///
+    /// ```rust
+    /// use std::time::Duration;
+    /// use wiremock::{Mock, MockServer, ResponseTemplate};
+    /// use wiremock::matchers::method;
+    ///
+    /// #[tokio::main]
+    /// async fn main() {
+    ///     // Arrange
+    ///     let mock_server = MockServer::start().await;
+    ///
+    ///     let response = ResponseTemplate::new(200);
+    ///     let mock = Mock::given(method("GET")).respond_with(response);
+    ///     let mock_guard = mock_server.register_as_scoped(mock).await;
+    ///     
+    ///     // Act
+    ///     let waiter = mock_guard.wait_until_satisfied();
+    ///     // Here we wrap the waiter in a tokio timeout
+    ///     let outcome = tokio::time::timeout(Duration::from_millis(10), waiter).await;
+    ///
+    ///     // Assert
+    ///     assert!(outcome.is_err());
+    /// }
+    /// ```
     pub async fn wait_until_satisfied(&self) {
         let (notify, flag) = &*self.notify;
         let mut notification = pin!(notify.notified());
