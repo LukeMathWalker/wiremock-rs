@@ -168,11 +168,11 @@ Check the table below to see how `wiremock` compares to them across the followin
 - Spying (e.g. verify that a mock has/hasn't been called in a test);
 - Standalone mode (i.e. can I launch an HTTP mock server outside of a test suite?).
 
-|           | Test execution strategy | How many APIs can I mock? | Out-of-the-box request matchers | Extensible request matching | API   | Spying | Standalone mode |
-|-----------|-------------------------|---------------------------|---------------------------------|----------------------------|-------|----------|-----------------|
-| mockito   | ❌ Sequential           | ❌ 1                        | ✔                           | ❌                        | Sync  | ✔     | ❌              |
-| httpmock  | ✔ Parallel              | ✔ Unbounded                | ✔                           | ✔                        | Async/Sync  | ✔     | ✔              |
-| wiremock  | ✔ Parallel ️             | ✔ Unbounded                | ✔                           | ✔                       | Async | ✔      | ❌              |
+|           | Test execution strategy | How many APIs can I mock? | Out-of-the-box request matchers | Extensible request matching | API        | Spying | Standalone mode |
+|-----------|-------------------------|---------------------------|---------------------------------|-----------------------------|------------|--------|-----------------|
+| mockito   | ✔ Parallel              | ✔ Unbounded               | ✔                               | ❌                          | Async/Sync | ✔      | ❌              |
+| httpmock  | ✔ Parallel              | ✔ Unbounded               | ✔                               | ✔                           | Async/Sync | ✔      | ✔               |
+| wiremock  | ✔ Parallel ️             | ✔ Unbounded               | ✔                               | ✔                           | Async      | ✔      | ❌              |
 
 
 ## Future evolution
