@@ -44,7 +44,11 @@ impl fmt::Display for Request {
             let values = values.join(",");
             writeln!(f, "{}: {}", name, values)?;
         }
-        writeln!(f, "{}", String::from_utf8_lossy(&self.body))
+        if let Ok(body) = String::from_utf8(self.body.clone()) {
+            writeln!(f, "{}", body)
+        } else {
+            writeln!(f, "Body size is {} bytes", &self.body.len())
+        }
     }
 }
 
