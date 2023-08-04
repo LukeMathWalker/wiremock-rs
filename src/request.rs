@@ -7,6 +7,8 @@ use http_types::convert::DeserializeOwned;
 use http_types::headers::{HeaderName, HeaderValue, HeaderValues};
 use http_types::{Method, Url};
 
+pub const BODY_PRINT_LIMIT: usize = 10_000;
+
 /// An incoming request to an instance of [`MockServer`].
 ///
 /// Each matcher gets an immutable reference to a `Request` instance in the [`matches`] method
@@ -31,6 +33,7 @@ pub struct Request {
     pub method: Method,
     pub headers: HashMap<HeaderName, HeaderValues>,
     pub body: Vec<u8>,
+    pub body_print_limit: usize,
 }
 
 impl fmt::Display for Request {
@@ -44,10 +47,23 @@ impl fmt::Display for Request {
             let values = values.join(",");
             writeln!(f, "{}: {}", name, values)?;
         }
-        if let Ok(body) = std::str::from_utf8(&self.body) {
+
+        if self.body.len() > self.body_print_limit {
+            writeln!(
+                f,
+                "Body is too large to print: {} bytes (limit: {} bytes)",
+                self.body.len(),
+                self.body_print_limit
+            )?;
+            writeln!(f, "Increase this limit by setting `WIREMOCK_BODY_PRINT_LIMIT`, or `MockServerBuilder::body_print_limit`")
+        } else if let Ok(body) = std::str::from_utf8(&self.body) {
             writeln!(f, "{}", body)
         } else {
-            writeln!(f, "Body size is {} bytes", self.body.len())
+            writeln!(
+                f,
+                "Body is likely binary (invalid utf-8) size is {} bytes",
+                self.body.len()
+            )
         }
     }
 }
@@ -79,6 +95,7 @@ impl Request {
             method,
             headers,
             body,
+            body_print_limit: BODY_PRINT_LIMIT,
         }
     }
 
@@ -123,6 +140,7 @@ impl Request {
             method,
             headers,
             body,
+            body_print_limit: BODY_PRINT_LIMIT,
         }
     }
 }

@@ -1,6 +1,8 @@
 use crate::mock_server::bare_server::{BareMockServer, RequestRecording};
 use crate::mock_server::exposed_server::InnerServer;
+use crate::request::BODY_PRINT_LIMIT;
 use crate::MockServer;
+use std::env;
 use std::net::TcpListener;
 
 /// A builder providing a fluent API to assemble a [`MockServer`] step-by-step.  
@@ -8,13 +10,22 @@ use std::net::TcpListener;
 pub struct MockServerBuilder {
     listener: Option<TcpListener>,
     record_incoming_requests: bool,
+    body_print_limit: usize,
 }
 
 impl MockServerBuilder {
     pub(super) fn new() -> Self {
+        let body_print_limit = match env::var("WIREMOCK_BODY_PRINT_LIMIT")
+            .ok()
+            .and_then(|x| x.parse::<usize>().ok())
+        {
+            Some(limit) => limit,
+            None => BODY_PRINT_LIMIT,
+        };
         Self {
             listener: None,
             record_incoming_requests: true,
+            body_print_limit,
         }
     }
 
@@ -76,6 +87,30 @@ impl MockServerBuilder {
         self
     }
 
+    /// By default, when printing requests the size of the body that can be
+    /// printed is limited.
+    ///
+    /// This may want to be changed if working with services with very large
+    /// bodies, or when printing wiremock output to a file where size matters
+    /// less than in a terminal window. You can configure this limit with
+    /// `MockServerBuilder::body_print_limit`.
+    pub fn body_print_limit(mut self, limit: usize) -> Self {
+        self.body_print_limit = limit;
+        self
+    }
+
+    /// By default, when printing requests the size of the body that can be
+    /// printed is limited.
+    ///
+    /// This may want to be changed if working with services with very large
+    /// bodies, or when printing wiremock output to a file where size matters
+    /// less than in a terminal window. You can functionally disable this limit
+    /// by calling `MockServerBuilder::disable_body_print_limit`.
+    pub fn disable_body_print_limit(mut self) -> Self {
+        self.body_print_limit = usize::MAX;
+        self
+    }
+
     /// Finalise the builder to get an instance of a [`BareMockServer`].
     pub(super) async fn build_bare(self) -> BareMockServer {
         let listener = if let Some(listener) = self.listener {
@@ -88,7 +123,7 @@ impl MockServerBuilder {
         } else {
             RequestRecording::Disabled
         };
-        BareMockServer::start(listener, recording).await
+        BareMockServer::start(listener, recording, self.body_print_limit).await
     }
 
     /// Finalise the builder and launch the [`MockServer`] instance!
