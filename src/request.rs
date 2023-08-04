@@ -44,10 +44,10 @@ impl fmt::Display for Request {
             let values = values.join(",");
             writeln!(f, "{}: {}", name, values)?;
         }
-        if let Ok(body) = String::from_utf8(self.body.clone()) {
+        if let Ok(body) = std::str::from_utf8(&self.body) {
             writeln!(f, "{}", body)
         } else {
-            writeln!(f, "Body size is {} bytes", &self.body.len())
+            writeln!(f, "Body size is {} bytes", self.body.len())
         }
     }
 }
