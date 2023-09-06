@@ -1,6 +1,7 @@
 use crate::mock_server::hyper::run_server;
 use crate::mock_set::MockId;
 use crate::mock_set::MountedMockSet;
+use crate::request::BodyPrintLimit;
 use crate::{mock::Mock, verification::VerificationOutcome, Request};
 use std::net::{SocketAddr, TcpListener, TcpStream};
 use std::pin::pin;
@@ -29,7 +30,7 @@ pub(crate) struct BareMockServer {
 pub(super) struct MockServerState {
     mock_set: MountedMockSet,
     received_requests: Option<Vec<Request>>,
-    body_print_limit: usize,
+    body_print_limit: BodyPrintLimit,
 }
 
 impl MockServerState {
@@ -53,7 +54,7 @@ impl BareMockServer {
     pub(super) async fn start(
         listener: TcpListener,
         request_recording: RequestRecording,
-        body_print_limit: usize,
+        body_print_limit: BodyPrintLimit,
     ) -> Self {
         let (shutdown_trigger, shutdown_receiver) = tokio::sync::oneshot::channel();
         let received_requests = match request_recording {

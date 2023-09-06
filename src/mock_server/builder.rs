@@ -1,6 +1,6 @@
 use crate::mock_server::bare_server::{BareMockServer, RequestRecording};
 use crate::mock_server::exposed_server::InnerServer;
-use crate::request::BODY_PRINT_LIMIT;
+use crate::request::{BodyPrintLimit, BODY_PRINT_LIMIT};
 use crate::MockServer;
 use std::env;
 use std::net::TcpListener;
@@ -10,7 +10,7 @@ use std::net::TcpListener;
 pub struct MockServerBuilder {
     listener: Option<TcpListener>,
     record_incoming_requests: bool,
-    body_print_limit: usize,
+    body_print_limit: BodyPrintLimit,
 }
 
 impl MockServerBuilder {
@@ -19,8 +19,8 @@ impl MockServerBuilder {
             .ok()
             .and_then(|x| x.parse::<usize>().ok())
         {
-            Some(limit) => limit,
-            None => BODY_PRINT_LIMIT,
+            Some(limit) => BodyPrintLimit::Limited(limit),
+            None => BodyPrintLimit::Limited(BODY_PRINT_LIMIT),
         };
         Self {
             listener: None,
@@ -94,20 +94,8 @@ impl MockServerBuilder {
     /// bodies, or when printing wiremock output to a file where size matters
     /// less than in a terminal window. You can configure this limit with
     /// `MockServerBuilder::body_print_limit`.
-    pub fn body_print_limit(mut self, limit: usize) -> Self {
+    pub fn body_print_limit(mut self, limit: BodyPrintLimit) -> Self {
         self.body_print_limit = limit;
-        self
-    }
-
-    /// By default, when printing requests the size of the body that can be
-    /// printed is limited.
-    ///
-    /// This may want to be changed if working with services with very large
-    /// bodies, or when printing wiremock output to a file where size matters
-    /// less than in a terminal window. You can functionally disable this limit
-    /// by calling `MockServerBuilder::disable_body_print_limit`.
-    pub fn disable_body_print_limit(mut self) -> Self {
-        self.body_print_limit = usize::MAX;
         self
     }
 
