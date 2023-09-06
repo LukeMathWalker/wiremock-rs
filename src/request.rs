@@ -55,7 +55,7 @@ impl fmt::Display for Request {
                 self.body.len(),
                 self.body_print_limit
             )?;
-            writeln!(f, "Increase this limit by setting `WIREMOCK_BODY_PRINT_LIMIT`, or `MockServerBuilder::body_print_limit`")
+            writeln!(f, "Increase this limit by setting `WIREMOCK_BODY_PRINT_LIMIT`, or calling `MockServerBuilder::body_print_limit` when building your MockServer instance")
         } else if let Ok(body) = std::str::from_utf8(&self.body) {
             writeln!(f, "{}", body)
         } else {
