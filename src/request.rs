@@ -53,6 +53,10 @@ impl Request {
         serde_json::from_slice(&self.body)
     }
 
+    pub fn body_form<T: DeserializeOwned>(&self) -> Result<T, serde_urlencoded::de::Error> {
+        serde_urlencoded::from_bytes(&self.body)
+    }
+
     pub async fn from(mut request: http_types::Request) -> Request {
         let method = request.method();
         let url = request.url().to_owned();
