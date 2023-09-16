@@ -3,6 +3,7 @@ use crate::mock_server::pool::{get_pooled_mock_server, PooledMockServer};
 use crate::mock_server::MockServerBuilder;
 use crate::{mock::Mock, verification::VerificationOutcome, MockGuard, Request};
 use log::debug;
+use std::fmt::Write;
 use std::net::SocketAddr;
 use std::ops::Deref;
 
@@ -333,24 +334,22 @@ impl MockServer {
                 if received_requests.is_empty() {
                     "The server did not receive any request.".into()
                 } else {
-                    format!(
-                        "Received requests:\n{}",
-                        received_requests
-                            .into_iter()
-                            .enumerate()
-                            .map(|(index, request)| {
-                                format!("- Request #{}\n{}", index + 1, &format!("\t{}", request))
-                            })
-                            .collect::<String>()
+                    received_requests.iter().enumerate().fold(
+                        "Received requests:\n".to_string(),
+                        |mut message, (index, request)| {
+                            _ = write!(message, "- Request #{}\n\t{}", index + 1, request);
+                            message
+                        },
                     )
                 }
             } else {
                 "Enable request recording on the mock server to get the list of incoming requests as part of the panic message.".into()
             };
-            let verifications_errors: String = failed_verifications
-                .iter()
-                .map(|m| format!("- {}\n", m.error_message()))
-                .collect();
+            let verifications_errors: String =
+                failed_verifications.iter().fold(String::new(), |mut s, m| {
+                    _ = write!(s, "- {}\n", m.error_message());
+                    s
+                });
             let error_message = format!(
                 "Verifications failed:\n{}\n{}",
                 verifications_errors, received_requests_message

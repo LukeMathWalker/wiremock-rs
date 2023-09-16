@@ -3,6 +3,7 @@ use crate::mock_set::MockId;
 use crate::mock_set::MountedMockSet;
 use crate::request::BodyPrintLimit;
 use crate::{mock::Mock, verification::VerificationOutcome, Request};
+use std::fmt::Write;
 use std::net::{SocketAddr, TcpListener, TcpStream};
 use std::pin::pin;
 use std::sync::atomic::AtomicBool;
@@ -285,19 +286,12 @@ impl Drop for MockGuard {
                     if received_requests.is_empty() {
                         "The server did not receive any request.".into()
                     } else {
-                        format!(
-                            "Received requests:\n{}",
-                            received_requests
-                                .iter()
-                                .enumerate()
-                                .map(|(index, request)| {
-                                    format!(
-                                        "- Request #{}\n{}",
-                                        index + 1,
-                                        &format!("\t{}", request)
-                                    )
-                                })
-                                .collect::<String>()
+                        received_requests.iter().enumerate().fold(
+                            "Received requests:\n".to_string(),
+                            |mut message, (index, request)| {
+                                _ = write!(message, "- Request #{}\n\t{}", index + 1, request);
+                                message
+                            },
                         )
                     }
                 } else {
