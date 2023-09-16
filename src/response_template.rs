@@ -1,9 +1,7 @@
-use http_types::headers::{HeaderName, HeaderValue};
-use http_types::{Response, StatusCode};
+use hyper::header::{HeaderName, HeaderValue};
+use hyper::{Body, HeaderMap, Response, StatusCode};
 use serde::Serialize;
-use std::collections::HashMap;
 use std::convert::TryInto;
-use std::str::FromStr;
 use std::time::Duration;
 
 /// The blueprint for the response returned by a [`MockServer`] when a [`Mock`] matches on an incoming request.
@@ -12,9 +10,9 @@ use std::time::Duration;
 /// [`MockServer`]: crate::MockServer
 #[derive(Clone, Debug)]
 pub struct ResponseTemplate {
-    mime: Option<http_types::Mime>,
+    mime: String,
     status_code: StatusCode,
-    headers: HashMap<HeaderName, Vec<HeaderValue>>,
+    headers: HeaderMap,
     body: Option<Vec<u8>>,
     delay: Option<Duration>,
 }
@@ -37,8 +35,8 @@ impl ResponseTemplate {
         let status_code = s.try_into().expect("Failed to convert into status code.");
         Self {
             status_code,
-            headers: HashMap::new(),
-            mime: None,
+            headers: HeaderMap::new(),
+            mime: String::new(),
             body: None,
             delay: None,
         }
@@ -61,14 +59,7 @@ impl ResponseTemplate {
         let value = value
             .try_into()
             .expect("Failed to convert into header value.");
-        match self.headers.get_mut(&key) {
-            Some(headers) => {
-                headers.push(value);
-            }
-            None => {
-                self.headers.insert(key, vec![value]);
-            }
-        }
+        self.headers.append(key, value);
         self
     }
 
@@ -118,7 +109,7 @@ impl ResponseTemplate {
         let value = value
             .try_into()
             .expect("Failed to convert into header value.");
-        self.headers.insert(key, vec![value]);
+        self.headers.insert(key, value);
         self
     }
 
@@ -145,10 +136,7 @@ impl ResponseTemplate {
         let body = serde_json::to_vec(&body).expect("Failed to convert into body.");
 
         self.body = Some(body);
-        self.mime = Some(
-            http_types::Mime::from_str("application/json")
-                .expect("Failed to convert into Mime header"),
-        );
+        self.mime = "application/json".to_string();
         self
     }
 
@@ -163,9 +151,7 @@ impl ResponseTemplate {
         let body = body.try_into().expect("Failed to convert into body.");
 
         self.body = Some(body.into_bytes());
-        self.mime = Some(
-            http_types::Mime::from_str("text/plain").expect("Failed to convert into Mime header"),
-        );
+        self.mime = "text/plain".to_string();
         self
     }
 
@@ -220,8 +206,7 @@ impl ResponseTemplate {
     {
         let body = body.try_into().expect("Failed to convert into body.");
         self.body = Some(body);
-        self.mime =
-            Some(http_types::Mime::from_str(mime).expect("Failed to convert into Mime header"));
+        self.mime = mime.to_string();
         self
     }
 
@@ -272,22 +257,24 @@ impl ResponseTemplate {
     }
 
     /// Generate a response from the template.
-    pub(crate) fn generate_response(&self) -> Response {
-        let mut response = Response::new(self.status_code);
+    pub(crate) fn generate_response(&self) -> Response<Body> {
+        let mut response = Response::default();
 
+        // Set status code
+        *response.status_mut() = self.status_code;
         // Add headers
-        for (header_name, header_values) in &self.headers {
-            response.insert_header(header_name.clone(), header_values.as_slice());
-        }
+        *response.headers_mut() = self.headers.clone();
 
         // Add body, if specified
         if let Some(body) = &self.body {
-            response.set_body(body.clone());
+            *response.body_mut() = body.clone().into();
         }
 
         // Set content-type, if needed
-        if let Some(mime) = &self.mime {
-            response.set_content_type(mime.to_owned());
+        if !self.mime.is_empty() {
+            response
+                .headers_mut()
+                .insert(hyper::header::CONTENT_TYPE, self.mime.parse().unwrap());
         }
 
         response

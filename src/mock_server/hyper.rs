@@ -1,5 +1,4 @@
 use crate::mock_server::bare_server::MockServerState;
-use hyper::http;
 use hyper::service::{make_service_fn, service_fn};
 use std::net::TcpListener;
 use std::sync::Arc;
@@ -38,7 +37,7 @@ pub(super) async fn run_server(
                         delay.await;
                     }
 
-                    Ok::<_, DynError>(http_types_response_to_hyper_response(response).await)
+                    Ok::<_, DynError>(response)
                 }
             }))
         }
@@ -71,37 +70,5 @@ where
     fn execute(&self, fut: F) {
         // This will spawn into the currently running `LocalSet`.
         tokio::task::spawn_local(fut);
-    }
-}
-
-async fn http_types_response_to_hyper_response(
-    mut response: http_types::Response,
-) -> hyper::Response<hyper::Body> {
-    let version = response.version().map(|v| v.into()).unwrap_or_default();
-    let mut builder = http::response::Builder::new()
-        .status(response.status() as u16)
-        .version(version);
-
-    headers_to_hyperium_headers(response.as_mut(), builder.headers_mut().unwrap());
-
-    let body_bytes = response.take_body().into_bytes().await.unwrap();
-    let body = hyper::Body::from(body_bytes);
-
-    builder.body(body).unwrap()
-}
-
-fn headers_to_hyperium_headers(
-    headers: &mut http_types::Headers,
-    hyperium_headers: &mut http::HeaderMap,
-) {
-    for (name, values) in headers {
-        let name = format!("{}", name).into_bytes();
-        let name = http::header::HeaderName::from_bytes(&name).unwrap();
-
-        for value in values.iter() {
-            let value = format!("{}", value).into_bytes();
-            let value = http::header::HeaderValue::from_bytes(&value).unwrap();
-            hyperium_headers.append(&name, value);
-        }
     }
 }

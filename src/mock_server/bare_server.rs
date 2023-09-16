@@ -37,7 +37,7 @@ impl MockServerState {
     pub(super) async fn handle_request(
         &mut self,
         mut request: Request,
-    ) -> (http_types::Response, Option<futures_timer::Delay>) {
+    ) -> (hyper::Response<hyper::Body>, Option<futures_timer::Delay>) {
         request.body_print_limit = self.body_print_limit;
         // If request recording is enabled, record the incoming request
         // by adding it to the `received_requests` stack

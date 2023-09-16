@@ -423,7 +423,7 @@ impl MockServer {
     ///
     /// ```rust
     /// use wiremock::MockServer;
-    /// use http_types::Method;
+    /// use hyper::Method;
     ///
     /// #[async_std::main]
     /// async fn main() {
@@ -438,7 +438,7 @@ impl MockServer {
     ///     assert_eq!(received_requests.len(), 1);
     ///
     ///     let received_request = &received_requests[0];
-    ///     assert_eq!(received_request.method, Method::Get);
+    ///     assert_eq!(received_request.method, Method::GET);
     ///     assert_eq!(received_request.url.path(), "/");
     ///     assert!(received_request.body.is_empty());
     /// }

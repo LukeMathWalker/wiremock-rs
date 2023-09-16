@@ -4,7 +4,6 @@ use crate::{
 };
 use crate::{Mock, Request, ResponseTemplate};
 use futures_timer::Delay;
-use http_types::{Response, StatusCode};
 use log::debug;
 use std::{
     ops::{Index, IndexMut},
@@ -49,7 +48,10 @@ impl MountedMockSet {
         }
     }
 
-    pub(crate) async fn handle_request(&mut self, request: Request) -> (Response, Option<Delay>) {
+    pub(crate) async fn handle_request(
+        &mut self,
+        request: Request,
+    ) -> (hyper::Response<hyper::Body>, Option<Delay>) {
         debug!("Handling request.");
         let mut response_template: Option<ResponseTemplate> = None;
         self.mocks.sort_by_key(|(m, _)| m.specification.priority);
@@ -67,7 +69,13 @@ impl MountedMockSet {
             (response_template.generate_response(), delay)
         } else {
             debug!("Got unexpected request:\n{}", request);
-            (Response::new(StatusCode::NotFound), None)
+            (
+                hyper::Response::builder()
+                    .status(hyper::StatusCode::NOT_FOUND)
+                    .body(hyper::Body::empty())
+                    .unwrap(),
+                None,
+            )
         }
     }
 
