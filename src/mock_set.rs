@@ -3,13 +3,13 @@ use crate::{
     verification::{VerificationOutcome, VerificationReport},
 };
 use crate::{Mock, Request, ResponseTemplate};
-use futures_timer::Delay;
 use log::debug;
 use std::{
     ops::{Index, IndexMut},
     sync::{atomic::AtomicBool, Arc},
 };
 use tokio::sync::Notify;
+use tokio::time::{sleep, Sleep};
 
 /// The collection of mocks used by a `MockServer` instance to match against
 /// incoming requests.
@@ -51,7 +51,7 @@ impl MountedMockSet {
     pub(crate) async fn handle_request(
         &mut self,
         request: Request,
-    ) -> (hyper::Response<hyper::Body>, Option<Delay>) {
+    ) -> (hyper::Response<hyper::Body>, Option<Sleep>) {
         debug!("Handling request.");
         let mut response_template: Option<ResponseTemplate> = None;
         self.mocks.sort_by_key(|(m, _)| m.specification.priority);
@@ -65,7 +65,7 @@ impl MountedMockSet {
             }
         }
         if let Some(response_template) = response_template {
-            let delay = response_template.delay().map(Delay::new);
+            let delay = response_template.delay().map(sleep);
             (response_template.generate_response(), delay)
         } else {
             debug!("Got unexpected request:\n{}", request);
