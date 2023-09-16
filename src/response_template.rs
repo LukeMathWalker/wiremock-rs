@@ -219,7 +219,6 @@ impl ResponseTemplate {
     ///
     /// ### Example:
     /// ```rust
-    /// use isahc::config::Configurable;
     /// use wiremock::{MockServer, Mock, ResponseTemplate};
     /// use wiremock::matchers::method;
     /// use std::time::Duration;
