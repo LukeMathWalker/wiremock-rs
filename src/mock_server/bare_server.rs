@@ -80,7 +80,7 @@ impl BareMockServer {
                 .build()
                 .expect("Cannot build local tokio runtime");
 
-            LocalSet::new().block_on(&runtime, server_future)
+            LocalSet::new().block_on(&runtime, server_future);
         });
         for _ in 0..40 {
             if TcpStream::connect_timeout(&server_address, std::time::Duration::from_millis(25))
@@ -162,7 +162,7 @@ impl BareMockServer {
     /// If request recording was disabled, it returns `None`.
     pub(crate) async fn received_requests(&self) -> Option<Vec<Request>> {
         let state = self.state.read().await;
-        state.received_requests.to_owned()
+        state.received_requests.clone()
     }
 }
 
@@ -264,7 +264,7 @@ impl MockGuard {
         }
 
         // await event
-        notification.await
+        notification.await;
     }
 }
 
@@ -312,6 +312,6 @@ impl Drop for MockGuard {
                 state.mock_set.deactivate(*mock_id);
             }
         };
-        futures::executor::block_on(future)
+        futures::executor::block_on(future);
     }
 }

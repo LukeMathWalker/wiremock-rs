@@ -48,7 +48,7 @@ impl Deref for InnerServer {
     fn deref(&self) -> &Self::Target {
         match self {
             InnerServer::Bare(b) => b,
-            InnerServer::Pooled(p) => p.deref(),
+            InnerServer::Pooled(p) => p,
         }
     }
 }
@@ -158,7 +158,7 @@ impl MockServer {
     ///
     /// [`mount`]: Mock::mount
     pub async fn register(&self, mock: Mock) {
-        self.0.register(mock).await
+        self.0.register(mock).await;
     }
 
     /// Register a **scoped** [`Mock`] on an instance of `MockServer`.
@@ -482,7 +482,7 @@ impl MockServer {
 impl Drop for MockServer {
     // Clean up when the `MockServer` instance goes out of scope.
     fn drop(&mut self) {
-        futures::executor::block_on(self.verify())
+        futures::executor::block_on(self.verify());
         // The sender half of the channel, `shutdown_trigger`, gets dropped here
         // Triggering the graceful shutdown of the server itself.
     }

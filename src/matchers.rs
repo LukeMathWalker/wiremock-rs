@@ -17,7 +17,6 @@ use regex::Regex;
 use serde::Serialize;
 use serde_json::Value;
 use std::convert::TryInto;
-use std::ops::Deref;
 use std::str;
 use url::Url;
 
@@ -1049,7 +1048,7 @@ impl BasicAuthMatcher {
     pub fn from_token(token: impl AsRef<str>) -> Self {
         Self(header(
             "Authorization",
-            format!("Basic {}", token.as_ref()).deref(),
+            &*format!("Basic {}", token.as_ref()),
         ))
     }
 }
@@ -1106,7 +1105,7 @@ impl BearerTokenMatcher {
     pub fn from_token(token: impl AsRef<str>) -> Self {
         Self(header(
             "Authorization",
-            format!("Bearer {}", token.as_ref()).deref(),
+            &*format!("Bearer {}", token.as_ref()),
         ))
     }
 }

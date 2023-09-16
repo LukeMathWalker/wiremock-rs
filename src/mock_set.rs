@@ -40,7 +40,7 @@ pub(crate) struct MockId {
 }
 
 impl MountedMockSet {
-    /// Create a new instance of MockSet.
+    /// Create a new instance of `MockSet`.
     pub(crate) fn new() -> MountedMockSet {
         MountedMockSet {
             mocks: vec![],
@@ -65,7 +65,7 @@ impl MountedMockSet {
             }
         }
         if let Some(response_template) = response_template {
-            let delay = response_template.delay().map(|d| Delay::new(d.to_owned()));
+            let delay = response_template.delay().map(Delay::new);
             (response_template.generate_response(), delay)
         } else {
             debug!("Got unexpected request:\n{}", request);
