@@ -62,15 +62,31 @@ impl fmt::Display for Request {
             BodyPrintLimit::Limited(limit) if self.body.len() > limit => {
                 // We need to use from_utf8_lossy because the limit may land within a utf8
                 // character.
-                let truncated = String::from_utf8_lossy(&self.body[..limit]);
-                writeln!(f, "{}", truncated)?;
-                writeln!(
-                    f,
-                    "We truncated the body because it was too large: {} bytes (limit: {} bytes)",
-                    self.body.len(),
-                    limit
-                )?;
-                writeln!(f, "Increase this limit by setting `WIREMOCK_BODY_PRINT_LIMIT`, or calling `MockServerBuilder::body_print_limit` when building your MockServer instance")
+                let mut written = false;
+                for end_byte in limit..(limit + 4).max(self.body.len()) {
+                    if let Ok(truncated) = std::str::from_utf8(&self.body[..end_byte]) {
+                        written = true;
+                        writeln!(f, "{}", truncated)?;
+                        if end_byte < self.body.len() {
+                            writeln!(
+                                f,
+                                "We truncated the body because it was too large: {} bytes (limit: {} bytes)",
+                                self.body.len(),
+                                limit
+                            )?;
+                            writeln!(f, "Increase this limit by setting `WIREMOCK_BODY_PRINT_LIMIT`, or calling `MockServerBuilder::body_print_limit` when building your MockServer instance")?;
+                        }
+                    }
+                }
+                if !written {
+                    writeln!(
+                        f,
+                        "Body is likely binary (invalid utf-8) size is {} bytes",
+                        self.body.len()
+                    )
+                } else {
+                    Ok(())
+                }
             }
             _ => {
                 if let Ok(body) = std::str::from_utf8(&self.body) {
