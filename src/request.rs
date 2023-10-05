@@ -60,8 +60,6 @@ impl fmt::Display for Request {
 
         match self.body_print_limit {
             BodyPrintLimit::Limited(limit) if self.body.len() > limit => {
-                // We need to use from_utf8_lossy because the limit may land within a utf8
-                // character.
                 let mut written = false;
                 for end_byte in limit..(limit + 4).max(self.body.len()) {
                     if let Ok(truncated) = std::str::from_utf8(&self.body[..end_byte]) {
