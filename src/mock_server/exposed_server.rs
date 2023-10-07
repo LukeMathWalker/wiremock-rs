@@ -347,7 +347,7 @@ impl MockServer {
             };
             let verifications_errors: String =
                 failed_verifications.iter().fold(String::new(), |mut s, m| {
-                    _ = write!(s, "- {}\n", m.error_message());
+                    _ = writeln!(s, "- {}", m.error_message());
                     s
                 });
             let error_message = format!(
