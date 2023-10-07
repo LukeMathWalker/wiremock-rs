@@ -394,13 +394,13 @@ impl Match for HeaderExactMatcher {
             .get_all(&self.0)
             .iter()
             .filter_map(|v| v.to_str().ok())
-            .flat_map(|v| v.split(','))
-            .map(|v| HeaderValue::from_str(v.trim()).unwrap())
+            .flat_map(|v| {
+                v.split(',')
+                    .map(str::trim)
+                    .filter_map(|v| HeaderValue::from_str(v).ok())
+            })
             .collect::<Vec<_>>();
-        if values.len() != self.1.len() {
-            return false;
-        }
-        values.into_iter().all(|value| self.1.contains(&value))
+        values == self.1 // order matters
     }
 }
 
