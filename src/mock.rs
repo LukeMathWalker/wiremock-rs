@@ -21,7 +21,7 @@ use std::ops::{
 ///     fn matches(&self, request: &Request) -> bool {
 ///         match request.headers.get(&self.0) {
 ///             // We are ignoring multi-valued headers for simplicity
-///             Some(value) => value.to_str().map(|v| v.len() % 2 == 1).unwrap_or_default(),
+///             Some(value) => value.to_str().unwrap_or_default().len() % 2 == 1,
 ///             None => false
 ///         }
 ///     }
@@ -73,7 +73,7 @@ use std::ops::{
 ///     // Check that a header with the specified name exists and its value has an odd length.
 ///     let matcher = move |request: &Request| {
 ///         match request.headers.get(&header_name) {
-///             Some(value) => value.to_str().map(|v| v.len() % 2 == 1).unwrap_or_default(),
+///             Some(value) => value.to_str().unwrap_or_default().len() % 2 == 1,
 ///             None => false
 ///         }
 ///     };
