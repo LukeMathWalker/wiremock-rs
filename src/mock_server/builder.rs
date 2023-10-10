@@ -87,10 +87,10 @@ impl MockServerBuilder {
         self
     }
 
-    /// By default, when printing requests the size of the body that can be
-    /// printed is limited.
+    /// The mock server prints the requests it received when one or more mocks have expectations that have not been satisfied.
+    /// By default, the size of the printed body is limited.
     ///
-    /// This may want to be changed if working with services with very large
+    /// You may want to change this if you're working with services with very large
     /// bodies, or when printing wiremock output to a file where size matters
     /// less than in a terminal window. You can configure this limit with
     /// `MockServerBuilder::body_print_limit`.
