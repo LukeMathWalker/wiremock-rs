@@ -74,6 +74,7 @@ impl fmt::Display for Request {
                             )?;
                             writeln!(f, "Increase this limit by setting `WIREMOCK_BODY_PRINT_LIMIT`, or calling `MockServerBuilder::body_print_limit` when building your MockServer instance")?;
                         }
+                        break;
                     }
                 }
                 if !written {
