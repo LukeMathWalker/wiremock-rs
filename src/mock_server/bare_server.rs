@@ -1,6 +1,7 @@
 use crate::mock_server::hyper::run_server;
 use crate::mock_set::MockId;
 use crate::mock_set::MountedMockSet;
+use crate::request::BodyPrintLimit;
 use crate::{mock::Mock, verification::VerificationOutcome, Request};
 use std::net::{SocketAddr, TcpListener, TcpStream};
 use std::pin::pin;
@@ -29,13 +30,15 @@ pub(crate) struct BareMockServer {
 pub(super) struct MockServerState {
     mock_set: MountedMockSet,
     received_requests: Option<Vec<Request>>,
+    body_print_limit: BodyPrintLimit,
 }
 
 impl MockServerState {
     pub(super) async fn handle_request(
         &mut self,
-        request: Request,
+        mut request: Request,
     ) -> (http_types::Response, Option<futures_timer::Delay>) {
+        request.body_print_limit = self.body_print_limit;
         // If request recording is enabled, record the incoming request
         // by adding it to the `received_requests` stack
         if let Some(received_requests) = &mut self.received_requests {
@@ -48,7 +51,11 @@ impl MockServerState {
 impl BareMockServer {
     /// Start a new instance of a `BareMockServer` listening on the specified
     /// [`TcpListener`](std::net::TcpListener).
-    pub(super) async fn start(listener: TcpListener, request_recording: RequestRecording) -> Self {
+    pub(super) async fn start(
+        listener: TcpListener,
+        request_recording: RequestRecording,
+        body_print_limit: BodyPrintLimit,
+    ) -> Self {
         let (shutdown_trigger, shutdown_receiver) = tokio::sync::oneshot::channel();
         let received_requests = match request_recording {
             RequestRecording::Enabled => Some(Vec::new()),
@@ -57,6 +64,7 @@ impl BareMockServer {
         let state = Arc::new(RwLock::new(MockServerState {
             mock_set: MountedMockSet::new(),
             received_requests,
+            body_print_limit,
         }));
         let server_address = listener
             .local_addr()
