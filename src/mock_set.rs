@@ -94,7 +94,7 @@ impl MountedMockSet {
     ///
     /// It will stop matching against incoming requests, regardless of its specification.
     pub(crate) fn deactivate(&mut self, mock_id: MockId) {
-        let mut mock = &mut self[mock_id];
+        let mock = &mut self[mock_id];
         mock.1 = MountedMockState::OutOfScope;
     }
 

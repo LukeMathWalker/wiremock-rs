@@ -13,7 +13,7 @@ async fn new_starts_the_server() {
     let mock_server = MockServer::start().await;
 
     // Assert
-    assert!(TcpStream::connect(&mock_server.address()).is_ok())
+    assert!(TcpStream::connect(mock_server.address()).is_ok())
 }
 
 #[async_std::test]
