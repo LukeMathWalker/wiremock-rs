@@ -257,26 +257,18 @@ impl ResponseTemplate {
 
     /// Generate a response from the template.
     pub(crate) fn generate_response(&self) -> Response<Body> {
-        let mut response = Response::default();
+        let mut response = Response::builder()
+            .status(self.status_code);
 
-        // Set status code
-        *response.status_mut() = self.status_code;
-        // Add headers
-        *response.headers_mut() = self.headers.clone();
-
-        // Add body, if specified
-        if let Some(body) = &self.body {
-            *response.body_mut() = body.clone().into();
-        }
-
+        let mut headers = self.headers.clone();
         // Set content-type, if needed
         if !self.mime.is_empty() {
-            response
-                .headers_mut()
-                .insert(hyper::header::CONTENT_TYPE, self.mime.parse().unwrap());
+            headers.insert(hyper::header::CONTENT_TYPE, self.mime.parse().unwrap());
         }
+        *response.headers_mut().unwrap() = headers;
 
-        response
+        let body = self.body.clone().unwrap_or_default();
+        response.body(Body::from(body)).unwrap()
     }
 
     /// Retrieve the response delay.
