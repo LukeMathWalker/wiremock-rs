@@ -1,4 +1,4 @@
-use hyper::HeaderMap;
+use http::HeaderMap;
 use wiremock::matchers::{basic_auth, bearer_token, header, header_regex, headers, method};
 use wiremock::{Mock, MockServer, ResponseTemplate};
 

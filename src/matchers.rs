@@ -10,7 +10,7 @@
 use crate::{Match, Request};
 use assert_json_diff::{assert_json_matches_no_panic, CompareMode};
 use base64::prelude::{Engine as _, BASE64_STANDARD};
-use hyper::header::{HeaderName, HeaderValue};
+use http::{HeaderName, HeaderValue};
 use hyper::Method;
 use log::debug;
 use regex::Regex;

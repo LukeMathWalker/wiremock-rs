@@ -75,7 +75,7 @@ use crate::{Request, ResponseTemplate};
 /// `Respond` that propagates back a request header in the response:
 ///
 /// ```rust
-/// use hyper::header::HeaderName;
+/// use http::HeaderName;
 /// use wiremock::{Match, MockServer, Mock, Request, ResponseTemplate, Respond};
 /// use wiremock::matchers::path;
 /// use std::convert::TryInto;

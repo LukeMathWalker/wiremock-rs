@@ -1,4 +1,4 @@
-use hyper::header::{HeaderName, HeaderValue};
+use http::{HeaderName, HeaderValue};
 use hyper::{Body, HeaderMap, Response, StatusCode};
 use serde::Serialize;
 use std::convert::TryInto;
@@ -263,7 +263,7 @@ impl ResponseTemplate {
         let mut headers = self.headers.clone();
         // Set content-type, if needed
         if !self.mime.is_empty() {
-            headers.insert(hyper::header::CONTENT_TYPE, self.mime.parse().unwrap());
+            headers.insert(http::header::CONTENT_TYPE, self.mime.parse().unwrap());
         }
         *response.headers_mut().unwrap() = headers;
 

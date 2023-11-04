@@ -15,7 +15,7 @@ use std::ops::{
 /// use std::convert::TryInto;
 ///
 /// // Check that a header with the specified name exists and its value has an odd length.
-/// pub struct OddHeaderMatcher(hyper::header::HeaderName);
+/// pub struct OddHeaderMatcher(http::HeaderName);
 ///
 /// impl Match for OddHeaderMatcher {
 ///     fn matches(&self, request: &Request) -> bool {
@@ -69,7 +69,7 @@ use std::ops::{
 ///     // Arrange
 ///     let mock_server = MockServer::start().await;
 ///     
-///     let header_name = hyper::header::HeaderName::from_static("custom");
+///     let header_name = http::HeaderName::from_static("custom");
 ///     // Check that a header with the specified name exists and its value has an odd length.
 ///     let matcher = move |request: &Request| {
 ///         match request.headers.get(&header_name) {
