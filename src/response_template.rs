@@ -1,22 +1,43 @@
+use futures::stream::{self, BoxStream};
 use http_types::headers::{HeaderName, HeaderValue};
 use http_types::{Response, StatusCode};
 use serde::Serialize;
 use std::collections::HashMap;
-use std::convert::TryInto;
+use std::convert::{TryFrom, TryInto};
+use std::future;
+use std::panic::{RefUnwindSafe, UnwindSafe};
 use std::str::FromStr;
+use std::sync::Arc;
 use std::time::Duration;
 
 /// The blueprint for the response returned by a [`MockServer`] when a [`Mock`] matches on an incoming request.
 ///
 /// [`Mock`]: crate::Mock
 /// [`MockServer`]: crate::MockServer
-#[derive(Clone, Debug)]
+#[derive(Clone)]
 pub struct ResponseTemplate {
     mime: Option<http_types::Mime>,
     status_code: StatusCode,
     headers: HashMap<HeaderName, Vec<HeaderValue>>,
-    body: Option<Vec<u8>>,
+    body_fn: Option<Arc<BodyFn>>,
     delay: Option<Duration>,
+}
+
+pub(crate) type BodyFn =
+    dyn Fn() -> (BodyStream, Option<u64>) + Send + Sync + RefUnwindSafe + UnwindSafe;
+pub(crate) type BodyStream =
+    BoxStream<'static, Result<Vec<u8>, Box<dyn std::error::Error + Send + Sync>>>;
+
+impl std::fmt::Debug for ResponseTemplate {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("ResponseTemplate")
+            .field("mime", &self.mime)
+            .field("status_code", &self.status_code)
+            .field("headers", &self.headers)
+            .field("body_fn", &self.body_fn.as_ref().map(|_| "[BodyFn]"))
+            .field("delay", &self.delay)
+            .finish()
+    }
 }
 
 // `wiremock` is a crate meant for testing - failures are most likely not handled/temporary mistakes.
@@ -39,7 +60,7 @@ impl ResponseTemplate {
             status_code,
             headers: HashMap::new(),
             mime: None,
-            body: None,
+            body_fn: None,
             delay: None,
         }
     }
@@ -134,7 +155,7 @@ impl ResponseTemplate {
         <B as TryInto<Vec<u8>>>::Error: std::fmt::Debug,
     {
         let body = body.try_into().expect("Failed to convert into body.");
-        self.body = Some(body);
+        self.body_fn = Some(wrap_body_in_arc_fn(body));
         self
     }
 
@@ -144,7 +165,7 @@ impl ResponseTemplate {
     pub fn set_body_json<B: Serialize>(mut self, body: B) -> Self {
         let body = serde_json::to_vec(&body).expect("Failed to convert into body.");
 
-        self.body = Some(body);
+        self.body_fn = Some(wrap_body_in_arc_fn(body));
         self.mime = Some(
             http_types::Mime::from_str("application/json")
                 .expect("Failed to convert into Mime header"),
@@ -162,7 +183,7 @@ impl ResponseTemplate {
     {
         let body = body.try_into().expect("Failed to convert into body.");
 
-        self.body = Some(body.into_bytes());
+        self.body_fn = Some(wrap_body_in_arc_fn(body.into_bytes()));
         self.mime = Some(
             http_types::Mime::from_str("text/plain").expect("Failed to convert into Mime header"),
         );
@@ -219,7 +240,7 @@ impl ResponseTemplate {
         <B as TryInto<Vec<u8>>>::Error: std::fmt::Debug,
     {
         let body = body.try_into().expect("Failed to convert into body.");
-        self.body = Some(body);
+        self.body_fn = Some(wrap_body_in_arc_fn(body));
         self.mime =
             Some(http_types::Mime::from_str(mime).expect("Failed to convert into Mime header"));
         self
@@ -272,7 +293,7 @@ impl ResponseTemplate {
     }
 
     /// Generate a response from the template.
-    pub(crate) fn generate_response(&self) -> Response {
+    pub(crate) fn generate_response(&self) -> (Response, Option<BodyStream>, Option<u64>) {
         let mut response = Response::new(self.status_code);
 
         // Add headers
@@ -280,21 +301,35 @@ impl ResponseTemplate {
             response.insert_header(header_name.clone(), header_values.as_slice());
         }
 
-        // Add body, if specified
-        if let Some(body) = &self.body {
-            response.set_body(body.clone());
-        }
-
         // Set content-type, if needed
         if let Some(mime) = &self.mime {
             response.set_content_type(mime.to_owned());
         }
 
-        response
+        // Get body stream, if specified
+        // TODO: use Option::unzip, bumping MSRV to 1.66
+        let (body, length) = match self.body_fn.as_deref().map(|f| f()) {
+            Some((body, length)) => (Some(body), length),
+            None => (None, None),
+        };
+
+        (response, body, length)
     }
 
     /// Retrieve the response delay.
     pub(crate) fn delay(&self) -> &Option<Duration> {
         &self.delay
     }
+}
+
+#[inline]
+fn wrap_body_in_arc_fn(body: Vec<u8>) -> Arc<BodyFn> {
+    Arc::new(move || {
+        let length = body.len();
+        let stream = Box::pin(stream::once(future::ready(Ok(body.clone()))));
+        (
+            stream,
+            Some(u64::try_from(length).expect("Length of body is too big")),
+        )
+    })
 }

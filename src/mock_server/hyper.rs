@@ -1,4 +1,6 @@
 use crate::mock_server::bare_server::MockServerState;
+use crate::response_template::BodyStream;
+use hyper::header::CONTENT_LENGTH;
 use hyper::http;
 use hyper::service::{make_service_fn, service_fn};
 use std::net::TcpListener;
@@ -20,7 +22,7 @@ pub(super) async fn run_server(
                 let server_state = server_state.clone();
                 async move {
                     let wiremock_request = crate::Request::from_hyper(request).await;
-                    let (response, delay) = server_state
+                    let (response, body, length, delay) = server_state
                         .write()
                         .await
                         .handle_request(wiremock_request)
@@ -38,7 +40,9 @@ pub(super) async fn run_server(
                         delay.await;
                     }
 
-                    Ok::<_, DynError>(http_types_response_to_hyper_response(response).await)
+                    Ok::<_, DynError>(
+                        http_types_response_to_hyper_response(response, body, length).await,
+                    )
                 }
             }))
         }
@@ -76,6 +80,8 @@ where
 
 async fn http_types_response_to_hyper_response(
     mut response: http_types::Response,
+    body: Option<BodyStream>,
+    length: Option<u64>,
 ) -> hyper::Response<hyper::Body> {
     let version = response.version().map(|v| v.into()).unwrap_or_default();
     let mut builder = http::response::Builder::new()
@@ -83,9 +89,11 @@ async fn http_types_response_to_hyper_response(
         .version(version);
 
     headers_to_hyperium_headers(response.as_mut(), builder.headers_mut().unwrap());
+    if let Some(length) = length {
+        builder = builder.header(CONTENT_LENGTH, length);
+    }
 
-    let body_bytes = response.take_body().into_bytes().await.unwrap();
-    let body = hyper::Body::from(body_bytes);
+    let body = body.map_or_else(hyper::Body::empty, hyper::Body::wrap_stream);
 
     builder.body(body).unwrap()
 }

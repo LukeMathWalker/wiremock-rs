@@ -1,5 +1,6 @@
 use crate::{
     mounted_mock::MountedMock,
+    response_template::BodyStream,
     verification::{VerificationOutcome, VerificationReport},
 };
 use crate::{Mock, Request, ResponseTemplate};
@@ -49,7 +50,10 @@ impl MountedMockSet {
         }
     }
 
-    pub(crate) async fn handle_request(&mut self, request: Request) -> (Response, Option<Delay>) {
+    pub(crate) async fn handle_request(
+        &mut self,
+        request: Request,
+    ) -> (Response, Option<BodyStream>, Option<u64>, Option<Delay>) {
         debug!("Handling request.");
         let mut response_template: Option<ResponseTemplate> = None;
         self.mocks.sort_by_key(|(m, _)| m.specification.priority);
@@ -64,10 +68,11 @@ impl MountedMockSet {
         }
         if let Some(response_template) = response_template {
             let delay = response_template.delay().map(|d| Delay::new(d.to_owned()));
-            (response_template.generate_response(), delay)
+            let (response, body, length) = response_template.generate_response();
+            (response, body, length, delay)
         } else {
             debug!("Got unexpected request:\n{}", request);
-            (Response::new(StatusCode::NotFound), None)
+            (Response::new(StatusCode::NotFound), None, None, None)
         }
     }
 
