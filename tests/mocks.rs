@@ -1,4 +1,4 @@
-use futures::FutureExt;
+use futures::{future, stream, FutureExt, StreamExt};
 use http_types::StatusCode;
 use serde::Serialize;
 use serde_json::json;
@@ -125,6 +125,61 @@ async fn simple_route_mock() {
     // Assert
     assert_eq!(response.status(), 200);
     assert_eq!(response.body_string().await.unwrap(), "world");
+}
+
+#[async_std::test]
+async fn simple_route_mock_with_bytes_stream() {
+    // Arrange
+    let mock_server = MockServer::start().await;
+    let stream_fn =
+        || stream::once(future::ready("hello ")).chain(stream::once(future::ready("world")));
+    let response = ResponseTemplate::new(200).set_body_bytes_stream(stream_fn, None);
+    let mock = Mock::given(method("GET"))
+        .and(PathExactMatcher::new("path"))
+        .respond_with(response);
+    mock_server.register(mock).await;
+
+    // Act
+    let mut response = surf::get(format!("{}/path", &mock_server.uri()))
+        .await
+        .unwrap();
+
+    // Assert
+    assert_eq!(response.status(), 200);
+    assert_eq!(response.header("Transfer-encoding").unwrap(), "chunked");
+    assert_eq!(response.body_string().await.unwrap(), "hello world");
+}
+
+#[async_std::test]
+async fn simple_route_mock_with_failing_stream() {
+    // Arrange
+    let mock_server = MockServer::start().await;
+    let stream_fn = || {
+        stream::once(future::ok("hello ")).chain(stream::once(async move {
+            // This is needed to make the body fail instead of the response
+            async_std::task::sleep(Duration::from_millis(1)).await;
+            Err(std::io::Error::new(
+                std::io::ErrorKind::Other,
+                "testing error",
+            ))
+        }))
+    };
+    let response = ResponseTemplate::new(200).set_body_raw_stream(stream_fn, Some(10), None);
+    let mock = Mock::given(method("GET"))
+        .and(PathExactMatcher::new("path"))
+        .respond_with(response);
+    mock_server.register(mock).await;
+
+    // Act
+    let mut response = surf::get(format!("{}/path", &mock_server.uri()))
+        .await
+        .unwrap();
+
+    // Assert
+    assert_eq!(response.status(), 200);
+    assert!(response.header("Transfer-encoding").is_none());
+    // TODO: improve error recognition, error from stream is not bubbled up
+    response.body_string().await.unwrap_err();
 }
 
 #[async_std::test]
