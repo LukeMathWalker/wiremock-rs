@@ -2,6 +2,7 @@ use crate::mock_server::hyper::run_server;
 use crate::mock_set::MockId;
 use crate::mock_set::MountedMockSet;
 use crate::request::BodyPrintLimit;
+use crate::response_template::BodyStream;
 use crate::{mock::Mock, verification::VerificationOutcome, Request};
 use std::net::{SocketAddr, TcpListener, TcpStream};
 use std::pin::pin;
@@ -37,7 +38,12 @@ impl MockServerState {
     pub(super) async fn handle_request(
         &mut self,
         mut request: Request,
-    ) -> (http_types::Response, Option<futures_timer::Delay>) {
+    ) -> (
+        http_types::Response,
+        Option<BodyStream>,
+        Option<u64>,
+        Option<futures_timer::Delay>,
+    ) {
         request.body_print_limit = self.body_print_limit;
         // If request recording is enabled, record the incoming request
         // by adding it to the `received_requests` stack
