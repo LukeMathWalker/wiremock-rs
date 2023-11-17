@@ -1,5 +1,6 @@
 use std::fmt;
 
+use http_body_util::BodyExt;
 use hyper::{HeaderMap, Method};
 use serde::de::DeserializeOwned;
 use url::Url;
@@ -106,7 +107,7 @@ impl Request {
         serde_json::from_slice(&self.body)
     }
 
-    pub(crate) async fn from_hyper(request: hyper::Request<hyper::Body>) -> Request {
+    pub(crate) async fn from_hyper(request: hyper::Request<hyper::body::Incoming>) -> Request {
         let (parts, body) = request.into_parts();
         let url = match parts.uri.authority() {
             Some(_) => parts.uri.to_string(),
@@ -115,16 +116,17 @@ impl Request {
         .parse()
         .unwrap();
 
-        let body = hyper::body::to_bytes(body)
+        let body = body
+            .collect()
             .await
             .expect("Failed to read request body.")
-            .to_vec();
+            .to_bytes();
 
         Self {
             url,
             method: parts.method,
             headers: parts.headers,
-            body,
+            body: body.to_vec(),
             body_print_limit: BodyPrintLimit::Limited(BODY_PRINT_LIMIT),
         }
     }

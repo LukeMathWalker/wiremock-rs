@@ -1,5 +1,7 @@
 use http::{HeaderName, HeaderValue};
-use hyper::{Body, HeaderMap, Response, StatusCode};
+use http_body_util::Full;
+use hyper::body::Bytes;
+use hyper::{HeaderMap, Response, StatusCode};
 use serde::Serialize;
 use std::convert::TryInto;
 use std::time::Duration;
@@ -256,9 +258,8 @@ impl ResponseTemplate {
     }
 
     /// Generate a response from the template.
-    pub(crate) fn generate_response(&self) -> Response<Body> {
-        let mut response = Response::builder()
-            .status(self.status_code);
+    pub(crate) fn generate_response(&self) -> Response<Full<Bytes>> {
+        let mut response = Response::builder().status(self.status_code);
 
         let mut headers = self.headers.clone();
         // Set content-type, if needed
@@ -268,7 +269,7 @@ impl ResponseTemplate {
         *response.headers_mut().unwrap() = headers;
 
         let body = self.body.clone().unwrap_or_default();
-        response.body(Body::from(body)).unwrap()
+        response.body(body.into()).unwrap()
     }
 
     /// Retrieve the response delay.

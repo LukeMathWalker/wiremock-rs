@@ -3,6 +3,8 @@ use crate::mock_set::MockId;
 use crate::mock_set::MountedMockSet;
 use crate::request::BodyPrintLimit;
 use crate::{mock::Mock, verification::VerificationOutcome, Request};
+use http_body_util::Full;
+use hyper::body::Bytes;
 use std::fmt::Write;
 use std::net::{SocketAddr, TcpListener, TcpStream};
 use std::pin::pin;
@@ -22,7 +24,7 @@ pub(crate) struct BareMockServer {
     state: Arc<RwLock<MockServerState>>,
     server_address: SocketAddr,
     // When `_shutdown_trigger` gets dropped the listening server terminates gracefully.
-    _shutdown_trigger: tokio::sync::oneshot::Sender<()>,
+    _shutdown_trigger: tokio::sync::watch::Sender<()>,
 }
 
 /// The elements of [`BareMockServer`] that are affected by each incoming request.
@@ -38,7 +40,7 @@ impl MockServerState {
     pub(super) async fn handle_request(
         &mut self,
         mut request: Request,
-    ) -> (hyper::Response<hyper::Body>, Option<tokio::time::Sleep>) {
+    ) -> (hyper::Response<Full<Bytes>>, Option<tokio::time::Sleep>) {
         request.body_print_limit = self.body_print_limit;
         // If request recording is enabled, record the incoming request
         // by adding it to the `received_requests` stack
@@ -57,7 +59,7 @@ impl BareMockServer {
         request_recording: RequestRecording,
         body_print_limit: BodyPrintLimit,
     ) -> Self {
-        let (shutdown_trigger, shutdown_receiver) = tokio::sync::oneshot::channel();
+        let (shutdown_trigger, shutdown_receiver) = tokio::sync::watch::channel(());
         let received_requests = match request_recording {
             RequestRecording::Enabled => Some(Vec::new()),
             RequestRecording::Disabled => None,

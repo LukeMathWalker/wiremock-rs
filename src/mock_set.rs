@@ -3,6 +3,8 @@ use crate::{
     verification::{VerificationOutcome, VerificationReport},
 };
 use crate::{Mock, Request, ResponseTemplate};
+use http_body_util::Full;
+use hyper::body::Bytes;
 use log::debug;
 use std::{
     ops::{Index, IndexMut},
@@ -51,7 +53,7 @@ impl MountedMockSet {
     pub(crate) async fn handle_request(
         &mut self,
         request: Request,
-    ) -> (hyper::Response<hyper::Body>, Option<Sleep>) {
+    ) -> (hyper::Response<Full<Bytes>>, Option<Sleep>) {
         debug!("Handling request.");
         let mut response_template: Option<ResponseTemplate> = None;
         self.mocks.sort_by_key(|(m, _)| m.specification.priority);
@@ -72,7 +74,7 @@ impl MountedMockSet {
             (
                 hyper::Response::builder()
                     .status(hyper::StatusCode::NOT_FOUND)
-                    .body(hyper::Body::empty())
+                    .body(Full::default())
                     .unwrap(),
                 None,
             )
