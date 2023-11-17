@@ -12,7 +12,6 @@ use std::sync::atomic::AtomicBool;
 use std::sync::Arc;
 use tokio::sync::Notify;
 use tokio::sync::RwLock;
-use tokio::task::LocalSet;
 
 /// An HTTP web-server running in the background to behave as one of your dependencies using `Mock`s
 /// for testing purposes.
@@ -77,12 +76,13 @@ impl BareMockServer {
         std::thread::spawn(move || {
             let server_future = run_server(listener, server_state, shutdown_receiver);
 
-            let runtime = tokio::runtime::Builder::new_current_thread()
+            let runtime = tokio::runtime::Builder::new_multi_thread()
+                .worker_threads(1)
                 .enable_all()
                 .build()
                 .expect("Cannot build local tokio runtime");
 
-            LocalSet::new().block_on(&runtime, server_future);
+            runtime.block_on(server_future);
         });
         for _ in 0..40 {
             if TcpStream::connect_timeout(&server_address, std::time::Duration::from_millis(25))

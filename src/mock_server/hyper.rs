@@ -5,8 +5,6 @@ use std::sync::Arc;
 use tokio::net::TcpListener;
 use tokio::sync::RwLock;
 
-type DynError = Box<dyn std::error::Error + Send + Sync>;
-
 /// The actual HTTP server responding to incoming requests according to the specified mocks.
 pub(super) async fn run_server(
     listener: std::net::TcpListener,
@@ -37,7 +35,7 @@ pub(super) async fn run_server(
                 delay.await;
             }
 
-            Ok::<_, DynError>(response)
+            Ok::<_, &'static str>(response)
         }
     };
 
@@ -58,7 +56,7 @@ pub(super) async fn run_server(
 
         let request_handler = request_handler.clone();
         let mut shutdown_signal = shutdown_signal.clone();
-        tokio::task::spawn_local(async move {
+        tokio::task::spawn(async move {
             let conn = hyper::server::conn::http1::Builder::new()
                 .serve_connection(io, service_fn(request_handler))
                 .with_upgrades();
