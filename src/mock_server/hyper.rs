@@ -11,6 +11,9 @@ pub(super) async fn run_server(
     server_state: Arc<RwLock<MockServerState>>,
     mut shutdown_signal: tokio::sync::watch::Receiver<()>,
 ) {
+    listener
+        .set_nonblocking(true)
+        .expect("Cannot set non-blocking mode on TcpListener");
     let listener = TcpListener::from_std(listener).expect("Cannot upgrade TcpListener");
 
     let request_handler = move |request| {
