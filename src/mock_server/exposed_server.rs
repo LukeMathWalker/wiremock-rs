@@ -28,6 +28,7 @@ use std::ops::Deref;
 /// instead of [`MockServer::register`].
 ///
 /// You can register as many [`Mock`]s as your scenario requires on a `MockServer`.
+#[derive(Debug)]
 pub struct MockServer(InnerServer);
 
 /// `MockServer` is either a wrapper around a `BareMockServer` retrieved from an
@@ -40,6 +41,19 @@ pub struct MockServer(InnerServer);
 pub(super) enum InnerServer {
     Bare(BareMockServer),
     Pooled(PooledMockServer),
+}
+
+impl Debug for InnerServer {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            InnerServer::Bare(bare) => bare.fmt(f),
+            InnerServer::Pooled(pooled) => write!(
+                f,
+                "PooledMockServer {{ address: {} }}",
+                pooled.deref().address()
+            ),
+        }
+    }
 }
 
 impl Deref for InnerServer {
@@ -478,12 +492,6 @@ impl MockServer {
     /// ```
     pub async fn received_requests(&self) -> Option<Vec<Request>> {
         self.0.received_requests().await
-    }
-}
-
-impl Debug for MockServer {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "MockServer {{ address: {} }}", self.address())
     }
 }
 

@@ -339,3 +339,24 @@ async fn use_mock_guard_to_await_satisfaction_readiness() {
     .await
     .expect("should be satisfied");
 }
+
+#[async_std::test]
+async fn debug_prints_mock_server_variants() {
+    let pooled_mock_server = MockServer::start().await;
+    assert_eq!(
+        format!(
+            "MockServer(PooledMockServer {{ address: {} }})",
+            pooled_mock_server.address()
+        ),
+        format!("{:?}", pooled_mock_server)
+    );
+
+    let bare_mock_server = MockServer::builder().start().await;
+    assert_eq!(
+        format!(
+            "MockServer(BareMockServer {{ address: {} }})",
+            bare_mock_server.address()
+        ),
+        format!("{:?}", bare_mock_server)
+    );
+}
