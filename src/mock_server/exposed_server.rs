@@ -3,6 +3,7 @@ use crate::mock_server::pool::{get_pooled_mock_server, PooledMockServer};
 use crate::mock_server::MockServerBuilder;
 use crate::{mock::Mock, verification::VerificationOutcome, MockGuard, Request};
 use log::debug;
+use std::fmt::Debug;
 use std::net::SocketAddr;
 use std::ops::Deref;
 
@@ -477,6 +478,12 @@ impl MockServer {
     /// ```
     pub async fn received_requests(&self) -> Option<Vec<Request>> {
         self.0.received_requests().await
+    }
+}
+
+impl Debug for MockServer {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "MockServer {{ address: {} }}", self.address())
     }
 }
 
