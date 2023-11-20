@@ -49,6 +49,7 @@ pub(crate) async fn get_pooled_mock_server() -> PooledMockServer {
 /// It:
 /// - creates a new `BareMockServer` if there is none to borrow from the pool;
 /// - "cleans up" used `BareMockServer`s before making them available again for other tests to use.
+#[derive(Debug)]
 pub(crate) struct MockServerPoolManager;
 
 #[async_trait]

@@ -38,22 +38,10 @@ pub struct MockServer(InnerServer);
 ///
 /// `InnerServer` implements `Deref<Target=BareMockServer>`, so we never actually have to match
 /// on `InnerServer` in `MockServer` - the compiler does all the boring heavy-lifting for us.
+#[derive(Debug)]
 pub(super) enum InnerServer {
     Bare(BareMockServer),
     Pooled(PooledMockServer),
-}
-
-impl Debug for InnerServer {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            InnerServer::Bare(bare) => bare.fmt(f),
-            InnerServer::Pooled(pooled) => write!(
-                f,
-                "PooledMockServer {{ address: {} }}",
-                pooled.deref().address()
-            ),
-        }
-    }
 }
 
 impl Deref for InnerServer {

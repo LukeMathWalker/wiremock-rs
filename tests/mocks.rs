@@ -343,18 +343,23 @@ async fn use_mock_guard_to_await_satisfaction_readiness() {
 #[async_std::test]
 async fn debug_prints_mock_server_variants() {
     let pooled_mock_server = MockServer::start().await;
-    assert_eq!(
-        format!(
-            "MockServer(PooledMockServer {{ address: {} }})",
-            pooled_mock_server.address()
-        ),
-        format!("{:?}", pooled_mock_server)
-    );
+    let pooled_debug_str = format!("{:?}", pooled_mock_server);
+
+    assert!(pooled_debug_str.starts_with("MockServer(Pooled(Object {"));
+    assert!(pooled_debug_str
+        .find(
+            format!(
+                "BareMockServer {{ address: {} }}",
+                pooled_mock_server.address()
+            )
+            .as_str()
+        )
+        .is_some());
 
     let bare_mock_server = MockServer::builder().start().await;
     assert_eq!(
         format!(
-            "MockServer(BareMockServer {{ address: {} }})",
+            "MockServer(Bare(BareMockServer {{ address: {} }}))",
             bare_mock_server.address()
         ),
         format!("{:?}", bare_mock_server)
