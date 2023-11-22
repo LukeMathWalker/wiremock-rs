@@ -422,7 +422,7 @@ impl MockServer {
     ///
     /// ```rust
     /// use wiremock::MockServer;
-    /// use hyper::Method;
+    /// use http::Method;
     ///
     /// #[async_std::main]
     /// async fn main() {

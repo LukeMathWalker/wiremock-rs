@@ -1,7 +1,7 @@
 use std::fmt;
 
+use http::{HeaderMap, Method};
 use http_body_util::BodyExt;
-use hyper::{HeaderMap, Method};
 use serde::de::DeserializeOwned;
 use url::Url;
 

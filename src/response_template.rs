@@ -1,7 +1,6 @@
-use http::{HeaderName, HeaderValue};
+use http::{HeaderMap, HeaderName, HeaderValue, Response, StatusCode};
 use http_body_util::Full;
 use hyper::body::Bytes;
-use hyper::{HeaderMap, Response, StatusCode};
 use serde::Serialize;
 use std::convert::TryInto;
 use std::time::Duration;
