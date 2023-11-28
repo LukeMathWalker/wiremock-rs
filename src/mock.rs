@@ -253,6 +253,7 @@ impl Debug for Matcher {
 /// [`register`]: MockServer::register
 /// [`mount`]: Mock::mount
 /// [`mount_as_scoped`]: Mock::mount_as_scoped
+#[must_use = "`Mock`s have to be mounted or registered with a `MockServer` to become effective"]
 pub struct Mock {
     pub(crate) matchers: Vec<Matcher>,
     pub(crate) response: Box<dyn Respond>,
