@@ -51,7 +51,7 @@ impl MockServerState {
 
 impl BareMockServer {
     /// Start a new instance of a `BareMockServer` listening on the specified
-    /// [`TcpListener`](std::net::TcpListener).
+    /// [`TcpListener`].
     pub(super) async fn start(
         listener: TcpListener,
         request_recording: RequestRecording,
