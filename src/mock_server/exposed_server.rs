@@ -3,6 +3,7 @@ use crate::mock_server::pool::{get_pooled_mock_server, PooledMockServer};
 use crate::mock_server::MockServerBuilder;
 use crate::{mock::Mock, verification::VerificationOutcome, MockGuard, Request};
 use log::debug;
+use std::fmt::Debug;
 use std::net::SocketAddr;
 use std::ops::Deref;
 
@@ -27,6 +28,7 @@ use std::ops::Deref;
 /// instead of [`MockServer::register`].
 ///
 /// You can register as many [`Mock`]s as your scenario requires on a `MockServer`.
+#[derive(Debug)]
 pub struct MockServer(InnerServer);
 
 /// `MockServer` is either a wrapper around a `BareMockServer` retrieved from an
@@ -36,6 +38,7 @@ pub struct MockServer(InnerServer);
 ///
 /// `InnerServer` implements `Deref<Target=BareMockServer>`, so we never actually have to match
 /// on `InnerServer` in `MockServer` - the compiler does all the boring heavy-lifting for us.
+#[derive(Debug)]
 pub(super) enum InnerServer {
     Bare(BareMockServer),
     Pooled(PooledMockServer),

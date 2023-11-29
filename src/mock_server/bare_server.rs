@@ -3,6 +3,7 @@ use crate::mock_set::MockId;
 use crate::mock_set::MountedMockSet;
 use crate::request::BodyPrintLimit;
 use crate::{mock::Mock, verification::VerificationOutcome, Request};
+use std::fmt::Debug;
 use std::net::{SocketAddr, TcpListener, TcpStream};
 use std::pin::pin;
 use std::sync::atomic::AtomicBool;
@@ -162,6 +163,12 @@ impl BareMockServer {
     pub(crate) async fn received_requests(&self) -> Option<Vec<Request>> {
         let state = self.state.read().await;
         state.received_requests.to_owned()
+    }
+}
+
+impl Debug for BareMockServer {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "BareMockServer {{ address: {} }}", self.address())
     }
 }
 
