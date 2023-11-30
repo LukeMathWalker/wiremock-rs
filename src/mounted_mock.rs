@@ -4,7 +4,7 @@ use tokio::sync::Notify;
 
 use crate::{verification::VerificationReport, Match, Mock, Request, ResponseTemplate};
 
-/// Given the behaviour specification as a [`Mock`](crate::Mock), keep track of runtime information
+/// Given the behaviour specification as a [`Mock`], keep track of runtime information
 /// concerning this mock - e.g. how many times it matched on a incoming request.
 pub(crate) struct MountedMock {
     pub(crate) specification: Mock,

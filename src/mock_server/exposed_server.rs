@@ -3,7 +3,7 @@ use crate::mock_server::pool::{get_pooled_mock_server, PooledMockServer};
 use crate::mock_server::MockServerBuilder;
 use crate::{mock::Mock, verification::VerificationOutcome, MockGuard, Request};
 use log::debug;
-use std::fmt::Debug;
+use std::fmt::{Debug, Write};
 use std::net::SocketAddr;
 use std::ops::Deref;
 
@@ -336,27 +336,25 @@ impl MockServer {
                 if received_requests.is_empty() {
                     "The server did not receive any request.".into()
                 } else {
-                    format!(
-                        "Received requests:\n{}",
-                        received_requests
-                            .into_iter()
-                            .enumerate()
-                            .map(|(index, request)| {
-                                format!("- Request #{}\n{}", index + 1, &format!("\t{}", request))
-                            })
-                            .collect::<String>()
-                    )
+                    let requests = received_requests.into_iter().enumerate().fold(
+                        String::new(),
+                        |mut r, (index, request)| {
+                            write!(r, "- Request #{idx}\n\t{request}", idx = index + 1).unwrap(); // infallible
+                            r
+                        },
+                    );
+                    format!("Received requests:\n{requests}",)
                 }
             } else {
                 "Enable request recording on the mock server to get the list of incoming requests as part of the panic message.".into()
             };
-            let verifications_errors: String = failed_verifications
-                .iter()
-                .map(|m| format!("- {}\n", m.error_message()))
-                .collect();
+            let verifications_errors =
+                failed_verifications.iter().fold(String::new(), |mut e, m| {
+                    writeln!(e, "- {}", m.error_message()).unwrap(); // infallible
+                    e
+                });
             let error_message = format!(
-                "Verifications failed:\n{}\n{}",
-                verifications_errors, received_requests_message
+                "Verifications failed:\n{verifications_errors}\n{received_requests_message}",
             );
             if std::thread::panicking() {
                 debug!("{}", &error_message);
