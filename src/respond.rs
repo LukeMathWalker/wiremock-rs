@@ -75,7 +75,7 @@ use crate::{Request, ResponseTemplate};
 /// `Respond` that propagates back a request header in the response:
 ///
 /// ```rust
-/// use http_types::headers::HeaderName;
+/// use http::HeaderName;
 /// use wiremock::{Match, MockServer, Mock, Request, ResponseTemplate, Respond};
 /// use wiremock::matchers::path;
 /// use std::convert::TryInto;
@@ -87,12 +87,12 @@ use crate::{Request, ResponseTemplate};
 ///
 /// impl Respond for CorrelationIdResponder {
 ///     fn respond(&self, request: &Request) -> ResponseTemplate {
+///         const HEADER: HeaderName = HeaderName::from_static("x-correlation-id");
 ///         let mut response_template = self.0.clone();
-///         let header_name = HeaderName::from_str("X-Correlation-Id").unwrap();
-///         if let Some(correlation_id) = request.headers.get(&header_name) {
+///         if let Some(correlation_id) = request.headers.get(&HEADER) {
 ///             response_template = response_template.insert_header(
-///                 header_name,
-///                 correlation_id.last().to_owned()
+///                 HEADER,
+///                 correlation_id.to_owned()
 ///             );
 ///         }
 ///         response_template

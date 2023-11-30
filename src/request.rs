@@ -1,11 +1,9 @@
-use std::iter::FromIterator;
-use std::str::FromStr;
-use std::{collections::HashMap, fmt};
+use std::fmt;
 
-use futures::AsyncReadExt;
-use http_types::convert::DeserializeOwned;
-use http_types::headers::{HeaderName, HeaderValue, HeaderValues};
-use http_types::{Method, Url};
+use http::{HeaderMap, Method};
+use http_body_util::BodyExt;
+use serde::de::DeserializeOwned;
+use url::Url;
 
 pub const BODY_PRINT_LIMIT: usize = 10_000;
 
@@ -41,7 +39,7 @@ pub enum BodyPrintLimit {
 pub struct Request {
     pub url: Url,
     pub method: Method,
-    pub headers: HashMap<HeaderName, HeaderValues>,
+    pub headers: HeaderMap,
     pub body: Vec<u8>,
     pub body_print_limit: BodyPrintLimit,
 }
@@ -49,10 +47,12 @@ pub struct Request {
 impl fmt::Display for Request {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         writeln!(f, "{} {}", self.method, self.url)?;
-        for (name, values) in &self.headers {
-            let values = values
+        for name in self.headers.keys() {
+            let values = self
+                .headers
+                .get_all(name)
                 .iter()
-                .map(|value| format!("{}", value))
+                .map(|value| String::from_utf8_lossy(value.as_bytes()))
                 .collect::<Vec<_>>();
             let values = values.join(",");
             writeln!(f, "{}: {}", name, values)?;
@@ -107,35 +107,8 @@ impl Request {
         serde_json::from_slice(&self.body)
     }
 
-    pub async fn from(mut request: http_types::Request) -> Request {
-        let method = request.method();
-        let url = request.url().to_owned();
-
-        let mut headers = HashMap::new();
-        for (header_name, header_values) in &request {
-            headers.insert(header_name.to_owned(), header_values.to_owned());
-        }
-
-        let mut body: Vec<u8> = vec![];
-        request
-            .take_body()
-            .into_reader()
-            .read_to_end(&mut body)
-            .await
-            .expect("Failed to read body");
-
-        Self {
-            url,
-            method,
-            headers,
-            body,
-            body_print_limit: BodyPrintLimit::Limited(BODY_PRINT_LIMIT),
-        }
-    }
-
-    pub(crate) async fn from_hyper(request: hyper::Request<hyper::Body>) -> Request {
+    pub(crate) async fn from_hyper(request: hyper::Request<hyper::body::Incoming>) -> Request {
         let (parts, body) = request.into_parts();
-        let method = parts.method.into();
         let url = match parts.uri.authority() {
             Some(_) => parts.uri.to_string(),
             None => format!("http://localhost{}", parts.uri),
@@ -143,37 +116,17 @@ impl Request {
         .parse()
         .unwrap();
 
-        let mut headers = HashMap::new();
-        for name in parts.headers.keys() {
-            let name = name.as_str().as_bytes().to_owned();
-            let name = HeaderName::from_bytes(name).unwrap();
-            let values = parts.headers.get_all(name.as_str());
-            for value in values {
-                let value = value.as_bytes().to_owned();
-                let value = HeaderValue::from_bytes(value).unwrap();
-                let value_parts = value.as_str().split(',');
-                let value_parts = value_parts
-                    .map(|it| it.trim())
-                    .filter_map(|it| HeaderValue::from_str(it).ok());
-                headers
-                    .entry(name.clone())
-                    .and_modify(|values: &mut HeaderValues| {
-                        values.append(&mut HeaderValues::from_iter(value_parts.clone()))
-                    })
-                    .or_insert_with(|| value_parts.collect());
-            }
-        }
-
-        let body = hyper::body::to_bytes(body)
+        let body = body
+            .collect()
             .await
             .expect("Failed to read request body.")
-            .to_vec();
+            .to_bytes();
 
         Self {
             url,
-            method,
-            headers,
-            body,
+            method: parts.method,
+            headers: parts.headers,
+            body: body.to_vec(),
             body_print_limit: BodyPrintLimit::Limited(BODY_PRINT_LIMIT),
         }
     }

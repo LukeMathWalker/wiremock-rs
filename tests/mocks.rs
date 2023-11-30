@@ -1,9 +1,9 @@
 use futures::FutureExt;
-use http_types::StatusCode;
 use serde::Serialize;
 use serde_json::json;
 use std::net::TcpStream;
 use std::time::Duration;
+use surf::StatusCode;
 use wiremock::matchers::{body_json, body_partial_json, method, path, PathExactMatcher};
 use wiremock::{Mock, MockServer, ResponseTemplate};
 

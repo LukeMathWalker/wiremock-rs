@@ -3,14 +3,15 @@ use crate::{
     verification::{VerificationOutcome, VerificationReport},
 };
 use crate::{Mock, Request, ResponseTemplate};
-use futures_timer::Delay;
-use http_types::{Response, StatusCode};
+use http_body_util::Full;
+use hyper::body::Bytes;
 use log::debug;
 use std::{
     ops::{Index, IndexMut},
     sync::{atomic::AtomicBool, Arc},
 };
 use tokio::sync::Notify;
+use tokio::time::{sleep, Sleep};
 
 /// The collection of mocks used by a `MockServer` instance to match against
 /// incoming requests.
@@ -41,7 +42,7 @@ pub(crate) struct MockId {
 }
 
 impl MountedMockSet {
-    /// Create a new instance of MockSet.
+    /// Create a new instance of `MockSet`.
     pub(crate) fn new() -> MountedMockSet {
         MountedMockSet {
             mocks: vec![],
@@ -49,7 +50,10 @@ impl MountedMockSet {
         }
     }
 
-    pub(crate) async fn handle_request(&mut self, request: Request) -> (Response, Option<Delay>) {
+    pub(crate) async fn handle_request(
+        &mut self,
+        request: Request,
+    ) -> (hyper::Response<Full<Bytes>>, Option<Sleep>) {
         debug!("Handling request.");
         let mut response_template: Option<ResponseTemplate> = None;
         self.mocks.sort_by_key(|(m, _)| m.specification.priority);
@@ -63,11 +67,17 @@ impl MountedMockSet {
             }
         }
         if let Some(response_template) = response_template {
-            let delay = response_template.delay().map(|d| Delay::new(d.to_owned()));
+            let delay = response_template.delay().map(sleep);
             (response_template.generate_response(), delay)
         } else {
             debug!("Got unexpected request:\n{}", request);
-            (Response::new(StatusCode::NotFound), None)
+            (
+                hyper::Response::builder()
+                    .status(hyper::StatusCode::NOT_FOUND)
+                    .body(Full::default())
+                    .unwrap(),
+                None,
+            )
         }
     }
 

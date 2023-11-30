@@ -50,7 +50,7 @@ impl Deref for InnerServer {
     fn deref(&self) -> &Self::Target {
         match self {
             InnerServer::Bare(b) => b,
-            InnerServer::Pooled(p) => p.deref(),
+            InnerServer::Pooled(p) => p,
         }
     }
 }
@@ -160,7 +160,7 @@ impl MockServer {
     ///
     /// [`mount`]: Mock::mount
     pub async fn register(&self, mock: Mock) {
-        self.0.register(mock).await
+        self.0.register(mock).await;
     }
 
     /// Register a **scoped** [`Mock`] on an instance of `MockServer`.
@@ -336,22 +336,21 @@ impl MockServer {
                 if received_requests.is_empty() {
                     "The server did not receive any request.".into()
                 } else {
-                    let requests = received_requests.into_iter().enumerate().fold(
-                        String::new(),
-                        |mut r, (index, request)| {
-                            write!(r, "- Request #{idx}\n\t{request}", idx = index + 1).unwrap(); // infallible
-                            r
+                    received_requests.iter().enumerate().fold(
+                        "Received requests:\n".to_string(),
+                        |mut message, (index, request)| {
+                            _ = write!(message, "- Request #{}\n\t{}", index + 1, request);
+                            message
                         },
-                    );
-                    format!("Received requests:\n{requests}",)
+                    )
                 }
             } else {
                 "Enable request recording on the mock server to get the list of incoming requests as part of the panic message.".into()
             };
-            let verifications_errors =
-                failed_verifications.iter().fold(String::new(), |mut e, m| {
-                    writeln!(e, "- {}", m.error_message()).unwrap(); // infallible
-                    e
+            let verifications_errors: String =
+                failed_verifications.iter().fold(String::new(), |mut s, m| {
+                    _ = writeln!(s, "- {}", m.error_message());
+                    s
                 });
             let error_message = format!(
                 "Verifications failed:\n{verifications_errors}\n{received_requests_message}",
@@ -424,7 +423,7 @@ impl MockServer {
     ///
     /// ```rust
     /// use wiremock::MockServer;
-    /// use http_types::Method;
+    /// use http::Method;
     ///
     /// #[async_std::main]
     /// async fn main() {
@@ -439,7 +438,7 @@ impl MockServer {
     ///     assert_eq!(received_requests.len(), 1);
     ///
     ///     let received_request = &received_requests[0];
-    ///     assert_eq!(received_request.method, Method::Get);
+    ///     assert_eq!(received_request.method, Method::GET);
     ///     assert_eq!(received_request.url.path(), "/");
     ///     assert!(received_request.body.is_empty());
     /// }
@@ -484,7 +483,7 @@ impl MockServer {
 impl Drop for MockServer {
     // Clean up when the `MockServer` instance goes out of scope.
     fn drop(&mut self) {
-        futures::executor::block_on(self.verify())
+        futures::executor::block_on(self.verify());
         // The sender half of the channel, `shutdown_trigger`, gets dropped here
         // Triggering the graceful shutdown of the server itself.
     }

@@ -3,6 +3,8 @@ use crate::mock_set::MockId;
 use crate::mock_set::MountedMockSet;
 use crate::request::BodyPrintLimit;
 use crate::{mock::Mock, verification::VerificationOutcome, Request};
+use http_body_util::Full;
+use hyper::body::Bytes;
 use std::fmt::{Debug, Write};
 use std::net::{SocketAddr, TcpListener, TcpStream};
 use std::pin::pin;
@@ -10,7 +12,6 @@ use std::sync::atomic::AtomicBool;
 use std::sync::Arc;
 use tokio::sync::Notify;
 use tokio::sync::RwLock;
-use tokio::task::LocalSet;
 
 /// An HTTP web-server running in the background to behave as one of your dependencies using `Mock`s
 /// for testing purposes.
@@ -22,7 +23,7 @@ pub(crate) struct BareMockServer {
     state: Arc<RwLock<MockServerState>>,
     server_address: SocketAddr,
     // When `_shutdown_trigger` gets dropped the listening server terminates gracefully.
-    _shutdown_trigger: tokio::sync::oneshot::Sender<()>,
+    _shutdown_trigger: tokio::sync::watch::Sender<()>,
 }
 
 /// The elements of [`BareMockServer`] that are affected by each incoming request.
@@ -38,7 +39,7 @@ impl MockServerState {
     pub(super) async fn handle_request(
         &mut self,
         mut request: Request,
-    ) -> (http_types::Response, Option<futures_timer::Delay>) {
+    ) -> (hyper::Response<Full<Bytes>>, Option<tokio::time::Sleep>) {
         request.body_print_limit = self.body_print_limit;
         // If request recording is enabled, record the incoming request
         // by adding it to the `received_requests` stack
@@ -57,7 +58,7 @@ impl BareMockServer {
         request_recording: RequestRecording,
         body_print_limit: BodyPrintLimit,
     ) -> Self {
-        let (shutdown_trigger, shutdown_receiver) = tokio::sync::oneshot::channel();
+        let (shutdown_trigger, shutdown_receiver) = tokio::sync::watch::channel(());
         let received_requests = match request_recording {
             RequestRecording::Enabled => Some(Vec::new()),
             RequestRecording::Disabled => None,
@@ -80,7 +81,7 @@ impl BareMockServer {
                 .build()
                 .expect("Cannot build local tokio runtime");
 
-            LocalSet::new().block_on(&runtime, server_future)
+            runtime.block_on(server_future);
         });
         for _ in 0..40 {
             if TcpStream::connect_timeout(&server_address, std::time::Duration::from_millis(25))
@@ -88,7 +89,7 @@ impl BareMockServer {
             {
                 break;
             }
-            futures_timer::Delay::new(std::time::Duration::from_millis(25)).await;
+            tokio::time::sleep(std::time::Duration::from_millis(25)).await;
         }
 
         Self {
@@ -162,7 +163,7 @@ impl BareMockServer {
     /// If request recording was disabled, it returns `None`.
     pub(crate) async fn received_requests(&self) -> Option<Vec<Request>> {
         let state = self.state.read().await;
-        state.received_requests.to_owned()
+        state.received_requests.clone()
     }
 }
 
@@ -270,7 +271,7 @@ impl MockGuard {
         }
 
         // await event
-        notification.await
+        notification.await;
     }
 }
 
@@ -292,15 +293,13 @@ impl Drop for MockGuard {
                     if received_requests.is_empty() {
                         "The server did not receive any request.".into()
                     } else {
-                        let requests = received_requests.iter().enumerate().fold(
-                            String::new(),
-                            |mut r, (index, request)| {
-                                write!(r, "- Request #{idx}\n\t{request}", idx = index + 1,)
-                                    .unwrap();
-                                r
+                        received_requests.iter().enumerate().fold(
+                            "Received requests:\n".to_string(),
+                            |mut message, (index, request)| {
+                                _ = write!(message, "- Request #{}\n\t{}", index + 1, request);
+                                message
                             },
-                        );
-                        format!("Received requests:\n{requests}")
+                        )
                     }
                 } else {
                     "Enable request recording on the mock server to get the list of incoming requests as part of the panic message.".into()
@@ -320,6 +319,6 @@ impl Drop for MockGuard {
                 state.mock_set.deactivate(*mock_id);
             }
         };
-        futures::executor::block_on(future)
+        futures::executor::block_on(future);
     }
 }
