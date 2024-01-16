@@ -8,7 +8,7 @@ use url::Url;
 pub const BODY_PRINT_LIMIT: usize = 10_000;
 
 /// Specifies limitations on printing request bodies when logging requests. For some mock servers
-/// the bodies may be too large to reasonably print and it may be desireable to limit them.
+/// the bodies may be too large to reasonably print and it may be desirable to limit them.
 #[derive(Debug, Copy, Clone)]
 pub enum BodyPrintLimit {
     /// Maximum length of a body to print in bytes.
