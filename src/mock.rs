@@ -160,7 +160,7 @@ impl Debug for Matcher {
 ///     mock_server.register(mock).await;
 ///
 ///     // We won't register this mock instead.
-///     let unregistered_mock = Mock::given(method("GET")).respond_with(response);
+///     let unregistered_mock = Mock::given(method("POST")).respond_with(response);
 ///     
 ///     // Act
 ///     let status = surf::get(&mock_server.uri())
