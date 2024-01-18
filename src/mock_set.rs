@@ -1,3 +1,4 @@
+use crate::request::BodyPrintLimit;
 use crate::{
     mounted_mock::MountedMock,
     verification::{VerificationOutcome, VerificationReport},
@@ -27,6 +28,7 @@ pub(crate) struct MountedMockSet {
     /// We need `generation` to know if a [`MockId`] points to an [`MountedMock`] that has been
     /// removed via [`MountedMockSet::reset`].
     generation: u16,
+    body_print_limit: BodyPrintLimit,
 }
 
 /// A `MockId` is an opaque index that uniquely identifies an [`MountedMock`] inside an [`MountedMockSet`].
@@ -42,11 +44,12 @@ pub(crate) struct MockId {
 }
 
 impl MountedMockSet {
-    /// Create a new instance of `MockSet`.
-    pub(crate) fn new() -> MountedMockSet {
+    /// Create a new instance of `MountedMockSet`.
+    pub(crate) fn new(body_print_limit: BodyPrintLimit) -> MountedMockSet {
         MountedMockSet {
             mocks: vec![],
             generation: 0,
+            body_print_limit,
         }
     }
 
@@ -70,7 +73,9 @@ impl MountedMockSet {
             let delay = response_template.delay().map(sleep);
             (response_template.generate_response(), delay)
         } else {
-            debug!("Got unexpected request:\n{}", request);
+            let mut msg = "Got unexpected request:\n".to_string();
+            _ = request.print_with_limit(&mut msg, self.body_print_limit);
+            debug!("{}", msg);
             (
                 hyper::Response::builder()
                     .status(hyper::StatusCode::NOT_FOUND)
@@ -177,11 +182,16 @@ pub(crate) enum MountedMockState {
 mod tests {
     use crate::matchers::path;
     use crate::mock_set::{MountedMockSet, MountedMockState};
+    use crate::request::BodyPrintLimit;
     use crate::{Mock, ResponseTemplate};
+
+    fn test_mock_set() -> MountedMockSet {
+        MountedMockSet::new(BodyPrintLimit::Unlimited)
+    }
 
     #[test]
     fn generation_is_incremented_for_every_reset() {
-        let mut set = MountedMockSet::new();
+        let mut set = test_mock_set();
         assert_eq!(set.generation, 0);
 
         for i in 1..10 {
@@ -194,7 +204,7 @@ mod tests {
     #[should_panic]
     fn accessing_a_mock_id_after_a_reset_triggers_a_panic() {
         // Assert
-        let mut set = MountedMockSet::new();
+        let mut set = test_mock_set();
         let mock = Mock::given(path("/")).respond_with(ResponseTemplate::new(200));
         let (_, mock_id) = set.register(mock);
 
@@ -208,7 +218,7 @@ mod tests {
     #[test]
     fn deactivating_a_mock_does_not_invalidate_other_ids() {
         // Assert
-        let mut set = MountedMockSet::new();
+        let mut set = test_mock_set();
         let first_mock = Mock::given(path("/")).respond_with(ResponseTemplate::new(200));
         let second_mock = Mock::given(path("/hello")).respond_with(ResponseTemplate::new(500));
         let (_, first_mock_id) = set.register(first_mock);

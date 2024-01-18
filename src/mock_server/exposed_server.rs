@@ -329,6 +329,7 @@ impl MockServer {
     /// their expectations on their number of invocations. Panics otherwise.
     pub async fn verify(&self) {
         debug!("Verify mock expectations.");
+        let body_print_limit = self.0.body_print_limit().await;
         if let VerificationOutcome::Failure(failed_verifications) = self.0.verify().await {
             let received_requests_message = if let Some(received_requests) =
                 self.0.received_requests().await
@@ -339,7 +340,8 @@ impl MockServer {
                     received_requests.iter().enumerate().fold(
                         "Received requests:\n".to_string(),
                         |mut message, (index, request)| {
-                            _ = write!(message, "- Request #{}\n\t{}", index + 1, request);
+                            _ = write!(message, "- Request #{}\n\t", index + 1,);
+                            _ = request.print_with_limit(&mut message, body_print_limit);
                             message
                         },
                     )

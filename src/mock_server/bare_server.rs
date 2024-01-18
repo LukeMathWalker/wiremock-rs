@@ -38,9 +38,8 @@ pub(super) struct MockServerState {
 impl MockServerState {
     pub(super) async fn handle_request(
         &mut self,
-        mut request: Request,
+        request: Request,
     ) -> (hyper::Response<Full<Bytes>>, Option<tokio::time::Sleep>) {
-        request.body_print_limit = self.body_print_limit;
         // If request recording is enabled, record the incoming request
         // by adding it to the `received_requests` stack
         if let Some(received_requests) = &mut self.received_requests {
@@ -64,7 +63,7 @@ impl BareMockServer {
             RequestRecording::Disabled => None,
         };
         let state = Arc::new(RwLock::new(MockServerState {
-            mock_set: MountedMockSet::new(),
+            mock_set: MountedMockSet::new(body_print_limit),
             received_requests,
             body_print_limit,
         }));
@@ -155,6 +154,11 @@ impl BareMockServer {
     /// Use this method to interact with the `BareMockServer` using `TcpStream`s.
     pub(crate) fn address(&self) -> &SocketAddr {
         &self.server_address
+    }
+
+    /// Return the body print limit of this running instance of `BareMockServer`.
+    pub(crate) async fn body_print_limit(&self) -> BodyPrintLimit {
+        self.state.read().await.body_print_limit
     }
 
     /// Return a vector with all the requests received by the `BareMockServer` since it started.  
@@ -296,7 +300,8 @@ impl Drop for MockGuard {
                         received_requests.iter().enumerate().fold(
                             "Received requests:\n".to_string(),
                             |mut message, (index, request)| {
-                                _ = write!(message, "- Request #{}\n\t{}", index + 1, request);
+                                _ = write!(message, "- Request #{}\n\t", index + 1,);
+                                _ = request.print_with_limit(&mut message, state.body_print_limit);
                                 message
                             },
                         )

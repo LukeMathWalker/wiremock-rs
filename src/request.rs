@@ -41,65 +41,6 @@ pub struct Request {
     pub method: Method,
     pub headers: HeaderMap,
     pub body: Vec<u8>,
-    pub body_print_limit: BodyPrintLimit,
-}
-
-impl fmt::Display for Request {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        writeln!(f, "{} {}", self.method, self.url)?;
-        for name in self.headers.keys() {
-            let values = self
-                .headers
-                .get_all(name)
-                .iter()
-                .map(|value| String::from_utf8_lossy(value.as_bytes()))
-                .collect::<Vec<_>>();
-            let values = values.join(",");
-            writeln!(f, "{}: {}", name, values)?;
-        }
-
-        match self.body_print_limit {
-            BodyPrintLimit::Limited(limit) if self.body.len() > limit => {
-                let mut written = false;
-                for end_byte in limit..(limit + 4).max(self.body.len()) {
-                    if let Ok(truncated) = std::str::from_utf8(&self.body[..end_byte]) {
-                        written = true;
-                        writeln!(f, "{}", truncated)?;
-                        if end_byte < self.body.len() {
-                            writeln!(
-                                f,
-                                "We truncated the body because it was too large: {} bytes (limit: {} bytes)",
-                                self.body.len(),
-                                limit
-                            )?;
-                            writeln!(f, "Increase this limit by setting `WIREMOCK_BODY_PRINT_LIMIT`, or calling `MockServerBuilder::body_print_limit` when building your MockServer instance")?;
-                        }
-                        break;
-                    }
-                }
-                if !written {
-                    writeln!(
-                        f,
-                        "Body is likely binary (invalid utf-8) size is {} bytes",
-                        self.body.len()
-                    )
-                } else {
-                    Ok(())
-                }
-            }
-            _ => {
-                if let Ok(body) = std::str::from_utf8(&self.body) {
-                    writeln!(f, "{}", body)
-                } else {
-                    writeln!(
-                        f,
-                        "Body is likely binary (invalid utf-8) size is {} bytes",
-                        self.body.len()
-                    )
-                }
-            }
-        }
-    }
 }
 
 impl Request {
@@ -127,7 +68,66 @@ impl Request {
             method: parts.method,
             headers: parts.headers,
             body: body.to_vec(),
-            body_print_limit: BodyPrintLimit::Limited(BODY_PRINT_LIMIT),
+        }
+    }
+
+    pub(crate) fn print_with_limit(
+        &self,
+        mut buffer: impl fmt::Write,
+        body_print_limit: BodyPrintLimit,
+    ) -> fmt::Result {
+        writeln!(buffer, "{} {}", self.method, self.url)?;
+        for name in self.headers.keys() {
+            let values = self
+                .headers
+                .get_all(name)
+                .iter()
+                .map(|value| String::from_utf8_lossy(value.as_bytes()))
+                .collect::<Vec<_>>();
+            let values = values.join(",");
+            writeln!(buffer, "{}: {}", name, values)?;
+        }
+
+        match body_print_limit {
+            BodyPrintLimit::Limited(limit) if self.body.len() > limit => {
+                let mut written = false;
+                for end_byte in limit..(limit + 4).max(self.body.len()) {
+                    if let Ok(truncated) = std::str::from_utf8(&self.body[..end_byte]) {
+                        written = true;
+                        writeln!(buffer, "{}", truncated)?;
+                        if end_byte < self.body.len() {
+                            writeln!(
+                                buffer,
+                                "We truncated the body because it was too large: {} bytes (limit: {} bytes)",
+                                self.body.len(),
+                                limit
+                            )?;
+                            writeln!(buffer, "Increase this limit by setting `WIREMOCK_BODY_PRINT_LIMIT`, or calling `MockServerBuilder::body_print_limit` when building your MockServer instance")?;
+                        }
+                        break;
+                    }
+                }
+                if !written {
+                    writeln!(
+                        buffer,
+                        "Body is likely binary (invalid utf-8) size is {} bytes",
+                        self.body.len()
+                    )
+                } else {
+                    Ok(())
+                }
+            }
+            _ => {
+                if let Ok(body) = std::str::from_utf8(&self.body) {
+                    writeln!(buffer, "{}", body)
+                } else {
+                    writeln!(
+                        buffer,
+                        "Body is likely binary (invalid utf-8) size is {} bytes",
+                        self.body.len()
+                    )
+                }
+            }
         }
     }
 }
