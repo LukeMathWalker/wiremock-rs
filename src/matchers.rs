@@ -871,6 +871,63 @@ impl Match for QueryParamExactMatcher {
 }
 
 #[derive(Debug)]
+/// Match a part of a query parameter value.
+///
+/// ### Example:
+/// ```rust
+/// use wiremock::{MockServer, Mock, ResponseTemplate};
+/// use wiremock::matchers::query_param_contains;
+///
+/// #[async_std::main]
+/// async fn main() {
+///     // Arrange
+///     let mock_server = MockServer::start().await;
+///
+///     Mock::given(query_param_contains("hello", "world"))
+///         .respond_with(ResponseTemplate::new(200))
+///         .mount(&mock_server)
+///         .await;
+///
+///     // Act
+///     let status = surf::get(format!("{}?hello=some_world", &mock_server.uri()))
+///         .await
+///         .unwrap()
+///         .status();
+///
+///     // Assert
+///     assert_eq!(status, 200);
+/// }
+/// ```
+pub struct QueryParamContainsMatcher(String, String);
+
+impl QueryParamContainsMatcher {
+    /// Specify the part of the query param value that should be matched as a string.
+    pub fn new<K: Into<String>, V: Into<String>>(key: K, value: V) -> Self {
+        let key = key.into();
+        let value = value.into();
+        Self(key, value)
+    }
+}
+
+/// Shorthand for [`QueryParamContainsMatcher::new`].
+pub fn query_param_contains<K, V>(key: K, value: V) -> QueryParamContainsMatcher
+where
+    K: Into<String>,
+    V: Into<String>,
+{
+    QueryParamContainsMatcher::new(key, value)
+}
+
+impl Match for QueryParamContainsMatcher {
+    fn matches(&self, request: &Request) -> bool {
+        request
+            .url
+            .query_pairs()
+            .any(|q| q.0 == self.0.as_str() && q.1.contains(self.1.as_str()))
+    }
+}
+
+#[derive(Debug)]
 /// Only match requests that do **not** contain a specified query parameter.
 ///
 /// ### Example:
