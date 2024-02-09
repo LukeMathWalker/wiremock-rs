@@ -7,7 +7,7 @@ use http_types::mime;
 use wiremock::{matchers::any, Mock, MockServer, Request, ResponseTemplate};
 
 #[async_std::test]
-async fn reuqest_form_data_body() {
+async fn request_form_data_body() {
     // Arrange
     let form_data: Arc<RwLock<HashMap<String, String>>> = Arc::new(RwLock::new(HashMap::new()));
     let mock_server = MockServer::start().await;
