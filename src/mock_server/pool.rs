@@ -65,7 +65,7 @@ impl deadpool::managed::Manager for MockServerPoolManager {
     async fn recycle(
         &self,
         mock_server: &mut BareMockServer,
-        _metrics: &Metrics
+        _metrics: &Metrics,
     ) -> deadpool::managed::RecycleResult<Infallible> {
         // Remove all existing settings - we want to start clean when the mock server
         // is picked up again from the pool.
