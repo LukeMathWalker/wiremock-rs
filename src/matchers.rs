@@ -871,7 +871,7 @@ impl Match for QueryParamExactMatcher {
 }
 
 #[derive(Debug)]
-/// Match a part of a query parameter value.
+/// Match when a query parameter contains the specified value as a substring.
 ///
 /// ### Example:
 /// ```rust
@@ -883,6 +883,7 @@ impl Match for QueryParamExactMatcher {
 ///     // Arrange
 ///     let mock_server = MockServer::start().await;
 ///
+///     // It matches since "world" is a substring of "some_world".
 ///     Mock::given(query_param_contains("hello", "world"))
 ///         .respond_with(ResponseTemplate::new(200))
 ///         .mount(&mock_server)
@@ -901,7 +902,7 @@ impl Match for QueryParamExactMatcher {
 pub struct QueryParamContainsMatcher(String, String);
 
 impl QueryParamContainsMatcher {
-    /// Specify the part of the query param value that should be matched as a string.
+    /// Specify the substring that the query parameter should contain.
     pub fn new<K: Into<String>, V: Into<String>>(key: K, value: V) -> Self {
         let key = key.into();
         let value = value.into();
