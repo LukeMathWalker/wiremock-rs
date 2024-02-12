@@ -1,6 +1,8 @@
 use crate::mock_server::bare_server::{BareMockServer, RequestRecording};
 use crate::mock_server::exposed_server::InnerServer;
+use crate::request::{BodyPrintLimit, BODY_PRINT_LIMIT};
 use crate::MockServer;
+use std::env;
 use std::net::TcpListener;
 
 /// A builder providing a fluent API to assemble a [`MockServer`] step-by-step.  
@@ -8,13 +10,22 @@ use std::net::TcpListener;
 pub struct MockServerBuilder {
     listener: Option<TcpListener>,
     record_incoming_requests: bool,
+    body_print_limit: BodyPrintLimit,
 }
 
 impl MockServerBuilder {
     pub(super) fn new() -> Self {
+        let body_print_limit = match env::var("WIREMOCK_BODY_PRINT_LIMIT")
+            .ok()
+            .and_then(|x| x.parse::<usize>().ok())
+        {
+            Some(limit) => BodyPrintLimit::Limited(limit),
+            None => BodyPrintLimit::Limited(BODY_PRINT_LIMIT),
+        };
         Self {
             listener: None,
             record_incoming_requests: true,
+            body_print_limit,
         }
     }
 
@@ -76,6 +87,18 @@ impl MockServerBuilder {
         self
     }
 
+    /// The mock server prints the requests it received when one or more mocks have expectations that have not been satisfied.
+    /// By default, the size of the printed body is limited.
+    ///
+    /// You may want to change this if you're working with services with very large
+    /// bodies, or when printing wiremock output to a file where size matters
+    /// less than in a terminal window. You can configure this limit with
+    /// `MockServerBuilder::body_print_limit`.
+    pub fn body_print_limit(mut self, limit: BodyPrintLimit) -> Self {
+        self.body_print_limit = limit;
+        self
+    }
+
     /// Finalise the builder to get an instance of a [`BareMockServer`].
     pub(super) async fn build_bare(self) -> BareMockServer {
         let listener = if let Some(listener) = self.listener {
@@ -88,7 +111,7 @@ impl MockServerBuilder {
         } else {
             RequestRecording::Disabled
         };
-        BareMockServer::start(listener, recording).await
+        BareMockServer::start(listener, recording, self.body_print_limit).await
     }
 
     /// Finalise the builder and launch the [`MockServer`] instance!

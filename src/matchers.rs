@@ -10,15 +10,14 @@
 use crate::{Match, Request};
 use assert_json_diff::{assert_json_matches_no_panic, CompareMode};
 use base64::prelude::{Engine as _, BASE64_STANDARD};
-use http_types::headers::{HeaderName, HeaderValue, HeaderValues};
-use http_types::{Method, Url};
+use http::{HeaderName, HeaderValue, Method};
 use log::debug;
 use regex::Regex;
 use serde::Serialize;
 use serde_json::Value;
 use std::convert::TryInto;
-use std::ops::Deref;
 use std::str;
+use url::Url;
 
 /// Implement the `Match` trait for all closures, out of the box,
 /// if their signature is compatible.
@@ -342,7 +341,7 @@ impl Match for PathRegexMatcher {
 ///     assert_eq!(status, 200);
 /// }
 /// ```
-pub struct HeaderExactMatcher(HeaderName, HeaderValues);
+pub struct HeaderExactMatcher(HeaderName, Vec<HeaderValue>);
 
 /// Shorthand for [`HeaderExactMatcher::new`].
 pub fn header<K, V>(key: K, value: V) -> HeaderExactMatcher
@@ -352,7 +351,7 @@ where
     V: TryInto<HeaderValue>,
     <V as TryInto<HeaderValue>>::Error: std::fmt::Debug,
 {
-    HeaderExactMatcher::new(key, value.try_into().map(HeaderValues::from).unwrap())
+    HeaderExactMatcher::new(key, vec![value])
 }
 
 /// Shorthand for [`HeaderExactMatcher::new`] supporting multi valued headers.
@@ -363,38 +362,44 @@ where
     V: TryInto<HeaderValue>,
     <V as TryInto<HeaderValue>>::Error: std::fmt::Debug,
 {
-    let values = values
-        .into_iter()
-        .filter_map(|v| v.try_into().ok())
-        .collect::<HeaderValues>();
     HeaderExactMatcher::new(key, values)
 }
 
 impl HeaderExactMatcher {
-    pub fn new<K, V>(key: K, value: V) -> Self
+    pub fn new<K, V>(key: K, values: Vec<V>) -> Self
     where
         K: TryInto<HeaderName>,
         <K as TryInto<HeaderName>>::Error: std::fmt::Debug,
-        V: TryInto<HeaderValues>,
-        <V as TryInto<HeaderValues>>::Error: std::fmt::Debug,
+        V: TryInto<HeaderValue>,
+        <V as TryInto<HeaderValue>>::Error: std::fmt::Debug,
     {
         let key = key.try_into().expect("Failed to convert to header name.");
-        let value = value
-            .try_into()
-            .expect("Failed to convert to header value.");
-        Self(key, value)
+        let values = values
+            .into_iter()
+            .map(|value| {
+                value
+                    .try_into()
+                    .expect("Failed to convert to header value.")
+            })
+            .collect();
+        Self(key, values)
     }
 }
 
 impl Match for HeaderExactMatcher {
     fn matches(&self, request: &Request) -> bool {
-        match request.headers.get(&self.0) {
-            None => false,
-            Some(values) => {
-                let headers: Vec<&str> = self.1.iter().map(HeaderValue::as_str).collect();
-                values.eq(headers.as_slice())
-            }
-        }
+        let values = request
+            .headers
+            .get_all(&self.0)
+            .iter()
+            .filter_map(|v| v.to_str().ok())
+            .flat_map(|v| {
+                v.split(',')
+                    .map(str::trim)
+                    .filter_map(|v| HeaderValue::from_str(v).ok())
+            })
+            .collect::<Vec<_>>();
+        values == self.1 // order matters
     }
 }
 
@@ -513,12 +518,16 @@ impl HeaderRegexMatcher {
 
 impl Match for HeaderRegexMatcher {
     fn matches(&self, request: &Request) -> bool {
-        match request.headers.get(&self.0) {
-            None => false,
-            Some(values) => {
-                let has_values = values.iter().next().is_some();
-                has_values && values.iter().all(|v| self.1.is_match(v.as_str()))
-            }
+        let mut it = request
+            .headers
+            .get_all(&self.0)
+            .iter()
+            .filter_map(|v| v.to_str().ok())
+            .peekable();
+        if it.peek().is_some() {
+            it.all(|v| self.1.is_match(v))
+        } else {
+            false
         }
     }
 }
@@ -862,6 +871,64 @@ impl Match for QueryParamExactMatcher {
 }
 
 #[derive(Debug)]
+/// Match when a query parameter contains the specified value as a substring.
+///
+/// ### Example:
+/// ```rust
+/// use wiremock::{MockServer, Mock, ResponseTemplate};
+/// use wiremock::matchers::query_param_contains;
+///
+/// #[async_std::main]
+/// async fn main() {
+///     // Arrange
+///     let mock_server = MockServer::start().await;
+///
+///     // It matches since "world" is a substring of "some_world".
+///     Mock::given(query_param_contains("hello", "world"))
+///         .respond_with(ResponseTemplate::new(200))
+///         .mount(&mock_server)
+///         .await;
+///
+///     // Act
+///     let status = surf::get(format!("{}?hello=some_world", &mock_server.uri()))
+///         .await
+///         .unwrap()
+///         .status();
+///
+///     // Assert
+///     assert_eq!(status, 200);
+/// }
+/// ```
+pub struct QueryParamContainsMatcher(String, String);
+
+impl QueryParamContainsMatcher {
+    /// Specify the substring that the query parameter should contain.
+    pub fn new<K: Into<String>, V: Into<String>>(key: K, value: V) -> Self {
+        let key = key.into();
+        let value = value.into();
+        Self(key, value)
+    }
+}
+
+/// Shorthand for [`QueryParamContainsMatcher::new`].
+pub fn query_param_contains<K, V>(key: K, value: V) -> QueryParamContainsMatcher
+where
+    K: Into<String>,
+    V: Into<String>,
+{
+    QueryParamContainsMatcher::new(key, value)
+}
+
+impl Match for QueryParamContainsMatcher {
+    fn matches(&self, request: &Request) -> bool {
+        request
+            .url
+            .query_pairs()
+            .any(|q| q.0 == self.0.as_str() && q.1.contains(self.1.as_str()))
+    }
+}
+
+#[derive(Debug)]
 /// Only match requests that do **not** contain a specified query parameter.
 ///
 /// ### Example:
@@ -994,7 +1061,6 @@ where
 /// use wiremock::{MockServer, Mock, ResponseTemplate};
 /// use wiremock::matchers::basic_auth;
 /// use serde::{Deserialize, Serialize};
-/// use http_types::auth::BasicAuth;
 /// use std::convert::TryInto;
 ///
 /// #[async_std::main]
@@ -1008,10 +1074,9 @@ where
 ///         .mount(&mock_server)
 ///         .await;
 ///
-///     let auth = BasicAuth::new("username", "password");
 ///     let client: surf::Client = surf::Config::new()
 ///         .set_base_url(surf::Url::parse(&mock_server.uri()).unwrap())
-///         .add_header(auth.name(), auth.value()).unwrap()
+///         .add_header("Authorization", "Basic dXNlcm5hbWU6cGFzc3dvcmQ=").unwrap()
 ///         .try_into().unwrap();
 ///
 ///     // Act
@@ -1040,7 +1105,7 @@ impl BasicAuthMatcher {
     pub fn from_token(token: impl AsRef<str>) -> Self {
         Self(header(
             "Authorization",
-            format!("Basic {}", token.as_ref()).deref(),
+            &*format!("Basic {}", token.as_ref()),
         ))
     }
 }
@@ -1069,7 +1134,6 @@ impl Match for BasicAuthMatcher {
 /// use wiremock::{MockServer, Mock, ResponseTemplate};
 /// use wiremock::matchers::bearer_token;
 /// use serde::{Deserialize, Serialize};
-/// use http_types::auth::BasicAuth;
 ///
 /// #[async_std::main]
 /// async fn main() {
@@ -1098,7 +1162,7 @@ impl BearerTokenMatcher {
     pub fn from_token(token: impl AsRef<str>) -> Self {
         Self(header(
             "Authorization",
-            format!("Bearer {}", token.as_ref()).deref(),
+            &*format!("Bearer {}", token.as_ref()),
         ))
     }
 }

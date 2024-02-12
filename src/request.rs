@@ -1,11 +1,21 @@
-use std::iter::FromIterator;
-use std::str::FromStr;
-use std::{collections::HashMap, fmt};
+use std::fmt;
 
-use futures::AsyncReadExt;
-use http_types::convert::DeserializeOwned;
-use http_types::headers::{HeaderName, HeaderValue, HeaderValues};
-use http_types::{Method, Url};
+use http::{HeaderMap, Method};
+use http_body_util::BodyExt;
+use serde::de::DeserializeOwned;
+use url::Url;
+
+pub const BODY_PRINT_LIMIT: usize = 10_000;
+
+/// Specifies limitations on printing request bodies when logging requests. For some mock servers
+/// the bodies may be too large to reasonably print and it may be desirable to limit them.
+#[derive(Debug, Copy, Clone)]
+pub enum BodyPrintLimit {
+    /// Maximum length of a body to print in bytes.
+    Limited(usize),
+    /// There is no limit to the size of a body that may be printed.
+    Unlimited,
+}
 
 /// An incoming request to an instance of [`MockServer`].
 ///
@@ -29,23 +39,8 @@ use http_types::{Method, Url};
 pub struct Request {
     pub url: Url,
     pub method: Method,
-    pub headers: HashMap<HeaderName, HeaderValues>,
+    pub headers: HeaderMap,
     pub body: Vec<u8>,
-}
-
-impl fmt::Display for Request {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        writeln!(f, "{} {}", self.method, self.url)?;
-        for (name, values) in &self.headers {
-            let values = values
-                .iter()
-                .map(|value| format!("{}", value))
-                .collect::<Vec<_>>();
-            let values = values.join(",");
-            writeln!(f, "{}: {}", name, values)?;
-        }
-        writeln!(f, "{}", String::from_utf8_lossy(&self.body))
-    }
 }
 
 impl Request {
@@ -57,34 +52,8 @@ impl Request {
         serde_urlencoded::from_bytes(&self.body)
     }
 
-    pub async fn from(mut request: http_types::Request) -> Request {
-        let method = request.method();
-        let url = request.url().to_owned();
-
-        let mut headers = HashMap::new();
-        for (header_name, header_values) in &request {
-            headers.insert(header_name.to_owned(), header_values.to_owned());
-        }
-
-        let mut body: Vec<u8> = vec![];
-        request
-            .take_body()
-            .into_reader()
-            .read_to_end(&mut body)
-            .await
-            .expect("Failed to read body");
-
-        Self {
-            url,
-            method,
-            headers,
-            body,
-        }
-    }
-
-    pub(crate) async fn from_hyper(request: hyper::Request<hyper::Body>) -> Request {
+    pub(crate) async fn from_hyper(request: hyper::Request<hyper::body::Incoming>) -> Request {
         let (parts, body) = request.into_parts();
-        let method = parts.method.into();
         let url = match parts.uri.authority() {
             Some(_) => parts.uri.to_string(),
             None => format!("http://localhost{}", parts.uri),
@@ -92,37 +61,77 @@ impl Request {
         .parse()
         .unwrap();
 
-        let mut headers = HashMap::new();
-        for name in parts.headers.keys() {
-            let name = name.as_str().as_bytes().to_owned();
-            let name = HeaderName::from_bytes(name).unwrap();
-            let values = parts.headers.get_all(name.as_str());
-            for value in values {
-                let value = value.as_bytes().to_owned();
-                let value = HeaderValue::from_bytes(value).unwrap();
-                let value_parts = value.as_str().split(',');
-                let value_parts = value_parts
-                    .map(|it| it.trim())
-                    .filter_map(|it| HeaderValue::from_str(it).ok());
-                headers
-                    .entry(name.clone())
-                    .and_modify(|values: &mut HeaderValues| {
-                        values.append(&mut HeaderValues::from_iter(value_parts.clone()))
-                    })
-                    .or_insert_with(|| value_parts.collect());
-            }
-        }
-
-        let body = hyper::body::to_bytes(body)
+        let body = body
+            .collect()
             .await
             .expect("Failed to read request body.")
-            .to_vec();
+            .to_bytes();
 
         Self {
             url,
-            method,
-            headers,
-            body,
+            method: parts.method,
+            headers: parts.headers,
+            body: body.to_vec(),
+        }
+    }
+
+    pub(crate) fn print_with_limit(
+        &self,
+        mut buffer: impl fmt::Write,
+        body_print_limit: BodyPrintLimit,
+    ) -> fmt::Result {
+        writeln!(buffer, "{} {}", self.method, self.url)?;
+        for name in self.headers.keys() {
+            let values = self
+                .headers
+                .get_all(name)
+                .iter()
+                .map(|value| String::from_utf8_lossy(value.as_bytes()))
+                .collect::<Vec<_>>();
+            let values = values.join(",");
+            writeln!(buffer, "{}: {}", name, values)?;
+        }
+
+        match body_print_limit {
+            BodyPrintLimit::Limited(limit) if self.body.len() > limit => {
+                let mut written = false;
+                for end_byte in limit..(limit + 4).max(self.body.len()) {
+                    if let Ok(truncated) = std::str::from_utf8(&self.body[..end_byte]) {
+                        written = true;
+                        writeln!(buffer, "{}", truncated)?;
+                        if end_byte < self.body.len() {
+                            writeln!(
+                                buffer,
+                                "We truncated the body because it was too large: {} bytes (limit: {} bytes)",
+                                self.body.len(),
+                                limit
+                            )?;
+                            writeln!(buffer, "Increase this limit by setting `WIREMOCK_BODY_PRINT_LIMIT`, or calling `MockServerBuilder::body_print_limit` when building your MockServer instance")?;
+                        }
+                        break;
+                    }
+                }
+                if !written {
+                    writeln!(
+                        buffer,
+                        "Body is likely binary (invalid utf-8) size is {} bytes",
+                        self.body.len()
+                    )
+                } else {
+                    Ok(())
+                }
+            }
+            _ => {
+                if let Ok(body) = std::str::from_utf8(&self.body) {
+                    writeln!(buffer, "{}", body)
+                } else {
+                    writeln!(
+                        buffer,
+                        "Body is likely binary (invalid utf-8) size is {} bytes",
+                        self.body.len()
+                    )
+                }
+            }
         }
     }
 }

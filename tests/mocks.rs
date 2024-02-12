@@ -1,9 +1,9 @@
 use futures::FutureExt;
-use http_types::StatusCode;
 use serde::Serialize;
 use serde_json::json;
 use std::net::TcpStream;
 use std::time::Duration;
+use surf::StatusCode;
 use wiremock::matchers::{body_json, body_partial_json, method, path, PathExactMatcher};
 use wiremock::{Mock, MockServer, ResponseTemplate};
 
@@ -13,7 +13,7 @@ async fn new_starts_the_server() {
     let mock_server = MockServer::start().await;
 
     // Assert
-    assert!(TcpStream::connect(&mock_server.address()).is_ok())
+    assert!(TcpStream::connect(mock_server.address()).is_ok())
 }
 
 #[async_std::test]
@@ -338,4 +338,30 @@ async fn use_mock_guard_to_await_satisfaction_readiness() {
     )
     .await
     .expect("should be satisfied");
+}
+
+#[async_std::test]
+async fn debug_prints_mock_server_variants() {
+    let pooled_mock_server = MockServer::start().await;
+    let pooled_debug_str = format!("{:?}", pooled_mock_server);
+
+    assert!(pooled_debug_str.starts_with("MockServer(Pooled(Object {"));
+    assert!(pooled_debug_str
+        .find(
+            format!(
+                "BareMockServer {{ address: {} }}",
+                pooled_mock_server.address()
+            )
+            .as_str()
+        )
+        .is_some());
+
+    let bare_mock_server = MockServer::builder().start().await;
+    assert_eq!(
+        format!(
+            "MockServer(Bare(BareMockServer {{ address: {} }}))",
+            bare_mock_server.address()
+        ),
+        format!("{:?}", bare_mock_server)
+    );
 }

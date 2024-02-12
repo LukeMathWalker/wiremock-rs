@@ -1,4 +1,3 @@
-use hyper::HeaderMap;
 use wiremock::matchers::{basic_auth, bearer_token, header, header_regex, headers, method};
 use wiremock::{Mock, MockServer, ResponseTemplate};
 
@@ -88,12 +87,11 @@ async fn should_match_multi_request_header_x() {
     mock_server.register(mock).await;
 
     // Act
-    let mut header_map = HeaderMap::new();
-    header_map.append("cache-control", "no-cache".parse().unwrap());
-    header_map.append("cache-control", "no-store".parse().unwrap());
     let should_match = reqwest::Client::new()
         .get(mock_server.uri())
-        .headers(header_map)
+        // TODO: use a dedicated headers when upgrade reqwest v0.12
+        .header("cache-control", "no-cache")
+        .header("cache-control", "no-store")
         .send()
         .await
         .unwrap();

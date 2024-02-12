@@ -1,7 +1,7 @@
 use crate::mock_server::bare_server::BareMockServer;
 use crate::MockServer;
 use async_trait::async_trait;
-use deadpool::managed::{Object, Pool};
+use deadpool::managed::{Metrics, Object, Pool};
 use once_cell::sync::Lazy;
 use std::convert::Infallible;
 
@@ -49,6 +49,7 @@ pub(crate) async fn get_pooled_mock_server() -> PooledMockServer {
 /// It:
 /// - creates a new `BareMockServer` if there is none to borrow from the pool;
 /// - "cleans up" used `BareMockServer`s before making them available again for other tests to use.
+#[derive(Debug)]
 pub(crate) struct MockServerPoolManager;
 
 #[async_trait]
@@ -64,6 +65,7 @@ impl deadpool::managed::Manager for MockServerPoolManager {
     async fn recycle(
         &self,
         mock_server: &mut BareMockServer,
+        _metrics: &Metrics,
     ) -> deadpool::managed::RecycleResult<Infallible> {
         // Remove all existing settings - we want to start clean when the mock server
         // is picked up again from the pool.

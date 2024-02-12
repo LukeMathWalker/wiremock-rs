@@ -1,16 +1,18 @@
+use crate::request::BodyPrintLimit;
 use crate::{
     mounted_mock::MountedMock,
     verification::{VerificationOutcome, VerificationReport},
 };
 use crate::{Mock, Request, ResponseTemplate};
-use futures_timer::Delay;
-use http_types::{Response, StatusCode};
+use http_body_util::Full;
+use hyper::body::Bytes;
 use log::debug;
 use std::{
     ops::{Index, IndexMut},
     sync::{atomic::AtomicBool, Arc},
 };
 use tokio::sync::Notify;
+use tokio::time::{sleep, Sleep};
 
 /// The collection of mocks used by a `MockServer` instance to match against
 /// incoming requests.
@@ -26,6 +28,7 @@ pub(crate) struct MountedMockSet {
     /// We need `generation` to know if a [`MockId`] points to an [`MountedMock`] that has been
     /// removed via [`MountedMockSet::reset`].
     generation: u16,
+    body_print_limit: BodyPrintLimit,
 }
 
 /// A `MockId` is an opaque index that uniquely identifies an [`MountedMock`] inside an [`MountedMockSet`].
@@ -41,15 +44,19 @@ pub(crate) struct MockId {
 }
 
 impl MountedMockSet {
-    /// Create a new instance of MockSet.
-    pub(crate) fn new() -> MountedMockSet {
+    /// Create a new instance of `MountedMockSet`.
+    pub(crate) fn new(body_print_limit: BodyPrintLimit) -> MountedMockSet {
         MountedMockSet {
             mocks: vec![],
             generation: 0,
+            body_print_limit,
         }
     }
 
-    pub(crate) async fn handle_request(&mut self, request: Request) -> (Response, Option<Delay>) {
+    pub(crate) async fn handle_request(
+        &mut self,
+        request: Request,
+    ) -> (hyper::Response<Full<Bytes>>, Option<Sleep>) {
         debug!("Handling request.");
         let mut response_template: Option<ResponseTemplate> = None;
         self.mocks.sort_by_key(|(m, _)| m.specification.priority);
@@ -63,11 +70,19 @@ impl MountedMockSet {
             }
         }
         if let Some(response_template) = response_template {
-            let delay = response_template.delay().map(|d| Delay::new(d.to_owned()));
+            let delay = response_template.delay().map(sleep);
             (response_template.generate_response(), delay)
         } else {
-            debug!("Got unexpected request:\n{}", request);
-            (Response::new(StatusCode::NotFound), None)
+            let mut msg = "Got unexpected request:\n".to_string();
+            _ = request.print_with_limit(&mut msg, self.body_print_limit);
+            debug!("{}", msg);
+            (
+                hyper::Response::builder()
+                    .status(hyper::StatusCode::NOT_FOUND)
+                    .body(Full::default())
+                    .unwrap(),
+                None,
+            )
         }
     }
 
@@ -94,7 +109,7 @@ impl MountedMockSet {
     ///
     /// It will stop matching against incoming requests, regardless of its specification.
     pub(crate) fn deactivate(&mut self, mock_id: MockId) {
-        let mut mock = &mut self[mock_id];
+        let mock = &mut self[mock_id];
         mock.1 = MountedMockState::OutOfScope;
     }
 
@@ -167,11 +182,16 @@ pub(crate) enum MountedMockState {
 mod tests {
     use crate::matchers::path;
     use crate::mock_set::{MountedMockSet, MountedMockState};
+    use crate::request::BodyPrintLimit;
     use crate::{Mock, ResponseTemplate};
+
+    fn test_mock_set() -> MountedMockSet {
+        MountedMockSet::new(BodyPrintLimit::Unlimited)
+    }
 
     #[test]
     fn generation_is_incremented_for_every_reset() {
-        let mut set = MountedMockSet::new();
+        let mut set = test_mock_set();
         assert_eq!(set.generation, 0);
 
         for i in 1..10 {
@@ -184,7 +204,7 @@ mod tests {
     #[should_panic]
     fn accessing_a_mock_id_after_a_reset_triggers_a_panic() {
         // Assert
-        let mut set = MountedMockSet::new();
+        let mut set = test_mock_set();
         let mock = Mock::given(path("/")).respond_with(ResponseTemplate::new(200));
         let (_, mock_id) = set.register(mock);
 
@@ -198,7 +218,7 @@ mod tests {
     #[test]
     fn deactivating_a_mock_does_not_invalidate_other_ids() {
         // Assert
-        let mut set = MountedMockSet::new();
+        let mut set = test_mock_set();
         let first_mock = Mock::given(path("/")).respond_with(ResponseTemplate::new(200));
         let second_mock = Mock::given(path("/hello")).respond_with(ResponseTemplate::new(500));
         let (_, first_mock_id) = set.register(first_mock);

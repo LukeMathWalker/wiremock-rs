@@ -1,14 +1,17 @@
 use crate::mock_server::hyper::run_server;
 use crate::mock_set::MockId;
 use crate::mock_set::MountedMockSet;
+use crate::request::BodyPrintLimit;
 use crate::{mock::Mock, verification::VerificationOutcome, Request};
+use http_body_util::Full;
+use hyper::body::Bytes;
+use std::fmt::{Debug, Write};
 use std::net::{SocketAddr, TcpListener, TcpStream};
 use std::pin::pin;
 use std::sync::atomic::AtomicBool;
 use std::sync::Arc;
 use tokio::sync::Notify;
 use tokio::sync::RwLock;
-use tokio::task::LocalSet;
 
 /// An HTTP web-server running in the background to behave as one of your dependencies using `Mock`s
 /// for testing purposes.
@@ -20,7 +23,7 @@ pub(crate) struct BareMockServer {
     state: Arc<RwLock<MockServerState>>,
     server_address: SocketAddr,
     // When `_shutdown_trigger` gets dropped the listening server terminates gracefully.
-    _shutdown_trigger: tokio::sync::oneshot::Sender<()>,
+    _shutdown_trigger: tokio::sync::watch::Sender<()>,
 }
 
 /// The elements of [`BareMockServer`] that are affected by each incoming request.
@@ -29,13 +32,14 @@ pub(crate) struct BareMockServer {
 pub(super) struct MockServerState {
     mock_set: MountedMockSet,
     received_requests: Option<Vec<Request>>,
+    body_print_limit: BodyPrintLimit,
 }
 
 impl MockServerState {
     pub(super) async fn handle_request(
         &mut self,
         request: Request,
-    ) -> (http_types::Response, Option<futures_timer::Delay>) {
+    ) -> (hyper::Response<Full<Bytes>>, Option<tokio::time::Sleep>) {
         // If request recording is enabled, record the incoming request
         // by adding it to the `received_requests` stack
         if let Some(received_requests) = &mut self.received_requests {
@@ -47,16 +51,21 @@ impl MockServerState {
 
 impl BareMockServer {
     /// Start a new instance of a `BareMockServer` listening on the specified
-    /// [`TcpListener`](std::net::TcpListener).
-    pub(super) async fn start(listener: TcpListener, request_recording: RequestRecording) -> Self {
-        let (shutdown_trigger, shutdown_receiver) = tokio::sync::oneshot::channel();
+    /// [`TcpListener`].
+    pub(super) async fn start(
+        listener: TcpListener,
+        request_recording: RequestRecording,
+        body_print_limit: BodyPrintLimit,
+    ) -> Self {
+        let (shutdown_trigger, shutdown_receiver) = tokio::sync::watch::channel(());
         let received_requests = match request_recording {
             RequestRecording::Enabled => Some(Vec::new()),
             RequestRecording::Disabled => None,
         };
         let state = Arc::new(RwLock::new(MockServerState {
-            mock_set: MountedMockSet::new(),
+            mock_set: MountedMockSet::new(body_print_limit),
             received_requests,
+            body_print_limit,
         }));
         let server_address = listener
             .local_addr()
@@ -71,7 +80,7 @@ impl BareMockServer {
                 .build()
                 .expect("Cannot build local tokio runtime");
 
-            LocalSet::new().block_on(&runtime, server_future)
+            runtime.block_on(server_future);
         });
         for _ in 0..40 {
             if TcpStream::connect_timeout(&server_address, std::time::Duration::from_millis(25))
@@ -79,7 +88,7 @@ impl BareMockServer {
             {
                 break;
             }
-            futures_timer::Delay::new(std::time::Duration::from_millis(25)).await;
+            tokio::time::sleep(std::time::Duration::from_millis(25)).await;
         }
 
         Self {
@@ -147,13 +156,24 @@ impl BareMockServer {
         &self.server_address
     }
 
+    /// Return the body print limit of this running instance of `BareMockServer`.
+    pub(crate) async fn body_print_limit(&self) -> BodyPrintLimit {
+        self.state.read().await.body_print_limit
+    }
+
     /// Return a vector with all the requests received by the `BareMockServer` since it started.  
     /// If no request has been served, it returns an empty vector.
     ///
     /// If request recording was disabled, it returns `None`.
     pub(crate) async fn received_requests(&self) -> Option<Vec<Request>> {
         let state = self.state.read().await;
-        state.received_requests.to_owned()
+        state.received_requests.clone()
+    }
+}
+
+impl Debug for BareMockServer {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "BareMockServer {{ address: {} }}", self.address())
     }
 }
 
@@ -255,7 +275,7 @@ impl MockGuard {
         }
 
         // await event
-        notification.await
+        notification.await;
     }
 }
 
@@ -277,19 +297,13 @@ impl Drop for MockGuard {
                     if received_requests.is_empty() {
                         "The server did not receive any request.".into()
                     } else {
-                        format!(
-                            "Received requests:\n{}",
-                            received_requests
-                                .iter()
-                                .enumerate()
-                                .map(|(index, request)| {
-                                    format!(
-                                        "- Request #{}\n{}",
-                                        index + 1,
-                                        &format!("\t{}", request)
-                                    )
-                                })
-                                .collect::<String>()
+                        received_requests.iter().enumerate().fold(
+                            "Received requests:\n".to_string(),
+                            |mut message, (index, request)| {
+                                _ = write!(message, "- Request #{}\n\t", index + 1,);
+                                _ = request.print_with_limit(&mut message, state.body_print_limit);
+                                message
+                            },
                         )
                     }
                 } else {
@@ -310,6 +324,6 @@ impl Drop for MockGuard {
                 state.mock_set.deactivate(*mock_id);
             }
         };
-        futures::executor::block_on(future)
+        futures::executor::block_on(future);
     }
 }

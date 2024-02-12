@@ -3,7 +3,7 @@ use std::{
     sync::{Arc, RwLock},
 };
 
-use http_types::mime;
+use surf::http::mime;
 use wiremock::{matchers::any, Mock, MockServer, Request, ResponseTemplate};
 
 #[async_std::test]
