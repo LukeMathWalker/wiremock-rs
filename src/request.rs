@@ -48,6 +48,10 @@ impl Request {
         serde_json::from_slice(&self.body)
     }
 
+    pub fn body_form<T: DeserializeOwned>(&self) -> Result<T, serde_urlencoded::de::Error> {
+        serde_urlencoded::from_bytes(&self.body)
+    }
+
     pub(crate) async fn from_hyper(request: hyper::Request<hyper::body::Incoming>) -> Request {
         let (parts, body) = request.into_parts();
         let url = match parts.uri.authority() {
