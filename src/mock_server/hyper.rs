@@ -60,9 +60,9 @@ pub(super) async fn run_server(
         let request_handler = request_handler.clone();
         let mut shutdown_signal = shutdown_signal.clone();
         tokio::task::spawn(async move {
-            let conn = hyper::server::conn::http1::Builder::new()
-                .serve_connection(io, service_fn(request_handler))
-                .with_upgrades();
+            let http_server =
+                hyper_util::server::conn::auto::Builder::new(hyper_util::rt::TokioExecutor::new());
+            let conn = http_server.serve_connection_with_upgrades(io, service_fn(request_handler));
             tokio::pin!(conn);
 
             loop {
