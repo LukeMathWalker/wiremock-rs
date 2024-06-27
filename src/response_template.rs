@@ -116,10 +116,36 @@ impl ResponseTemplate {
 
     /// Append multiple header key-value pairs.
     ///
-    /// Unlike `insert_header`, this function will not override the contents of a header:
-    /// - if there are no header values with `key` as header name, it will insert one;
-    /// - if there are already some values with `key` as header name, it will append to the
-    ///   existing list.
+    /// Existing header values will not be overridden.
+    ///
+    /// # Example
+    /// ```rust
+    /// use wiremock::{MockServer, Mock, ResponseTemplate};
+    /// use wiremock::matchers::method;
+    ///
+    /// #[async_std::main]
+    /// async fn main() {
+    ///     // Arrange
+    ///     let mock_server = MockServer::start().await;
+    ///     let headers = vec![
+    ///         ("Set-Cookie", "name=value"),
+    ///         ("Set-Cookie", "name2=value2; Domain=example.com"),
+    ///     ];
+    ///     let template = ResponseTemplate::new(200).append_headers(headers);
+    ///     Mock::given(method("GET"))
+    ///         .respond_with(template)
+    ///         .mount(&mock_server)
+    ///         .await;
+    ///
+    ///     // Act
+    ///     let res = surf::get(&mock_server.uri())
+    ///         .await
+    ///         .unwrap();
+    ///
+    ///     // Assert
+    ///     assert_eq!(res.header("Set-Cookie").unwrap().iter().count(), 2);
+    /// }
+    /// ```
     pub fn append_headers<K, V, I>(mut self, headers: I) -> Self
     where
         K: TryInto<HeaderName>,
