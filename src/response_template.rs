@@ -114,6 +114,33 @@ impl ResponseTemplate {
         self
     }
 
+    /// Append multiple header key-value pairs.
+    ///
+    /// Unlike `insert_header`, this function will not override the contents of a header:
+    /// - if there are no header values with `key` as header name, it will insert one;
+    /// - if there are already some values with `key` as header name, it will append to the
+    ///   existing list.
+    pub fn append_headers<K, V, I>(mut self, headers: I) -> Self
+    where
+        K: TryInto<HeaderName>,
+        <K as TryInto<HeaderName>>::Error: std::fmt::Debug,
+        V: TryInto<HeaderValue>,
+        <V as TryInto<HeaderValue>>::Error: std::fmt::Debug,
+        I: IntoIterator<Item = (K, V)>,
+    {
+        let headers = headers.into_iter().map(|(key, value)| {
+            (
+                key.try_into().expect("Failed to convert into header name."),
+                value
+                    .try_into()
+                    .expect("Failed to convert into header value."),
+            )
+        });
+        // The `Extend<(HeaderName, T)>` impl uses `HeaderMap::append` internally: https://docs.rs/http/1.0.0/src/http/header/map.rs.html#1953
+        self.headers.extend(headers);
+        self
+    }
+
     /// Set the response body with bytes.
     ///
     /// It sets "Content-Type" to "application/octet-stream".
