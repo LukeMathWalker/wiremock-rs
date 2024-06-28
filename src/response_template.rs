@@ -114,6 +114,59 @@ impl ResponseTemplate {
         self
     }
 
+    /// Append multiple header key-value pairs.
+    ///
+    /// Existing header values will not be overridden.
+    ///
+    /// # Example
+    /// ```rust
+    /// use wiremock::{MockServer, Mock, ResponseTemplate};
+    /// use wiremock::matchers::method;
+    ///
+    /// #[async_std::main]
+    /// async fn main() {
+    ///     // Arrange
+    ///     let mock_server = MockServer::start().await;
+    ///     let headers = vec![
+    ///         ("Set-Cookie", "name=value"),
+    ///         ("Set-Cookie", "name2=value2; Domain=example.com"),
+    ///     ];
+    ///     let template = ResponseTemplate::new(200).append_headers(headers);
+    ///     Mock::given(method("GET"))
+    ///         .respond_with(template)
+    ///         .mount(&mock_server)
+    ///         .await;
+    ///
+    ///     // Act
+    ///     let res = surf::get(&mock_server.uri())
+    ///         .await
+    ///         .unwrap();
+    ///
+    ///     // Assert
+    ///     assert_eq!(res.header("Set-Cookie").unwrap().iter().count(), 2);
+    /// }
+    /// ```
+    pub fn append_headers<K, V, I>(mut self, headers: I) -> Self
+    where
+        K: TryInto<HeaderName>,
+        <K as TryInto<HeaderName>>::Error: std::fmt::Debug,
+        V: TryInto<HeaderValue>,
+        <V as TryInto<HeaderValue>>::Error: std::fmt::Debug,
+        I: IntoIterator<Item = (K, V)>,
+    {
+        let headers = headers.into_iter().map(|(key, value)| {
+            (
+                key.try_into().expect("Failed to convert into header name."),
+                value
+                    .try_into()
+                    .expect("Failed to convert into header value."),
+            )
+        });
+        // The `Extend<(HeaderName, T)>` impl uses `HeaderMap::append` internally: https://docs.rs/http/1.0.0/src/http/header/map.rs.html#1953
+        self.headers.extend(headers);
+        self
+    }
+
     /// Set the response body with bytes.
     ///
     /// It sets "Content-Type" to "application/octet-stream".
