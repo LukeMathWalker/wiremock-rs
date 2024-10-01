@@ -59,7 +59,7 @@ Add `wiremock` to your development dependencies by editing the `Cargo.toml` file
 ```toml
 [dev-dependencies]
 # ...
-wiremock = "0.5"
+wiremock = "0.6"
 ```
 Or by running:
 ```bash
