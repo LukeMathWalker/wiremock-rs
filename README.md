@@ -90,14 +90,14 @@ async fn main() {
         .await
         .unwrap()
         .status();
-    assert_eq!(status.as_u16(), 200);
+    assert_eq!(status, surf::StatusCode::Ok);
 
     // If the request doesn't match any `Mock` mounted on our `MockServer` a 404 is returned.
     let status = surf::get(format!("{}/missing", &mock_server.uri()))
         .await
         .unwrap()
         .status();
-    assert_eq!(status.as_u16(), 404);
+    assert_eq!(status, surf::StatusCode::NotFound);
 }
 ```
 
