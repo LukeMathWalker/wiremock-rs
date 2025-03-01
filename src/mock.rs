@@ -765,6 +765,12 @@ impl From<u64> for Times {
     }
 }
 
+impl From<RangeFull> for Times {
+    fn from(x: RangeFull) -> Self {
+        Times(TimesEnum::Unbounded(x))
+    }
+}
+
 // A quick macro to help easing the implementation pain.
 macro_rules! impl_from_for_range {
     ($type_name:ident) => {
