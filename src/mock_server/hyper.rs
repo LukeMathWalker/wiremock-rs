@@ -5,6 +5,17 @@ use std::sync::Arc;
 use tokio::net::TcpListener;
 use tokio::sync::RwLock;
 
+/// Work around a lifetime error where, for some reason,
+/// `Box<dyn std::error::Error + Send + Sync + 'static>` can't be converted to a
+/// `Box<dyn std::error::Error + Send + Sync>`
+struct ErrorLifetimeCast(Box<dyn std::error::Error + Send + Sync + 'static>);
+
+impl From<ErrorLifetimeCast> for Box<dyn std::error::Error + Send + Sync> {
+    fn from(value: ErrorLifetimeCast) -> Self {
+        value.0
+    }
+}
+
 /// The actual HTTP server responding to incoming requests according to the specified mocks.
 pub(super) async fn run_server(
     listener: std::net::TcpListener,
@@ -24,7 +35,8 @@ pub(super) async fn run_server(
                 .write()
                 .await
                 .handle_request(wiremock_request)
-                .await;
+                .await
+                .map_err(ErrorLifetimeCast)?;
 
             // We do not wait for the delay within the handler otherwise we would be
             // holding on to the write-side of the `RwLock` on `mock_set`.
@@ -38,7 +50,7 @@ pub(super) async fn run_server(
                 delay.await;
             }
 
-            Ok::<_, &'static str>(response)
+            Ok::<_, ErrorLifetimeCast>(response)
         }
     };
 
