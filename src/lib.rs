@@ -157,6 +157,8 @@ mod verification;
 
 pub use mock::{Match, Mock, MockBuilder, Times};
 pub use mock_server::{MockGuard, MockServer, MockServerBuilder};
+#[cfg(feature = "tls")]
+pub use mock_server::tls;
 pub use request::Request;
 pub use respond::Respond;
 pub use response_template::ResponseTemplate;
