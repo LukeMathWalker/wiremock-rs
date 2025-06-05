@@ -3,7 +3,7 @@ use std::fmt;
 use http::{HeaderMap, Method};
 use http_body_util::BodyExt;
 use serde::de::DeserializeOwned;
-use url::Url;
+use url::{form_urlencoded, Url};
 
 pub const BODY_PRINT_LIMIT: usize = 10_000;
 
@@ -46,6 +46,10 @@ pub struct Request {
 impl Request {
     pub fn body_json<T: DeserializeOwned>(&self) -> Result<T, serde_json::Error> {
         serde_json::from_slice(&self.body)
+    }
+
+    pub fn body_form_urlencoded(&self) -> form_urlencoded::Parse<'_> {
+        form_urlencoded::parse(&self.body)
     }
 
     pub(crate) async fn from_hyper(request: hyper::Request<hyper::body::Incoming>) -> Request {
