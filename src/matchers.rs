@@ -988,6 +988,204 @@ impl Match for QueryParamIsMissingMatcher {
         !request.url.query_pairs().any(|(k, _)| k == self.0)
     }
 }
+
+#[derive(Debug)]
+/// Match **exactly** the form url encoded field of a request.
+///
+/// ### Example:
+/// ```rust
+/// use wiremock::{MockServer, Mock, ResponseTemplate};
+/// use wiremock::matchers::form_url_encoded;
+/// use url::form_urlencoded;
+///
+/// #[async_std::main]
+/// async fn main() {
+///     // Arrange
+///     let mock_server = MockServer::start().await;
+///
+///     Mock::given(form_url_encoded("hello", "world"))
+///         .respond_with(ResponseTemplate::new(200))
+///         .mount(&mock_server)
+///         .await;
+///
+///     let form = form_urlencoded::Serializer::new(String::new())
+///         .append_pair("hello", "world")
+///         .finish();
+///
+///     // Act
+///     let status = surf::post(&mock_server.uri())
+///         .body(form)
+///         .await
+///         .unwrap()
+///         .status();
+///
+///     // Assert
+///     assert_eq!(status, 200);
+/// }
+/// ```
+pub struct FormUrlEncodedExactMatcher(String, String);
+
+impl FormUrlEncodedExactMatcher {
+    /// Specify the expected value for a field inside the form url encoded body.
+    pub fn new<K: Into<String>, V: Into<String>>(key: K, value: V) -> Self {
+        let key = key.into();
+        let value = value.into();
+        Self(key, value)
+    }
+}
+
+/// Shorthand for [`FormUrlEncodedExactMatcher::new`].
+pub fn form_url_encoded<K, V>(key: K, value: V) -> FormUrlEncodedExactMatcher
+where
+    K: Into<String>,
+    V: Into<String>,
+{
+    FormUrlEncodedExactMatcher::new(key, value)
+}
+
+impl Match for FormUrlEncodedExactMatcher {
+    fn matches(&self, request: &Request) -> bool {
+        request
+            .body_form_urlencoded()
+            .any(|(k, v)| k == self.0 && v == self.1)
+    }
+}
+
+#[derive(Debug)]
+/// Match when the form url encoded body contains the specified value as a substring.
+///
+/// ### Example:
+/// ```rust
+/// use wiremock::{MockServer, Mock, ResponseTemplate};
+/// use wiremock::matchers::form_url_encoded_contains;
+/// use url::form_urlencoded;
+///
+/// #[async_std::main]
+/// async fn main() {
+///     // Arrange
+///     let mock_server = MockServer::start().await;
+///
+///     // It matches since "world" is a substring of "some_world".
+///     Mock::given(form_url_encoded_contains("hello", "world"))
+///         .respond_with(ResponseTemplate::new(200))
+///         .mount(&mock_server)
+///         .await;
+///
+///     let form = form_urlencoded::Serializer::new(String::new())
+///         .append_pair("hello", "some_world")
+///         .finish();
+///
+///     // Act
+///     let status = surf::post(&mock_server.uri())
+///         .body(form)
+///         .await
+///         .unwrap()
+///         .status();
+///
+///     // Assert
+///     assert_eq!(status, 200);
+/// }
+/// ```
+pub struct FormUrlEncodedContainsMatcher(String, String);
+
+impl FormUrlEncodedContainsMatcher {
+    /// Specify the key value pair that the form url encoded body should contain.
+    pub fn new<K: Into<String>, V: Into<String>>(key: K, value: V) -> Self {
+        let key = key.into();
+        let value = value.into();
+        Self(key, value)
+    }
+}
+
+/// Shorthand for [`FormUrlEncodedContainsMatcher::new`].
+pub fn form_url_encoded_contains<K, V>(key: K, value: V) -> FormUrlEncodedContainsMatcher
+where
+    K: Into<String>,
+    V: Into<String>,
+{
+    FormUrlEncodedContainsMatcher::new(key, value)
+}
+
+impl Match for FormUrlEncodedContainsMatcher {
+    fn matches(&self, request: &Request) -> bool {
+        request
+            .body_form_urlencoded()
+            .any(|(k, v)| k == self.0 && v.contains(self.1.as_str()))
+    }
+}
+
+#[derive(Debug)]
+/// Only match requests that do **not** contain a specified form url encoded field.
+///
+/// ### Example:
+/// ```rust
+/// use wiremock::{MockServer, Mock, ResponseTemplate};
+/// use wiremock::matchers::{method, form_url_encoded_field_is_missing};
+/// use url::form_urlencoded;
+///
+/// #[async_std::main]
+/// async fn main() {
+///     // Arrange
+///     let mock_server = MockServer::start().await;
+///
+///     Mock::given(method("POST"))
+///         .and(form_url_encoded_field_is_missing("unexpected"))
+///         .respond_with(ResponseTemplate::new(200))
+///         .mount(&mock_server)
+///         .await;
+///
+///     let form = form_urlencoded::Serializer::new(String::new())
+///         .append_pair("hello", "world")
+///         .finish();
+///
+///     // Act
+///     let ok_status = surf::post(mock_server.uri().to_string())
+///         .body(form)
+///         .await
+///         .unwrap()
+///         .status();
+///
+///     // Assert
+///     assert_eq!(ok_status, 200);
+///
+///     let form = form_urlencoded::Serializer::new(String::new())
+///         .append_pair("unexpected", "foo")
+///         .finish();
+///
+///     // Act
+///     let err_status = surf::post(mock_server.uri())
+///     .body(form)
+///     .await.
+///     unwrap().status();
+///
+///     // Assert
+///     assert_eq!(err_status, 404);
+/// }
+/// ```
+pub struct FormUrlEncodedFieldIsMissingMatcher(String);
+
+impl FormUrlEncodedFieldIsMissingMatcher {
+    /// Specify the form field that is expected to not exist.
+    pub fn new<K: Into<String>>(key: K) -> Self {
+        let key = key.into();
+        Self(key)
+    }
+}
+
+/// Shorthand for [`FormUrlEncodedFieldIsMissingMatcher::new`].
+pub fn form_url_encoded_field_is_missing<K>(key: K) -> FormUrlEncodedFieldIsMissingMatcher
+where
+    K: Into<String>,
+{
+    FormUrlEncodedFieldIsMissingMatcher::new(key)
+}
+
+impl Match for FormUrlEncodedFieldIsMissingMatcher {
+    fn matches(&self, request: &Request) -> bool {
+        !request.body_form_urlencoded().any(|(k, _)| k == self.0)
+    }
+}
+
 /// Match an incoming request if its body is encoded as JSON and can be deserialized
 /// according to the specified schema.
 ///
