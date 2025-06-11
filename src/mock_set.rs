@@ -2,8 +2,9 @@ use crate::request::BodyPrintLimit;
 use crate::{
     mounted_mock::MountedMock,
     verification::{VerificationOutcome, VerificationReport},
+    ErrorResponse,
 };
-use crate::{Mock, Request, ResponseTemplate};
+use crate::{Mock, Request};
 use http_body_util::Full;
 use hyper::body::Bytes;
 use log::debug;
@@ -56,9 +57,9 @@ impl MountedMockSet {
     pub(crate) async fn handle_request(
         &mut self,
         request: Request,
-    ) -> (hyper::Response<Full<Bytes>>, Option<Sleep>) {
+    ) -> Result<(hyper::Response<Full<Bytes>>, Option<Sleep>), ErrorResponse> {
         debug!("Handling request.");
-        let mut response_template: Option<ResponseTemplate> = None;
+        let mut response_template: Option<_> = None;
         self.mocks.sort_by_key(|(m, _)| m.specification.priority);
         for (mock, mock_state) in &mut self.mocks {
             if *mock_state == MountedMockState::OutOfScope {
@@ -70,19 +71,22 @@ impl MountedMockSet {
             }
         }
         if let Some(response_template) = response_template {
-            let delay = response_template.delay().map(sleep);
-            (response_template.generate_response(), delay)
+            match response_template {
+                Ok(response_template) => {
+                    let delay = response_template.delay().map(sleep);
+                    Ok((response_template.generate_response(), delay))
+                }
+                Err(err) => Err(err),
+            }
         } else {
             let mut msg = "Got unexpected request:\n".to_string();
             _ = request.print_with_limit(&mut msg, self.body_print_limit);
             debug!("{}", msg);
-            (
-                hyper::Response::builder()
-                    .status(hyper::StatusCode::NOT_FOUND)
-                    .body(Full::default())
-                    .unwrap(),
-                None,
-            )
+            let not_found_response = hyper::Response::builder()
+                .status(hyper::StatusCode::NOT_FOUND)
+                .body(Full::default())
+                .unwrap();
+            Ok((not_found_response, None))
         }
     }
 

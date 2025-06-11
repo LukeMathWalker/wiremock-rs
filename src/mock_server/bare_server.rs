@@ -2,7 +2,7 @@ use crate::mock_server::hyper::run_server;
 use crate::mock_set::MockId;
 use crate::mock_set::MountedMockSet;
 use crate::request::BodyPrintLimit;
-use crate::{mock::Mock, verification::VerificationOutcome, Request};
+use crate::{mock::Mock, verification::VerificationOutcome, ErrorResponse, Request};
 use http_body_util::Full;
 use hyper::body::Bytes;
 use std::fmt::{Debug, Write};
@@ -39,7 +39,7 @@ impl MockServerState {
     pub(super) async fn handle_request(
         &mut self,
         request: Request,
-    ) -> (hyper::Response<Full<Bytes>>, Option<tokio::time::Sleep>) {
+    ) -> Result<(hyper::Response<Full<Bytes>>, Option<tokio::time::Sleep>), ErrorResponse> {
         // If request recording is enabled, record the incoming request
         // by adding it to the `received_requests` stack
         if let Some(received_requests) = &mut self.received_requests {

@@ -155,6 +155,8 @@ mod respond;
 mod response_template;
 mod verification;
 
+pub type ErrorResponse = Box<dyn std::error::Error + Send + Sync + 'static>;
+
 pub use mock::{Match, Mock, MockBuilder, Times};
 pub use mock_server::{MockGuard, MockServer, MockServerBuilder};
 pub use request::Request;
