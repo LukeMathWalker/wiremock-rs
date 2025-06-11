@@ -380,13 +380,14 @@ async fn io_err() {
 
     // Assert
     let err = reqwest::get(&mock_server.uri()).await.unwrap_err();
+    // We're skipping the original error since it can be either `error sending request` or
+    // `error sending request for url (http://127.0.0.1:<port>/)`
     let actual_err: Vec<String> =
-        iter::successors::<&dyn std::error::Error, _>(Some(&err), |err| err.source())
+        iter::successors(std::error::Error::source(&err), |err| err.source())
             .map(|err| err.to_string())
             .collect();
 
     let expected_err = vec![
-        format!("error sending request for url ({}/)", mock_server.uri()),
         "client error (SendRequest)".to_string(),
         "connection closed before message completed".to_string(),
     ];
@@ -411,13 +412,14 @@ async fn custom_err() {
 
     // Assert
     let err = reqwest::get(&mock_server.uri()).await.unwrap_err();
+    // We're skipping the original error since it can be either `error sending request` or
+    // `error sending request for url (http://127.0.0.1:<port>/)`
     let actual_err: Vec<String> =
-        iter::successors::<&dyn std::error::Error, _>(Some(&err), |err| err.source())
+        iter::successors(std::error::Error::source(&err), |err| err.source())
             .map(|err| err.to_string())
             .collect();
 
     let expected_err = vec![
-        format!("error sending request for url ({}/)", mock_server.uri()),
         "client error (SendRequest)".to_string(),
         "connection closed before message completed".to_string(),
     ];
