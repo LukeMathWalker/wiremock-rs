@@ -36,18 +36,24 @@ use std::ops::{
 ///         .respond_with(ResponseTemplate::new(200))
 ///         .mount(&mock_server)
 ///         .await;
-///     
+///
+///     let client = reqwest::Client::new();
+///
 ///     // Even length
-///     let status = surf::get(&mock_server.uri())
+///     let status = client
+///         .get(&mock_server.uri())
 ///         .header("custom", "even")
+///         .send()
 ///         .await
 ///         .unwrap()
 ///         .status();
 ///     assert_eq!(status, 404);
 ///
 ///     // Odd length
-///     let status = surf::get(&mock_server.uri())
+///     let status = client
+///         .get(&mock_server.uri())
 ///         .header("custom", "odd")
+///         .send()
 ///         .await
 ///         .unwrap()
 ///         .status();
@@ -82,18 +88,24 @@ use std::ops::{
 ///         .respond_with(ResponseTemplate::new(200))
 ///         .mount(&mock_server)
 ///         .await;
-///     
+///
+///     let client = reqwest::Client::new();
+///
 ///     // Even length
-///     let status = surf::get(&mock_server.uri())
+///     let status = client
+///         .get(&mock_server.uri())
 ///         .header("custom", "even")
+///         .send()
 ///         .await
 ///         .unwrap()
 ///         .status();
 ///     assert_eq!(status, 404);
 ///
 ///     // Odd length
-///     let status = surf::get(&mock_server.uri())
+///     let status = client
+///         .get(&mock_server.uri())
 ///         .header("custom", "odd")
+///         .send()
 ///         .await
 ///         .unwrap()
 ///         .status();
@@ -163,7 +175,7 @@ impl Debug for Matcher {
 ///     let unregistered_mock = Mock::given(method("POST")).respond_with(response);
 ///     
 ///     // Act
-///     let status = surf::get(&mock_server.uri())
+///     let status = reqwest::get(&mock_server.uri())
 ///         .await
 ///         .unwrap()
 ///         .status();
@@ -171,7 +183,9 @@ impl Debug for Matcher {
 ///
 ///     // This would have matched `unregistered_mock`, but we haven't registered it!
 ///     // Hence it returns a 404, the default response when no mocks matched on the mock server.
-///     let status = surf::post(&mock_server.uri())
+///     let client = reqwest::Client::new();
+///     let status = client.post(&mock_server.uri())
+///         .send()
 ///         .await
 ///         .unwrap()
 ///         .status();
@@ -200,7 +214,7 @@ impl Debug for Matcher {
 ///         .await;
 ///     
 ///     // Act
-///     let status = surf::get(&mock_server.uri())
+///     let status = reqwest::get(&mock_server.uri())
 ///         .await
 ///         .unwrap()
 ///         .status();
@@ -225,7 +239,7 @@ impl Debug for Matcher {
 ///         .mount_as_scoped(mock_server)
 ///         .await;
 ///
-///     surf::get(&mock_server.uri())
+///     reqwest::get(&mock_server.uri())
 ///         .await
 ///         .unwrap();
 ///
@@ -242,7 +256,7 @@ impl Debug for Matcher {
 ///
 ///     // This would have returned 200 if the `Mock` in
 ///     // `my_test_helper` had not been scoped.
-///     let status = surf::get(&mock_server.uri())
+///     let status = reqwest::get(&mock_server.uri())
 ///         .await
 ///         .unwrap()
 ///         .status();
@@ -321,14 +335,14 @@ impl Mock {
     ///     // Act
     ///
     ///     // The first request matches, as expected.
-    ///     let status = surf::get(&mock_server.uri())
+    ///     let status = reqwest::get(&mock_server.uri())
     ///         .await
     ///         .unwrap()
     ///         .status();
     ///     assert_eq!(status, 200);
     ///
     ///     // The second request does NOT match given our `up_to_n_times(1)` setting.
-    ///     let status = surf::get(&mock_server.uri())
+    ///     let status = reqwest::get(&mock_server.uri())
     ///         .await
     ///         .unwrap()
     ///         .status();
@@ -379,7 +393,7 @@ impl Mock {
     ///     // Act
     ///
     ///     // The request with highest priority, as expected.
-    ///     let status = surf::get(&format!("{}/abcd", mock_server.uri()))
+    ///     let status = reqwest::get(&format!("{}/abcd", mock_server.uri()))
     ///         .await
     ///         .unwrap()
     ///         .status();
@@ -439,7 +453,7 @@ impl Mock {
     ///         .await;
     ///     
     ///     // Act
-    ///     let status = surf::get(&mock_server.uri())
+    ///     let status = reqwest::get(&mock_server.uri())
     ///         .await
     ///         .unwrap()
     ///         .status();
@@ -498,7 +512,7 @@ impl Mock {
     ///         .await;
     ///     
     ///     // Act
-    ///     let status = surf::get(&mock_server.uri())
+    ///     let status = reqwest::get(&mock_server.uri())
     ///         .await
     ///         .unwrap()
     ///         .status();
@@ -565,7 +579,7 @@ impl Mock {
     ///         .mount_as_scoped(mock_server)
     ///         .await;
     ///
-    ///     surf::get(&mock_server.uri())
+    ///     reqwest::get(&mock_server.uri())
     ///         .await
     ///         .unwrap();
     ///
@@ -582,7 +596,7 @@ impl Mock {
     ///
     ///     // This would have returned 200 if the `Mock` in
     ///     // `my_test_helper` had not been scoped.
-    ///     let status = surf::get(&mock_server.uri())
+    ///     let status = reqwest::get(&mock_server.uri())
     ///         .await
     ///         .unwrap()
     ///         .status();
@@ -614,7 +628,7 @@ impl Mock {
     ///     my_test_helper(&mock_server).await;
     ///
     ///     // Act
-    ///     let status = surf::get(&mock_server.uri())
+    ///     let status = reqwest::get(&mock_server.uri())
     ///         .await
     ///         .unwrap()
     ///         .status();

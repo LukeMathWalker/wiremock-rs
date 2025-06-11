@@ -1,9 +1,9 @@
 use futures::FutureExt;
+use reqwest::StatusCode;
 use serde::Serialize;
 use serde_json::json;
 use std::net::TcpStream;
 use std::time::Duration;
-use surf::StatusCode;
 use wiremock::matchers::{body_json, body_partial_json, method, path, PathExactMatcher};
 use wiremock::{Mock, MockServer, ResponseTemplate};
 
@@ -22,7 +22,7 @@ async fn returns_404_if_nothing_matches() {
     let mock_server = MockServer::start().await;
 
     // Act
-    let status = surf::get(&mock_server.uri()).await.unwrap().status();
+    let status = reqwest::get(&mock_server.uri()).await.unwrap().status();
 
     // Assert
     assert_eq!(status, 404);
@@ -85,7 +85,7 @@ async fn received_request_are_printed_as_panic_message_if_expectations_are_not_v
         .await;
 
     // Act - we sent a request that does not match (GET)
-    surf::get(&mock_server.uri()).await.unwrap();
+    reqwest::get(&mock_server.uri()).await.unwrap();
 
     // Assert - verified on drop
 }
@@ -118,13 +118,13 @@ async fn simple_route_mock() {
     mock_server.register(mock).await;
 
     // Act
-    let mut response = surf::get(format!("{}/hello", &mock_server.uri()))
+    let response = reqwest::get(format!("{}/hello", &mock_server.uri()))
         .await
         .unwrap();
 
     // Assert
     assert_eq!(response.status(), 200);
-    assert_eq!(response.body_string().await.unwrap(), "world");
+    assert_eq!(response.text().await.unwrap(), "world");
 }
 
 #[async_std::test]
@@ -151,10 +151,10 @@ async fn two_route_mocks() {
         .await;
 
     // Act
-    let mut first_response = surf::get(format!("{}/first", &mock_server.uri()))
+    let first_response = reqwest::get(format!("{}/first", &mock_server.uri()))
         .await
         .unwrap();
-    let mut second_response = surf::get(format!("{}/second", &mock_server.uri()))
+    let second_response = reqwest::get(format!("{}/second", &mock_server.uri()))
         .await
         .unwrap();
 
@@ -162,8 +162,8 @@ async fn two_route_mocks() {
     assert_eq!(first_response.status(), 200);
     assert_eq!(second_response.status(), 200);
 
-    assert_eq!(first_response.body_string().await.unwrap(), "aaa");
-    assert_eq!(second_response.body_string().await.unwrap(), "bbb");
+    assert_eq!(first_response.text().await.unwrap(), "aaa");
+    assert_eq!(second_response.text().await.unwrap(), "bbb");
 }
 
 #[async_std::test]
@@ -186,10 +186,16 @@ async fn body_json_matches_independent_of_key_ordering() {
     mock_server.register(mock).await;
 
     // Act
-    let response = surf::post(mock_server.uri()).body(body).await.unwrap();
+    let client = reqwest::Client::new();
+    let response = client
+        .post(mock_server.uri())
+        .body(body)
+        .send()
+        .await
+        .unwrap();
 
     // Assert
-    assert_eq!(response.status(), StatusCode::Ok);
+    assert_eq!(response.status(), 200);
 }
 
 #[async_std::test]
@@ -205,11 +211,18 @@ async fn body_json_partial_matches_a_part_of_response_json() {
         .respond_with(response);
     mock_server.register(mock).await;
 
+    let client = reqwest::Client::new();
+
     // Act
-    let response = surf::post(mock_server.uri()).body(body).await.unwrap();
+    let response = client
+        .post(mock_server.uri())
+        .json(&body)
+        .send()
+        .await
+        .unwrap();
 
     // Assert
-    assert_eq!(response.status(), StatusCode::Ok);
+    assert_eq!(response.status(), StatusCode::OK);
 }
 
 #[should_panic(expected = "\
@@ -247,25 +260,33 @@ async fn use_mock_guard_to_verify_requests_from_mock() {
         )
         .await;
 
+    let client = reqwest::Client::new();
+
     // Act
     let uri = mock_server.uri();
-    let response = surf::post(format!("{uri}/first"))
-        .body(json!({ "attempt": 1}))
+    let response = client
+        .post(format!("{uri}/first"))
+        .json(&json!({ "attempt": 1}))
+        .send()
         .await
         .unwrap();
-    assert_eq!(response.status(), StatusCode::Ok);
+    assert_eq!(response.status(), StatusCode::OK);
 
-    let response = surf::post(format!("{uri}/first"))
-        .body(json!({ "attempt": 2}))
+    let response = client
+        .post(format!("{uri}/first"))
+        .json(&json!({ "attempt": 2}))
+        .send()
         .await
         .unwrap();
-    assert_eq!(response.status(), StatusCode::Ok);
+    assert_eq!(response.status(), StatusCode::OK);
 
-    let response = surf::post(format!("{uri}/second"))
-        .body(json!({ "attempt": 99}))
+    let response = client
+        .post(format!("{uri}/second"))
+        .json(&json!({ "attempt": 99}))
+        .send()
         .await
         .unwrap();
-    assert_eq!(response.status(), StatusCode::Ok);
+    assert_eq!(response.status(), StatusCode::OK);
 
     // Assert
     let all_requests_to_first = first.received_requests().await;
@@ -301,8 +322,9 @@ async fn use_mock_guard_to_await_satisfaction_readiness() {
 
     // Act one
     let uri = mock_server.uri();
-    let response = surf::post(format!("{uri}/satisfy")).await.unwrap();
-    assert_eq!(response.status(), StatusCode::Ok);
+    let client = reqwest::Client::new();
+    let response = client.post(format!("{uri}/satisfy")).send().await.unwrap();
+    assert_eq!(response.status(), StatusCode::OK);
 
     // Assert
     satisfy
@@ -319,10 +341,13 @@ async fn use_mock_guard_to_await_satisfaction_readiness() {
     // Act two
     async_std::task::spawn(async move {
         async_std::task::sleep(Duration::from_millis(100)).await;
-        let response = surf::post(format!("{uri}/eventually_satisfy"))
+        let client = reqwest::Client::new();
+        let response = client
+            .post(format!("{uri}/eventually_satisfy"))
+            .send()
             .await
             .unwrap();
-        assert_eq!(response.status(), StatusCode::Ok);
+        assert_eq!(response.status(), StatusCode::OK);
     });
 
     // Assert

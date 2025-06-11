@@ -19,7 +19,7 @@ async fn should_prioritize_mock_with_highest_priority() {
     mock_server.register(regex).await;
 
     // Act
-    let should_match = surf::get(format!("{}/abcd", mock_server.uri()))
+    let should_match = reqwest::get(format!("{}/abcd", mock_server.uri()))
         .await
         .unwrap();
     // Assert
@@ -41,7 +41,7 @@ async fn should_not_prioritize_mock_with_lower_priority() {
     mock_server.register(regex).await;
 
     // Act
-    let should_match = surf::get(format!("{}/abcd", mock_server.uri()))
+    let should_match = reqwest::get(format!("{}/abcd", mock_server.uri()))
         .await
         .unwrap();
     // Assert
@@ -62,7 +62,7 @@ async fn by_default_should_use_insertion_order() {
     mock_server.register(regex).await;
 
     // Act
-    let should_match = surf::get(format!("{}/abcd", mock_server.uri()))
+    let should_match = reqwest::get(format!("{}/abcd", mock_server.uri()))
         .await
         .unwrap();
     // Assert
@@ -81,7 +81,7 @@ async fn by_default_should_use_insertion_order() {
     mock_server.register(exact).await;
 
     // Act
-    let should_match = surf::get(format!("{}/abcd", mock_server.uri()))
+    let should_match = reqwest::get(format!("{}/abcd", mock_server.uri()))
         .await
         .unwrap();
     // Assert

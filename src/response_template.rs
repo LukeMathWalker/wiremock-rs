@@ -91,12 +91,12 @@ impl ResponseTemplate {
     ///         .await;
     ///
     ///     // Act
-    ///     let res = surf::get(&mock_server.uri())
+    ///     let res = reqwest::get(&mock_server.uri())
     ///         .await
     ///         .unwrap();
     ///
     ///     // Assert
-    ///     assert_eq!(res.header("X-Correlation-ID").unwrap().as_str(), correlation_id);
+    ///     assert_eq!(res.headers().get("X-Correlation-ID").unwrap().to_str().unwrap(), correlation_id);
     /// }
     /// ```
     pub fn insert_header<K, V>(mut self, key: K, value: V) -> Self
@@ -138,12 +138,12 @@ impl ResponseTemplate {
     ///         .await;
     ///
     ///     // Act
-    ///     let res = surf::get(&mock_server.uri())
+    ///     let res = reqwest::get(&mock_server.uri())
     ///         .await
     ///         .unwrap();
     ///
     ///     // Assert
-    ///     assert_eq!(res.header("Set-Cookie").unwrap().iter().count(), 2);
+    ///     assert_eq!(res.headers().get_all("Set-Cookie").iter().count(), 2);
     /// }
     /// ```
     pub fn append_headers<K, V, I>(mut self, headers: I) -> Self
@@ -214,7 +214,6 @@ impl ResponseTemplate {
     ///
     /// ### Example:
     /// ```rust
-    /// use surf::http::mime;
     /// use wiremock::{MockServer, Mock, ResponseTemplate};
     /// use wiremock::matchers::method;
     ///
@@ -241,16 +240,17 @@ impl ResponseTemplate {
     ///         .await;
     ///
     ///     // Act
-    ///     let mut res = surf::get(&mock_server.uri())
+    ///     let mut res = reqwest::get(&mock_server.uri())
     ///         .await
     ///         .unwrap();
-    ///     let body = res.body_string()
+    ///     let content_type = res.headers().get(reqwest::header::CONTENT_TYPE).cloned();
+    ///     let body = res.text()
     ///         .await
     ///         .unwrap();
     ///
     ///     // Assert
     ///     assert_eq!(body, r#"{"hello": "world"}"#);
-    ///     assert_eq!(res.content_type(), Some(mime::JSON));
+    ///     assert_eq!(content_type, Some("application/json".parse().unwrap()));
     /// }
     /// ```
     pub fn set_body_raw<B>(mut self, body: B, mime: &str) -> Self
@@ -293,7 +293,7 @@ impl ResponseTemplate {
     ///     let mut res = async_std::future::timeout(
     ///         // Shorter than the response delay!
     ///         delay / 3,
-    ///         surf::get(&mock_server.uri())
+    ///         reqwest::get(&mock_server.uri())
     ///     )
     ///     .await;
     ///

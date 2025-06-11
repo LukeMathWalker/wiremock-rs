@@ -20,21 +20,6 @@ async fn hello_reqwest() {
     assert_eq!(resp.status(), 200);
 }
 
-#[tokio::test]
-async fn hello_surf() {
-    let mock_server = MockServer::start().await;
-
-    Mock::given(method("GET"))
-        .and(path("/"))
-        .respond_with(ResponseTemplate::new(200))
-        .mount(&mock_server)
-        .await;
-
-    let status = surf::get(&mock_server.uri()).await.unwrap().status();
-
-    assert_eq!(status, 200);
-}
-
 #[actix_rt::test]
 async fn hello_reqwest_actix() {
     let mock_server = MockServer::start().await;

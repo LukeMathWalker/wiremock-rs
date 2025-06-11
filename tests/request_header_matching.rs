@@ -11,8 +11,11 @@ async fn should_match_simple_request_header() {
     mock_server.register(mock).await;
 
     // Act
-    let should_match = surf::get(mock_server.uri())
+    let client = reqwest::Client::new();
+    let should_match = client
+        .get(mock_server.uri())
         .header("content-type", "application/json")
+        .send()
         .await
         .unwrap();
     // Assert
@@ -29,8 +32,11 @@ async fn should_not_match_simple_request_header_upon_wrong_key() {
     mock_server.register(mock).await;
 
     // Act
-    let should_fail_wrong_key = surf::get(mock_server.uri())
+    let client = reqwest::Client::new();
+    let should_fail_wrong_key = client
+        .get(mock_server.uri())
         .header("accept", "application/json")
+        .send()
         .await
         .unwrap();
     // Assert
@@ -47,8 +53,11 @@ async fn should_not_match_simple_request_header_upon_wrong_value() {
     mock_server.register(mock).await;
 
     // Act
-    let should_fail_wrong_value = surf::get(mock_server.uri())
+    let client = reqwest::Client::new();
+    let should_fail_wrong_value = client
+        .get(mock_server.uri())
         .header("content-type", "application/xml")
+        .send()
         .await
         .unwrap();
     // Assert
@@ -66,8 +75,11 @@ async fn should_match_multi_request_header() {
     mock_server.register(mock).await;
 
     // Act
-    let should_match = surf::get(mock_server.uri())
+    let client = reqwest::Client::new();
+    let should_match = client
+        .get(mock_server.uri())
         .header("cache-control", "no-cache, no-store")
+        .send()
         .await
         .unwrap();
 
@@ -111,8 +123,11 @@ async fn should_not_match_multi_request_header_upon_wrong_values() {
     mock_server.register(mock).await;
 
     // Act
-    let should_fail_wrong_values = surf::get(mock_server.uri())
+    let client = reqwest::Client::new();
+    let should_fail_wrong_values = client
+        .get(mock_server.uri())
         .header("cache-control", "no-cache, no-transform")
+        .send()
         .await
         .unwrap();
 
@@ -131,8 +146,11 @@ async fn should_not_match_multi_request_header_upon_incomplete_values() {
     mock_server.register(mock).await;
 
     // Act
-    let should_fail_incomplete_values = surf::get(mock_server.uri())
+    let client = reqwest::Client::new();
+    let should_fail_incomplete_values = client
+        .get(mock_server.uri())
         .header("cache-control", "no-cache")
+        .send()
         .await
         .unwrap();
 
@@ -149,9 +167,13 @@ async fn should_match_regex_single_header_value() {
         .respond_with(ResponseTemplate::new(200));
     mock_server.register(mock).await;
 
+    let client = reqwest::Client::new();
+
     // Act
-    let should_match = surf::get(mock_server.uri())
+    let should_match = client
+        .get(mock_server.uri())
         .header("cache-control", "no-cache")
+        .send()
         .await
         .unwrap();
 
@@ -168,10 +190,14 @@ async fn should_match_regex_multiple_header_values() {
         .respond_with(ResponseTemplate::new(200));
     mock_server.register(mock).await;
 
+    let client = reqwest::Client::new();
+
     // Act
-    let should_match = surf::get(mock_server.uri())
+    let should_match = client
+        .get(mock_server.uri())
         .header("cache-control", "no-cache")
         .header("cache-control", "no-store")
+        .send()
         .await
         .unwrap();
 
@@ -188,9 +214,13 @@ async fn should_not_match_regex_with_wrong_header_value() {
         .respond_with(ResponseTemplate::new(200));
     mock_server.register(mock).await;
 
+    let client = reqwest::Client::new();
+
     // Act
-    let should_fail_wrong_value = surf::get(mock_server.uri())
+    let should_fail_wrong_value = client
+        .get(mock_server.uri())
         .header("cache-control", "no-junk")
+        .send()
         .await
         .unwrap();
 
@@ -207,10 +237,14 @@ async fn should_not_match_regex_with_at_least_one_wrong_header_value() {
         .respond_with(ResponseTemplate::new(200));
     mock_server.register(mock).await;
 
+    let client = reqwest::Client::new();
+
     // Act
-    let should_fail_wrong_value = surf::get(mock_server.uri())
+    let should_fail_wrong_value = client
+        .get(mock_server.uri())
         .header("cache-control", "no-cache")
         .header("cache-control", "no-junk")
+        .send()
         .await
         .unwrap();
 
@@ -228,7 +262,7 @@ async fn should_not_match_regex_with_no_values_for_header() {
     mock_server.register(mock).await;
 
     // Act
-    let should_fail_wrong_value = surf::get(mock_server.uri()).await.unwrap();
+    let should_fail_wrong_value = reqwest::get(mock_server.uri()).await.unwrap();
 
     // Assert
     assert_eq!(should_fail_wrong_value.status(), 404);
@@ -243,9 +277,13 @@ async fn should_match_basic_auth_header() {
         .respond_with(ResponseTemplate::new(200));
     mock_server.register(mock).await;
 
+    let client = reqwest::Client::new();
+
     // Act
-    let should_match = surf::get(mock_server.uri())
+    let should_match = client
+        .get(mock_server.uri())
         .header("Authorization", "Basic QWxhZGRpbjpvcGVuIHNlc2FtZQ==")
+        .send()
         .await
         .unwrap();
     // Assert
@@ -261,9 +299,13 @@ async fn should_not_match_bad_basic_auth_header() {
         .respond_with(ResponseTemplate::new(200));
     mock_server.register(mock).await;
 
+    let client = reqwest::Client::new();
+
     // Act
-    let should_not_match = surf::get(mock_server.uri())
+    let should_not_match = client
+        .get(mock_server.uri())
         .header("Authorization", "Basic QWxhZGRpbjpvcGVuIHNlc2FtZQ==")
+        .send()
         .await
         .unwrap();
     // Assert
@@ -279,9 +321,13 @@ async fn should_match_bearer_token_header() {
         .respond_with(ResponseTemplate::new(200));
     mock_server.register(mock).await;
 
+    let client = reqwest::Client::new();
+
     // Act
-    let should_match = surf::get(mock_server.uri())
+    let should_match = client
+        .get(mock_server.uri())
         .header("Authorization", "Bearer delightful")
+        .send()
         .await
         .unwrap();
     // Assert
@@ -297,9 +343,13 @@ async fn should_not_match_bearer_token_header() {
         .respond_with(ResponseTemplate::new(200));
     mock_server.register(mock).await;
 
+    let client = reqwest::Client::new();
+
     // Act
-    let should_not_match = surf::get(mock_server.uri())
+    let should_not_match = client
+        .get(mock_server.uri())
         .header("Authorization", "Bearer delightful")
+        .send()
         .await
         .unwrap();
     // Assert
