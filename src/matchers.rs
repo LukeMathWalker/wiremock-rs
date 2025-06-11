@@ -51,7 +51,7 @@ where
 ///     mock_server.register(mock).await;
 ///
 ///     // Act
-///     let status = surf::get(&mock_server.uri())
+///     let status = reqwest::get(&mock_server.uri())
 ///         .await
 ///         .unwrap()
 ///         .status();
@@ -114,7 +114,7 @@ impl Match for MethodExactMatcher {
 ///     mock_server.register(mock).await;
 ///
 ///     // Act
-///     let status = surf::get(&mock_server.uri())
+///     let status = reqwest::get(&mock_server.uri())
 ///         .await
 ///         .unwrap()
 ///         .status();
@@ -155,7 +155,7 @@ impl Match for AnyMatcher {
 ///     mock_server.register(mock).await;
 ///
 ///     // Act
-///     let status = surf::get(format!("{}/hello", &mock_server.uri()))
+///     let status = reqwest::get(format!("{}/hello", &mock_server.uri()))
 ///         .await
 ///         .unwrap()
 ///         .status();
@@ -184,7 +184,7 @@ impl Match for AnyMatcher {
 ///     mock_server.register(mock).await;
 ///
 ///     // Act
-///     let status = surf::get(format!("{}/hello?a_parameter=some_value", &mock_server.uri()))
+///     let status = reqwest::get(format!("{}/hello?a_parameter=some_value", &mock_server.uri()))
 ///         .await
 ///         .unwrap()
 ///         .status();
@@ -251,7 +251,7 @@ impl Match for PathExactMatcher {
 ///     mock_server.register(mock).await;
 ///
 ///     // Act
-///     let status = surf::get(format!("{}/hello/123", &mock_server.uri()))
+///     let status = reqwest::get(format!("{}/hello/123", &mock_server.uri()))
 ///         .await
 ///         .unwrap()
 ///         .status();
@@ -277,7 +277,7 @@ impl Match for PathExactMatcher {
 ///     mock_server.register(mock).await;
 ///
 ///     // Act
-///     let status = surf::get(format!("{}/users/da2854ea-b70f-46e7-babc-2846eff4d33c/posts", &mock_server.uri()))
+///     let status = reqwest::get(format!("{}/users/da2854ea-b70f-46e7-babc-2846eff4d33c/posts", &mock_server.uri()))
 ///         .await
 ///         .unwrap()
 ///         .status();
@@ -330,9 +330,12 @@ impl Match for PathRegexMatcher {
 ///         .await;
 ///
 ///     // Act
-///     let status = surf::get(&mock_server.uri())
+///     let client = reqwest::Client::new();
+///     let status = client
+///         .get(&mock_server.uri())
 ///         .header("custom", "header")
 ///         .header("cache-control", "no-cache, no-store")
+///         .send()
 ///         .await
 ///         .unwrap()
 ///         .status();
@@ -424,8 +427,11 @@ impl Match for HeaderExactMatcher {
 ///         .await;
 ///
 ///     // Act
-///     let status = surf::get(&mock_server.uri())
+///     let client = reqwest::Client::new();
+///     let status = client
+///         .get(&mock_server.uri())
 ///         .header("custom", "header")
+///         .send()
 ///         .await
 ///         .unwrap()
 ///         .status();
@@ -483,8 +489,10 @@ impl Match for HeaderExistsMatcher {
 ///         .await;
 ///
 ///     // Act
-///     let status = surf::get(&mock_server.uri())
+///     let client = reqwest::Client::new();
+///     let status = client.get(&mock_server.uri())
 ///         .header("custom", "headers are fun to match on with a regex")
+///         .send()
 ///         .await
 ///         .unwrap()
 ///         .status();
@@ -551,8 +559,10 @@ impl Match for HeaderRegexMatcher {
 ///         .await;
 ///
 ///     // Act
-///     let status = surf::post(&mock_server.uri())
+///     let client = reqwest::Client::new();
+///     let status = client.post(&mock_server.uri())
 ///         .body("hello world!")
+///         .send()
 ///         .await
 ///         .unwrap()
 ///         .status();
@@ -582,8 +592,10 @@ impl Match for HeaderRegexMatcher {
 ///         .await;
 ///
 ///     // Act
-///     let status = surf::post(&mock_server.uri())
-///         .body(expected_body)
+///     let client = reqwest::Client::new();
+///     let status = client.post(&mock_server.uri())
+///         .json(&expected_body)
+///         .send()
 ///         .await
 ///         .unwrap()
 ///         .status();
@@ -689,8 +701,10 @@ impl Match for BodyExactMatcher {
 ///         .await;
 ///
 ///     // Act
-///     let status = surf::post(&mock_server.uri())
+///     let client = reqwest::Client::new();
+///     let status = client.post(&mock_server.uri())
 ///         .body("this is a hello world example!")
+///         .send()
 ///         .await
 ///         .unwrap()
 ///         .status();
@@ -768,8 +782,10 @@ impl Match for BodyContainsMatcher {
 ///         "hello": "world!",
 ///         "foo": "bar"
 ///     });
-///     let status = surf::post(&mock_server.uri())
-///         .body(body)
+///     let client = reqwest::Client::new();
+///     let status = client.post(&mock_server.uri())
+///         .json(&body)
+///         .send()
 ///         .await
 ///         .unwrap()
 ///         .status();
@@ -832,7 +848,7 @@ impl Match for BodyPartialJsonMatcher {
 ///         .await;
 ///
 ///     // Act
-///     let status = surf::get(format!("{}?hello=world", &mock_server.uri()))
+///     let status = reqwest::get(format!("{}?hello=world", &mock_server.uri()))
 ///         .await
 ///         .unwrap()
 ///         .status();
@@ -890,7 +906,7 @@ impl Match for QueryParamExactMatcher {
 ///         .await;
 ///
 ///     // Act
-///     let status = surf::get(format!("{}?hello=some_world", &mock_server.uri()))
+///     let status = reqwest::get(format!("{}?hello=some_world", &mock_server.uri()))
 ///         .await
 ///         .unwrap()
 ///         .status();
@@ -948,7 +964,7 @@ impl Match for QueryParamContainsMatcher {
 ///         .await;
 ///
 ///     // Act
-///     let ok_status = surf::get(mock_server.uri().to_string())
+///     let ok_status = reqwest::get(mock_server.uri().to_string())
 ///         .await
 ///         .unwrap()
 ///         .status();
@@ -957,7 +973,7 @@ impl Match for QueryParamContainsMatcher {
 ///     assert_eq!(ok_status, 200);
 ///
 ///     // Act
-///     let err_status = surf::get(format!("{}?unexpected=foo", mock_server.uri()))
+///     let err_status = reqwest::get(format!("{}?unexpected=foo", mock_server.uri()))
 ///     .await.
 ///     unwrap().status();
 ///
@@ -1020,9 +1036,11 @@ impl Match for QueryParamIsMissingMatcher {
 ///         json!({"hello": "world!"}),
 ///         json!({"hello": "everyone!"}),
 ///     ];
-///     for case in success_cases.into_iter() {
-///         let status = surf::post(&mock_server.uri())
-///             .body(case)
+///     let client = reqwest::Client::new();
+///     for case in &success_cases {
+///         let status = client.post(&mock_server.uri())
+///             .json(case)
+///             .send()
 ///             .await
 ///             .unwrap()
 ///             .status();
@@ -1035,8 +1053,9 @@ impl Match for QueryParamIsMissingMatcher {
 ///     // because it does not have the `hello` field.
 ///     // It won't match.
 ///     let failure_case = json!({"world": "hello!"});
-///     let status = surf::post(&mock_server.uri())
-///         .body(failure_case)
+///     let status = client.post(&mock_server.uri())
+///         .json(&failure_case)
+///         .send()
 ///         .await
 ///         .unwrap()
 ///         .status();
@@ -1061,7 +1080,6 @@ where
 /// use wiremock::{MockServer, Mock, ResponseTemplate};
 /// use wiremock::matchers::basic_auth;
 /// use serde::{Deserialize, Serialize};
-/// use std::convert::TryInto;
 ///
 /// #[async_std::main]
 /// async fn main() {
@@ -1074,13 +1092,13 @@ where
 ///         .mount(&mock_server)
 ///         .await;
 ///
-///     let client: surf::Client = surf::Config::new()
-///         .set_base_url(surf::Url::parse(&mock_server.uri()).unwrap())
-///         .add_header("Authorization", "Basic dXNlcm5hbWU6cGFzc3dvcmQ=").unwrap()
-///         .try_into().unwrap();
+///     let client = reqwest::Client::new();
 ///
 ///     // Act
-///     let status = client.get("/")
+///     let status = client
+///         .get(&mock_server.uri())
+///         .header("Authorization", "Basic dXNlcm5hbWU6cGFzc3dvcmQ=")
+///         .send()
 ///         .await
 ///         .unwrap()
 ///         .status();
@@ -1145,9 +1163,12 @@ impl Match for BasicAuthMatcher {
 ///         .mount(&mock_server)
 ///         .await;
 ///
+///     let client = reqwest::Client::new();
+///
 ///     // Act
-///     let status = surf::get(&mock_server.uri())
+///     let status = client.get(&mock_server.uri())
 ///         .header("Authorization", "Bearer token")
+///         .send()
 ///         .await
 ///         .unwrap()
 ///         .status();

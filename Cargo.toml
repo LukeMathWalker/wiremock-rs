@@ -37,8 +37,8 @@ base64 = "0.22"
 url = "2.2"
 
 [dev-dependencies]
-async-std = { version = "1.13.0", features = ["attributes"] }
-surf = "2.3.2"
-reqwest = "0.12.7"
+async-std = { version = "1.13.0", features = ["attributes", "tokio1"] }
+reqwest = { version = "0.12.7", features = ["json"] }
 tokio = { version = "1.5.0", features = ["macros", "rt-multi-thread"] }
 actix-rt = "2.2.0"
+serde = { version = "1", features = ["derive"] }

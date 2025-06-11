@@ -38,14 +38,14 @@
 //!         .await;
 //!     
 //!     // If we probe the MockServer using any HTTP client it behaves as expected.
-//!     let status = surf::get(format!("{}/hello", &mock_server.uri()))
+//!     let status = reqwest::get(format!("{}/hello", &mock_server.uri()))
 //!         .await
 //!         .unwrap()
 //!         .status();
 //!     assert_eq!(status, 200);
 //!
 //!     // If the request doesn't match any `Mock` mounted on our `MockServer` a 404 is returned.
-//!     let status = surf::get(format!("{}/missing", &mock_server.uri()))
+//!     let status = reqwest::get(format!("{}/missing", &mock_server.uri()))
 //!         .await
 //!         .unwrap()
 //!         .status();
