@@ -1,15 +1,17 @@
-use crate::mock_server::hyper::run_server;
+use crate::mock_server::hyper::{run_server, HyperRequestHandler};
 use crate::mock_set::MockId;
 use crate::mock_set::MountedMockSet;
 use crate::request::BodyPrintLimit;
 use crate::{mock::Mock, verification::VerificationOutcome, Request};
 use http_body_util::Full;
 use hyper::body::Bytes;
+use hyper_server::accept::Accept;
 use std::fmt::{Debug, Write};
 use std::net::{SocketAddr, TcpListener, TcpStream};
 use std::pin::pin;
 use std::sync::atomic::AtomicBool;
 use std::sync::Arc;
+use tokio::io::{AsyncRead, AsyncWrite};
 use tokio::sync::Notify;
 use tokio::sync::RwLock;
 
@@ -52,11 +54,27 @@ impl MockServerState {
 impl BareMockServer {
     /// Start a new instance of a `BareMockServer` listening on the specified
     /// [`TcpListener`].
-    pub(super) async fn start(
+    pub(super) async fn start<A>(
         listener: TcpListener,
         request_recording: RequestRecording,
         body_print_limit: BodyPrintLimit,
-    ) -> Self {
+        acceptor: A,
+    ) -> Self
+    where
+        A: Accept<tokio::net::TcpStream, HyperRequestHandler> + Send + Clone + 'static,
+        <A as Accept<tokio::net::TcpStream, HyperRequestHandler>>::Future: Send,
+        <A as Accept<tokio::net::TcpStream, HyperRequestHandler>>::Stream:
+            Unpin + Send + AsyncWrite + AsyncRead + 'static,
+        <A as Accept<tokio::net::TcpStream, HyperRequestHandler>>::Service:
+            hyper::service::Service<http::Request<hyper::body::Incoming>, Response = http::Response<Full<Bytes>>>
+        + Send,
+        <<A as Accept<tokio::net::TcpStream, HyperRequestHandler>>::Service as hyper::service::Service<
+            http::Request<hyper::body::Incoming>,
+        >>::Error: Send + Sync + Into<Box<dyn std::error::Error + Send + Sync>> + 'static,
+        <<A as Accept<tokio::net::TcpStream, HyperRequestHandler>>::Service as hyper::service::Service<
+            http::Request<hyper::body::Incoming>,
+        >>::Future: Send + 'static,
+    {
         let (shutdown_trigger, shutdown_receiver) = tokio::sync::watch::channel(());
         let received_requests = match request_recording {
             RequestRecording::Enabled => Some(Vec::new()),
@@ -73,7 +91,7 @@ impl BareMockServer {
 
         let server_state = state.clone();
         std::thread::spawn(move || {
-            let server_future = run_server(listener, server_state, shutdown_receiver);
+            let server_future = run_server(listener, server_state, shutdown_receiver, acceptor);
 
             let runtime = tokio::runtime::Builder::new_current_thread()
                 .enable_all()

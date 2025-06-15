@@ -2,17 +2,16 @@
 //!
 //! Based on https://github.com/rustls/rustls/blob/main/rustls/examples/internal/test_ca.rs
 use std::{
-    convert::{TryFrom as _, TryInto as _},
+    convert::TryInto,
     fmt::Display,
     net::IpAddr,
-    str::FromStr as _,
+    str::FromStr,
     sync::atomic::{AtomicU64, Ordering},
 };
 
 use rcgen::{
     BasicConstraints, Certificate, CertificateParams, DistinguishedName, ExtendedKeyUsagePurpose,
-    Ia5String, IsCa, KeyPair, KeyUsagePurpose, SanType, SerialNumber, SignatureAlgorithm,
-    PKCS_ED25519,
+    IsCa, KeyPair, KeyUsagePurpose, SanType, SerialNumber, SignatureAlgorithm, PKCS_ED25519,
 };
 
 use rustls_pki_types::{CertificateDer, PrivateKeyDer};
@@ -102,7 +101,7 @@ impl MockTlsCertificates {
 // The methods are not const, so we use a function.
 fn default_hostnames() -> Vec<SanType> {
     vec![
-        SanType::DnsName(Ia5String::try_from("localhost".to_string()).unwrap()),
+        SanType::DnsName(("localhost".to_string()).try_into().unwrap()),
         SanType::IpAddress(IpAddr::from_str("127.0.0.1").unwrap()),
     ]
 }
@@ -162,7 +161,9 @@ fn gen_client_cert(
     params.key_usages = EE_KEY_USAGES.to_vec();
     params.extended_key_usages = vec![ExtendedKeyUsagePurpose::ClientAuth];
     params.subject_alt_names = vec![SanType::Rfc822Name(
-        Ia5String::try_from(email.to_string())
+        email
+            .to_string()
+            .try_into()
             .unwrap_or_else(|_| panic!("Invalid email: {}", email)),
     )];
 
