@@ -59,7 +59,7 @@ impl deadpool::managed::Manager for MockServerPoolManager {
 
     async fn create(&self) -> Result<BareMockServer, Infallible> {
         // All servers in the pool use the default configuration
-        Ok(MockServer::builder().build_bare().await)
+        Ok(MockServer::builder().build_bare_http().await)
     }
 
     async fn recycle(
