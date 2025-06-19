@@ -119,6 +119,7 @@ impl MockServerBuilder {
             listener,
             recording,
             self.body_print_limit,
+            "http",
             DefaultAcceptor::new(),
         )
         .await
@@ -143,6 +144,7 @@ impl MockServerBuilder {
             listener,
             recording,
             self.body_print_limit,
+            "https",
             RustlsAcceptor::new(rustls_config),
         )
         .await

@@ -24,6 +24,7 @@ use tokio::sync::RwLock;
 pub(crate) struct BareMockServer {
     state: Arc<RwLock<MockServerState>>,
     server_address: SocketAddr,
+    proto: &'static str,
     // When `_shutdown_trigger` gets dropped the listening server terminates gracefully.
     _shutdown_trigger: tokio::sync::watch::Sender<()>,
 }
@@ -58,6 +59,7 @@ impl BareMockServer {
         listener: TcpListener,
         request_recording: RequestRecording,
         body_print_limit: BodyPrintLimit,
+        proto: &'static str,
         acceptor: A,
     ) -> Self
     where
@@ -112,6 +114,7 @@ impl BareMockServer {
         Self {
             state,
             server_address,
+            proto,
             _shutdown_trigger: shutdown_trigger,
         }
     }
@@ -164,7 +167,7 @@ impl BareMockServer {
     /// Use this method to compose uris when interacting with this instance of `BareMockServer` via
     /// an HTTP client.
     pub(crate) fn uri(&self) -> String {
-        format!("http://{}", self.server_address)
+        format!("{}://{}", self.proto, self.server_address)
     }
 
     /// Return the socket address of this running instance of `BareMockServer`, e.g. `127.0.0.1:4372`.
@@ -191,7 +194,12 @@ impl BareMockServer {
 
 impl Debug for BareMockServer {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "BareMockServer {{ address: {} }}", self.address())
+        write!(
+            f,
+            "BareMockServer {{ proto: {}, address: {} }}",
+            self.proto,
+            self.address()
+        )
     }
 }
 
