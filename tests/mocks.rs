@@ -374,7 +374,8 @@ async fn debug_prints_mock_server_variants() {
     assert!(pooled_debug_str
         .find(
             format!(
-                "BareMockServer {{ address: {} }}",
+                "BareMockServer {{ proto: {}, address: {} }}",
+                "http",
                 pooled_mock_server.address()
             )
             .as_str()
@@ -384,7 +385,8 @@ async fn debug_prints_mock_server_variants() {
     let bare_mock_server = MockServer::builder().start().await;
     assert_eq!(
         format!(
-            "MockServer(Bare(BareMockServer {{ address: {} }}))",
+            "MockServer(Bare(BareMockServer {{ proto: {}, address: {} }}))",
+            "http",
             bare_mock_server.address()
         ),
         format!("{:?}", bare_mock_server)

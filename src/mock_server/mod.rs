@@ -16,7 +16,7 @@ mod exposed_server;
 mod hyper;
 mod pool;
 #[cfg(feature = "tls")]
-pub mod tls;
+pub mod tls_certs;
 
 pub use bare_server::MockGuard;
 pub use builder::MockServerBuilder;

@@ -2,7 +2,7 @@
 use criterion::{criterion_group, criterion_main, Criterion};
 
 #[cfg(feature = "tls")]
-use wiremock::tls::MockTlsCertificates;
+use wiremock::tls_certs::MockTlsCertificates;
 
 #[cfg(feature = "tls")]
 // On the good old M1 processor it takes ~77 µs
