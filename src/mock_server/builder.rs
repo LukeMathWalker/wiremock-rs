@@ -7,6 +7,9 @@ use hyper_server::tls_rustls::RustlsConfig;
 use std::env;
 use std::net::TcpListener;
 
+#[cfg(feature = "tls")]
+use super::tls_certs::MockServerTlsConfig;
+
 /// A builder providing a fluent API to assemble a [`MockServer`] step-by-step.
 /// Use [`MockServer::builder`] to get started.
 pub struct MockServerBuilder {
@@ -127,7 +130,7 @@ impl MockServerBuilder {
 
     /// Finalise the builder to get an instance of a [`BareMockServer`].
     #[cfg(feature = "tls")]
-    pub(super) async fn build_bare_https(self, rustls_config: RustlsConfig) -> BareMockServer {
+    pub(super) async fn build_bare_https(self, certs: MockServerTlsConfig) -> BareMockServer {
         use hyper_server::tls_rustls::RustlsAcceptor;
 
         let listener = if let Some(listener) = self.listener {
@@ -140,6 +143,14 @@ impl MockServerBuilder {
         } else {
             RequestRecording::Disabled
         };
+
+        let rustls_config = RustlsConfig::from_der(
+            vec![certs.server_cert_der, certs.root_cert_der],
+            certs.server_key_der,
+        )
+        .await
+        .expect("Failed to build RustlsConfig");
+
         BareMockServer::start(
             listener,
             recording,
@@ -157,9 +168,7 @@ impl MockServerBuilder {
 
     /// Finalise the builder and launch the HTTPS [`MockServer`] instance!
     #[cfg(feature = "tls")]
-    pub async fn start_https(self, rustls_config: RustlsConfig) -> MockServer {
-        MockServer::new(InnerServer::Bare(
-            self.build_bare_https(rustls_config).await,
-        ))
+    pub async fn start_https(self, tls_conf: MockServerTlsConfig) -> MockServer {
+        MockServer::new(InnerServer::Bare(self.build_bare_https(tls_conf).await))
     }
 }

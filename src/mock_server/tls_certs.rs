@@ -9,13 +9,11 @@ use std::{
     sync::atomic::{AtomicU64, Ordering},
 };
 
-use hyper_server::tls_rustls::RustlsConfig;
 use rcgen::{
     BasicConstraints, Certificate, CertificateParams, DistinguishedName, ExtendedKeyUsagePurpose,
     IsCa, KeyPair, KeyUsagePurpose, SanType, SerialNumber, SignatureAlgorithm, PKCS_ED25519,
 };
-
-use rustls_pki_types::{CertificateDer, PrivateKeyDer};
+use rustls_pki_types::{pem::PemObject, CertificateDer, PrivateKeyDer};
 
 pub const DEFAULT_ALGORITHM: &SignatureAlgorithm = &PKCS_ED25519;
 
@@ -41,21 +39,69 @@ const EE_KEY_USAGES: &[KeyUsagePurpose; 2] = &[
 
 static SERIAL_NUMBER: AtomicU64 = AtomicU64::new(1);
 
+pub struct MockServerTlsConfig {
+    pub root_cert_der: Vec<u8>,
+    pub server_cert_der: Vec<u8>,
+    pub server_key_der: Vec<u8>,
+}
+
+impl MockServerTlsConfig {
+    #[inline]
+    pub fn from_der(
+        root_cert_der: Vec<u8>,
+        server_cert_der: Vec<u8>,
+        server_key_der: Vec<u8>,
+    ) -> Self {
+        Self {
+            root_cert_der,
+            server_cert_der,
+            server_key_der,
+        }
+    }
+
+    /// Create a new `MockServerTlsConfig` from PEM-encoded certificates and key.
+    ///
+    /// Panics if the data cannot be parsed as valid PEM.
+    #[inline]
+    pub fn from_pem(
+        root_cert_pem: Vec<u8>,
+        server_cert_pem: Vec<u8>,
+        server_key_pem: Vec<u8>,
+    ) -> Self {
+        let root_cert_der = CertificateDer::from_pem_slice(&root_cert_pem)
+            .expect("Failed to parse root certificate from PEM")
+            .to_vec();
+        let server_cert_der = CertificateDer::from_pem_slice(&server_cert_pem)
+            .expect("Failed to parse server certificate from PEM")
+            .to_vec();
+        let server_key_der = PrivateKeyDer::from_pem_slice(&server_key_pem)
+            .expect("Failed to parse server key from PEM")
+            .secret_der()
+            .to_vec();
+
+        Self {
+            root_cert_der,
+            server_cert_der,
+            server_key_der,
+        }
+    }
+}
+
 pub struct MockTlsCertificates {
-    root_cert: Certificate,
-    server_cert: Certificate,
-    server_key: KeyPair,
+    pub root_cert: Certificate,
+    pub server_cert: Certificate,
+    pub server_key: KeyPair,
 }
 
 impl MockTlsCertificates {
-    /// Creates an instance with "localhost" and "127.0.0.1" as hostnames.
+    /// Generate server certificates and key with "localhost" and "127.0.0.1" as hostnames.
     // On the good old M1 processor it takes ~77 µs
     #[inline]
     pub fn new() -> Self {
         Self::with_hostnames(default_hostnames())
     }
 
-    /// Creates an instance with custom hostnames and IPs.
+    /// Generate server certificates and key with custom hostnames and IPs.
     pub fn with_hostnames(hostnames: impl Into<Vec<SanType>>) -> Self {
         let (root_cert, root_key) = gen_root_cert(DEFAULT_ALGORITHM);
         // We do not bother to have an intermediate certificate because CAs use them for flexibility only.
@@ -96,12 +142,13 @@ impl MockTlsCertificates {
         )
     }
 
-    pub async fn get_rustls_config(&self) -> Result<RustlsConfig, std::io::Error> {
-        let server_cert_der = self.server_cert.der().to_vec();
-        let root_cert_der = self.get_root_cert().der().to_vec();
-        let server_private_key_der = self.server_key.serialize_der();
-
-        RustlsConfig::from_der(vec![server_cert_der, root_cert_der], server_private_key_der).await
+    #[inline]
+    pub fn get_server_config(&self) -> MockServerTlsConfig {
+        MockServerTlsConfig {
+            root_cert_der: self.root_cert.der().to_vec(),
+            server_cert_der: self.server_cert.der().to_vec(),
+            server_key_der: self.server_key.serialize_der(),
+        }
     }
 }
 

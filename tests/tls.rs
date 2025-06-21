@@ -1,19 +1,13 @@
 #[cfg(feature = "tls")]
 mod tlstests {
-    use hyper_server::tls_rustls::RustlsConfig;
-    use wiremock::tls_certs::MockTlsCertificates;
+    use wiremock::tls_certs::{MockServerTlsConfig, MockTlsCertificates};
 
     #[async_std::test]
     async fn test_tls_basic() {
         let certs = MockTlsCertificates::new();
 
         let mock_server = wiremock::MockServer::builder()
-            .start_https(
-                certs
-                    .get_rustls_config()
-                    .await
-                    .expect("Failed to create RustlsConfig"),
-            )
+            .start_https(certs.get_server_config())
             .await;
         let uri = mock_server.uri();
         let port = mock_server.address().port();
@@ -26,12 +20,7 @@ mod tlstests {
         let certs = MockTlsCertificates::new();
 
         let mock_server = wiremock::MockServer::builder()
-            .start_https(
-                certs
-                    .get_rustls_config()
-                    .await
-                    .expect("Failed to create RustlsConfig"),
-            )
+            .start_https(certs.get_server_config())
             .await;
         let uri = mock_server.uri();
 
@@ -52,12 +41,7 @@ mod tlstests {
         let certs = MockTlsCertificates::new();
 
         let mock_server = wiremock::MockServer::builder()
-            .start_https(
-                certs
-                    .get_rustls_config()
-                    .await
-                    .expect("Failed to create RustlsConfig"),
-            )
+            .start_https(certs.get_server_config())
             .await;
         let uri = mock_server.uri();
 
@@ -81,12 +65,7 @@ mod tlstests {
         let certs = MockTlsCertificates::new();
 
         let mock_server = wiremock::MockServer::builder()
-            .start_https(
-                certs
-                    .get_rustls_config()
-                    .await
-                    .expect("Failed to create RustlsConfig"),
-            )
+            .start_https(certs.get_server_config())
             .await;
         let uri = mock_server.uri();
 
@@ -114,15 +93,14 @@ mod tlstests {
 
     #[async_std::test]
     async fn test_tls_from_file() {
-        let rustls_config = RustlsConfig::from_pem(
-            include_bytes!("fixtures/tls/server.crt").to_vec(),
-            include_bytes!("fixtures/tls/server.key").to_vec(),
-        )
-        .await
-        .expect("Failed to create RustlsConfig from file");
+        let root_cert_pem = include_bytes!("fixtures/tls/rootCA.crt").to_vec();
+        let server_cert_pem = include_bytes!("fixtures/tls/server.crt").to_vec();
+        let server_key_pem = include_bytes!("fixtures/tls/server.key").to_vec();
+        let mock_server_tls_config =
+            MockServerTlsConfig::from_pem(root_cert_pem, server_cert_pem, server_key_pem);
 
         let mock_server = wiremock::MockServer::builder()
-            .start_https(rustls_config)
+            .start_https(mock_server_tls_config)
             .await;
         let uri = mock_server.uri();
 
