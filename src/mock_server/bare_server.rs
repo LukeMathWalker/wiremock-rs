@@ -1,15 +1,17 @@
-use crate::mock_server::hyper::run_server;
+use crate::mock_server::hyper::{run_server, HyperRequestHandler};
 use crate::mock_set::MockId;
 use crate::mock_set::MountedMockSet;
 use crate::request::BodyPrintLimit;
 use crate::{mock::Mock, verification::VerificationOutcome, ErrorResponse, Request};
 use http_body_util::Full;
 use hyper::body::Bytes;
+use hyper_server::accept::Accept;
 use std::fmt::{Debug, Write};
 use std::net::{SocketAddr, TcpListener, TcpStream};
 use std::pin::pin;
 use std::sync::atomic::AtomicBool;
 use std::sync::Arc;
+use tokio::io::{AsyncRead, AsyncWrite};
 use tokio::sync::Notify;
 use tokio::sync::RwLock;
 
@@ -22,6 +24,7 @@ use tokio::sync::RwLock;
 pub(crate) struct BareMockServer {
     state: Arc<RwLock<MockServerState>>,
     server_address: SocketAddr,
+    proto: &'static str,
     // When `_shutdown_trigger` gets dropped the listening server terminates gracefully.
     _shutdown_trigger: tokio::sync::watch::Sender<()>,
 }
@@ -52,11 +55,28 @@ impl MockServerState {
 impl BareMockServer {
     /// Start a new instance of a `BareMockServer` listening on the specified
     /// [`TcpListener`].
-    pub(super) async fn start(
+    pub(super) async fn start<A>(
         listener: TcpListener,
         request_recording: RequestRecording,
         body_print_limit: BodyPrintLimit,
-    ) -> Self {
+        proto: &'static str,
+        acceptor: A,
+    ) -> Self
+    where
+        A: Accept<tokio::net::TcpStream, HyperRequestHandler> + Send + Clone + 'static,
+        <A as Accept<tokio::net::TcpStream, HyperRequestHandler>>::Future: Send,
+        <A as Accept<tokio::net::TcpStream, HyperRequestHandler>>::Stream:
+            Unpin + Send + AsyncWrite + AsyncRead + 'static,
+        <A as Accept<tokio::net::TcpStream, HyperRequestHandler>>::Service:
+            hyper::service::Service<http::Request<hyper::body::Incoming>, Response = http::Response<Full<Bytes>>>
+        + Send,
+        <<A as Accept<tokio::net::TcpStream, HyperRequestHandler>>::Service as hyper::service::Service<
+            http::Request<hyper::body::Incoming>,
+        >>::Error: Send + Sync + Into<Box<dyn std::error::Error + Send + Sync>> + 'static,
+        <<A as Accept<tokio::net::TcpStream, HyperRequestHandler>>::Service as hyper::service::Service<
+            http::Request<hyper::body::Incoming>,
+        >>::Future: Send + 'static,
+    {
         let (shutdown_trigger, shutdown_receiver) = tokio::sync::watch::channel(());
         let received_requests = match request_recording {
             RequestRecording::Enabled => Some(Vec::new()),
@@ -73,7 +93,7 @@ impl BareMockServer {
 
         let server_state = state.clone();
         std::thread::spawn(move || {
-            let server_future = run_server(listener, server_state, shutdown_receiver);
+            let server_future = run_server(listener, server_state, shutdown_receiver, acceptor);
 
             let runtime = tokio::runtime::Builder::new_current_thread()
                 .enable_all()
@@ -94,6 +114,7 @@ impl BareMockServer {
         Self {
             state,
             server_address,
+            proto,
             _shutdown_trigger: shutdown_trigger,
         }
     }
@@ -146,7 +167,7 @@ impl BareMockServer {
     /// Use this method to compose uris when interacting with this instance of `BareMockServer` via
     /// an HTTP client.
     pub(crate) fn uri(&self) -> String {
-        format!("http://{}", self.server_address)
+        format!("{}://{}", self.proto, self.server_address)
     }
 
     /// Return the socket address of this running instance of `BareMockServer`, e.g. `127.0.0.1:4372`.
@@ -173,7 +194,12 @@ impl BareMockServer {
 
 impl Debug for BareMockServer {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "BareMockServer {{ address: {} }}", self.address())
+        write!(
+            f,
+            "BareMockServer {{ proto: {}, address: {} }}",
+            self.proto,
+            self.address()
+        )
     }
 }
 

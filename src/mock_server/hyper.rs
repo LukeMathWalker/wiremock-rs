@@ -1,14 +1,18 @@
 use crate::mock_server::bare_server::MockServerState;
-use hyper::service::service_fn;
+use futures::future::{BoxFuture, FutureExt as _};
+use http_body_util::Full;
+use hyper::body::Bytes;
+use hyper_server::accept::Accept;
 use hyper_util::rt::TokioIo;
 use std::sync::Arc;
+use tokio::io::{AsyncRead, AsyncWrite};
 use tokio::net::TcpListener;
 use tokio::sync::RwLock;
 
 /// Work around a lifetime error where, for some reason,
 /// `Box<dyn std::error::Error + Send + Sync + 'static>` can't be converted to a
 /// `Box<dyn std::error::Error + Send + Sync>`
-struct ErrorLifetimeCast(Box<dyn std::error::Error + Send + Sync + 'static>);
+pub(super) struct ErrorLifetimeCast(Box<dyn std::error::Error + Send + Sync + 'static>);
 
 impl From<ErrorLifetimeCast> for Box<dyn std::error::Error + Send + Sync> {
     fn from(value: ErrorLifetimeCast) -> Self {
@@ -16,19 +20,18 @@ impl From<ErrorLifetimeCast> for Box<dyn std::error::Error + Send + Sync> {
     }
 }
 
-/// The actual HTTP server responding to incoming requests according to the specified mocks.
-pub(super) async fn run_server(
-    listener: std::net::TcpListener,
+#[derive(Clone)]
+pub(super) struct HyperRequestHandler {
     server_state: Arc<RwLock<MockServerState>>,
-    mut shutdown_signal: tokio::sync::watch::Receiver<()>,
-) {
-    listener
-        .set_nonblocking(true)
-        .expect("Cannot set non-blocking mode on TcpListener");
-    let listener = TcpListener::from_std(listener).expect("Cannot upgrade TcpListener");
+}
 
-    let request_handler = move |request| {
-        let server_state = server_state.clone();
+impl hyper::service::Service<hyper::Request<hyper::body::Incoming>> for HyperRequestHandler {
+    type Response = hyper::Response<Full<Bytes>>;
+    type Error = ErrorLifetimeCast;
+    type Future = BoxFuture<'static, Result<Self::Response, Self::Error>>;
+
+    fn call(&self, request: hyper::Request<hyper::body::Incoming>) -> Self::Future {
+        let server_state = self.server_state.clone();
         async move {
             let wiremock_request = crate::Request::from_hyper(request).await;
             let (response, delay) = server_state
@@ -52,6 +55,37 @@ pub(super) async fn run_server(
 
             Ok::<_, ErrorLifetimeCast>(response)
         }
+        .boxed()
+    }
+}
+
+/// The actual HTTP server responding to incoming requests according to the specified mocks.
+pub(super) async fn run_server<A>(
+    listener: std::net::TcpListener,
+    server_state: Arc<RwLock<MockServerState>>,
+    mut shutdown_signal: tokio::sync::watch::Receiver<()>,
+    acceptor: A,
+) where
+    A: Accept<tokio::net::TcpStream, HyperRequestHandler> + Send + Clone + 'static,
+    <A as Accept<tokio::net::TcpStream, HyperRequestHandler>>::Future: Send,
+    <A as Accept<tokio::net::TcpStream, HyperRequestHandler>>::Stream:
+        Unpin + Send  + AsyncWrite + AsyncRead + 'static,
+    <A as Accept<tokio::net::TcpStream, HyperRequestHandler>>::Service:
+        hyper::service::Service<http::Request<hyper::body::Incoming>, Response = http::Response<Full<Bytes>>>
+    + Send,
+    <<A as Accept<tokio::net::TcpStream, HyperRequestHandler>>::Service
+     as hyper::service::Service<http::Request<hyper::body::Incoming>>>::Error:
+        Send + Sync  + Into<Box<dyn std::error::Error + Send + Sync>> + 'static,
+    <<A as Accept<tokio::net::TcpStream, HyperRequestHandler>>::Service
+     as hyper::service::Service<http::Request<hyper::body::Incoming>>>::Future: Send + 'static,
+{
+    listener
+        .set_nonblocking(true)
+        .expect("Cannot set non-blocking mode on TcpListener");
+    let listener = TcpListener::from_std(listener).expect("Cannot upgrade TcpListener");
+
+    let request_handler = HyperRequestHandler {
+        server_state: server_state.clone(),
     };
 
     loop {
@@ -67,14 +101,24 @@ pub(super) async fn run_server(
                 break;
             }
         };
-        let io = TokioIo::new(stream);
-
         let request_handler = request_handler.clone();
         let mut shutdown_signal = shutdown_signal.clone();
+        let acceptor = acceptor.clone();
         tokio::task::spawn(async move {
+            let accept = acceptor.accept(stream, request_handler).await;
+            let (stream, request_service) = match accept {
+                Ok((stream, service)) => (stream, service),
+                Err(e) => {
+                    log::error!("Failed to accept connection: {}", e);
+                    return;
+                }
+            };
+
+            let io = TokioIo::new(stream);
+
             let http_server =
                 hyper_util::server::conn::auto::Builder::new(hyper_util::rt::TokioExecutor::new());
-            let conn = http_server.serve_connection_with_upgrades(io, service_fn(request_handler));
+            let conn = http_server.serve_connection_with_upgrades(io, request_service);
             tokio::pin!(conn);
 
             loop {
