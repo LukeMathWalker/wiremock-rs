@@ -1,6 +1,6 @@
 //! Certificate generation.
 //!
-//! Based on https://github.com/rustls/rustls/blob/main/rustls/examples/internal/test_ca.rs
+// Based on https://github.com/rustls/rustls/blob/main/rustls/examples/internal/test_ca.rs
 use std::{
     convert::TryInto,
     fmt::Display,
@@ -97,6 +97,7 @@ impl MockTlsCertificates {
     /// Generate server certificates and key with "localhost" and "127.0.0.1" as hostnames.
     // On the good old M1 processor it takes ~77 µs
     #[inline]
+    #[allow(clippy::new_without_default)]
     pub fn new() -> Self {
         Self::with_hostnames(default_hostnames())
     }
