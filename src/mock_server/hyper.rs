@@ -9,6 +9,17 @@ use tokio::io::{AsyncRead, AsyncWrite};
 use tokio::net::TcpListener;
 use tokio::sync::RwLock;
 
+/// Work around a lifetime error where, for some reason,
+/// `Box<dyn std::error::Error + Send + Sync + 'static>` can't be converted to a
+/// `Box<dyn std::error::Error + Send + Sync>`
+pub(super) struct ErrorLifetimeCast(Box<dyn std::error::Error + Send + Sync + 'static>);
+
+impl From<ErrorLifetimeCast> for Box<dyn std::error::Error + Send + Sync> {
+    fn from(value: ErrorLifetimeCast) -> Self {
+        value.0
+    }
+}
+
 #[derive(Clone)]
 pub(super) struct HyperRequestHandler {
     server_state: Arc<RwLock<MockServerState>>,
@@ -16,7 +27,7 @@ pub(super) struct HyperRequestHandler {
 
 impl hyper::service::Service<hyper::Request<hyper::body::Incoming>> for HyperRequestHandler {
     type Response = hyper::Response<Full<Bytes>>;
-    type Error = &'static str;
+    type Error = ErrorLifetimeCast;
     type Future = BoxFuture<'static, Result<Self::Response, Self::Error>>;
 
     fn call(&self, request: hyper::Request<hyper::body::Incoming>) -> Self::Future {
@@ -27,7 +38,8 @@ impl hyper::service::Service<hyper::Request<hyper::body::Incoming>> for HyperReq
                 .write()
                 .await
                 .handle_request(wiremock_request)
-                .await;
+                .await
+                .map_err(ErrorLifetimeCast)?;
 
             // We do not wait for the delay within the handler otherwise we would be
             // holding on to the write-side of the `RwLock` on `mock_set`.
@@ -41,7 +53,7 @@ impl hyper::service::Service<hyper::Request<hyper::body::Incoming>> for HyperReq
                 delay.await;
             }
 
-            Ok::<_, &'static str>(response)
+            Ok::<_, ErrorLifetimeCast>(response)
         }
         .boxed()
     }

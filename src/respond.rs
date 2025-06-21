@@ -1,4 +1,4 @@
-use crate::{Request, ResponseTemplate};
+use crate::{ErrorResponse, Request, ResponseTemplate};
 
 /// Anything that implements `Respond` can be used to reply to an incoming request when a
 /// [`Mock`] is activated.
@@ -150,5 +150,20 @@ where
 {
     fn respond(&self, request: &Request) -> ResponseTemplate {
         (self)(request)
+    }
+}
+
+/// Like [`Respond`], but it only allows returning an error through a function.
+pub trait RespondErr: Send + Sync {
+    fn respond_err(&self, request: &Request) -> ErrorResponse;
+}
+
+impl<F, Err> RespondErr for F
+where
+    F: Send + Sync + Fn(&Request) -> Err,
+    Err: std::error::Error + Send + Sync + 'static,
+{
+    fn respond_err(&self, request: &Request) -> ErrorResponse {
+        Box::new((self)(request))
     }
 }

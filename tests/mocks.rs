@@ -2,10 +2,13 @@ use futures::FutureExt;
 use reqwest::StatusCode;
 use serde::Serialize;
 use serde_json::json;
+use std::fmt::{Display, Formatter};
+use std::io::ErrorKind;
+use std::iter;
 use std::net::TcpStream;
 use std::time::Duration;
 use wiremock::matchers::{body_json, body_partial_json, method, path, PathExactMatcher};
-use wiremock::{Mock, MockServer, ResponseTemplate};
+use wiremock::{Mock, MockServer, Request, ResponseTemplate};
 
 #[async_std::test]
 async fn new_starts_the_server() {
@@ -391,4 +394,61 @@ async fn debug_prints_mock_server_variants() {
         ),
         format!("{:?}", bare_mock_server)
     );
+}
+
+#[tokio::test]
+async fn io_err() {
+    // Act
+    let mock_server = MockServer::start().await;
+    let mock = Mock::given(method("GET")).respond_with_err(|_: &Request| {
+        std::io::Error::new(ErrorKind::ConnectionReset, "connection reset")
+    });
+    mock_server.register(mock).await;
+
+    // Assert
+    let err = reqwest::get(&mock_server.uri()).await.unwrap_err();
+    // We're skipping the original error since it can be either `error sending request` or
+    // `error sending request for url (http://127.0.0.1:<port>/)`
+    let actual_err: Vec<String> =
+        iter::successors(std::error::Error::source(&err), |err| err.source())
+            .map(|err| err.to_string())
+            .collect();
+
+    let expected_err = vec![
+        "client error (SendRequest)".to_string(),
+        "connection closed before message completed".to_string(),
+    ];
+    assert_eq!(actual_err, expected_err);
+}
+
+#[tokio::test]
+async fn custom_err() {
+    // Act
+    #[derive(Debug)]
+    struct CustomErr;
+    impl Display for CustomErr {
+        fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+            f.write_str("custom error")
+        }
+    }
+    impl std::error::Error for CustomErr {}
+
+    let mock_server = MockServer::start().await;
+    let mock = Mock::given(method("GET")).respond_with_err(|_: &Request| CustomErr);
+    mock_server.register(mock).await;
+
+    // Assert
+    let err = reqwest::get(&mock_server.uri()).await.unwrap_err();
+    // We're skipping the original error since it can be either `error sending request` or
+    // `error sending request for url (http://127.0.0.1:<port>/)`
+    let actual_err: Vec<String> =
+        iter::successors(std::error::Error::source(&err), |err| err.source())
+            .map(|err| err.to_string())
+            .collect();
+
+    let expected_err = vec![
+        "client error (SendRequest)".to_string(),
+        "connection closed before message completed".to_string(),
+    ];
+    assert_eq!(actual_err, expected_err);
 }
