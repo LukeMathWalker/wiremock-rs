@@ -77,7 +77,7 @@ mod tlstests {
     }
 
     #[async_std::test]
-    async fn test_tls_with_TODO() {
+    async fn test_tls_with_client_cert() {
         let certs = MockTlsCertificates::new();
 
         let mock_server = wiremock::MockServer::builder()
@@ -88,13 +88,19 @@ mod tlstests {
                     .expect("Failed to create RustlsConfig"),
             )
             .await;
-        todo!();
         let uri = mock_server.uri();
 
         let reqwest_root_certificate = reqwest::Certificate::from_der(certs.get_root_cert().der())
             .expect("Failed to create certificate from DER");
+        let (client_cert, client_key) = certs.gen_client_cert("johnny@house-of-leaves.test");
+        let client_cert_pem = client_cert.pem();
+        let client_key_pem = client_key.serialize_pem();
+        let client_cert =
+            reqwest::Identity::from_pem((client_cert_pem + &client_key_pem).as_bytes())
+                .expect("Failed to create Identity from PEM");
         let client = reqwest::Client::builder()
             .add_root_certificate(reqwest_root_certificate)
+            .identity(client_cert)
             .use_rustls_tls() // It fails on MacOS with native-tls no mattter what, so use rustls.
             .build()
             .expect("Failed to build HTTP client");
