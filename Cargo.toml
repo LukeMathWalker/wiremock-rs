@@ -42,15 +42,16 @@ rustls-pki-types = { version = "1.11.0", optional = true }
 
 [dev-dependencies]
 async-std = { version = "1.13.0", features = ["attributes", "tokio1"] }
-reqwest = { version = "0.12.7", features = ["json", "rustls-tls"] }
+reqwest = { version = "0.12.7", features = ["json"] }
 tokio = { version = "1.5.0", features = ["macros", "rt-multi-thread"] }
 actix-rt = "2.2.0"
 serde = { version = "1", features = ["derive"] }
 criterion = "0.5.1"
 
 [features]
-tls =  ["rcgen", "hyper-server/tls-rustls", "rustls-pki-types"]
-default = ["tls"]
+default = []
+# Enable HTTPS mock server support.
+tls =  ["hyper-server/tls-rustls", "rcgen", "rustls-pki-types", "reqwest/rustls-tls"]
 
 [[bench]]
 name = "tls_certs"
