@@ -4,7 +4,7 @@ mod tlstests {
 
     #[async_std::test]
     async fn test_tls_basic() {
-        let certs = MockTlsCertificates::new();
+        let certs = MockTlsCertificates::random();
 
         let mock_server = wiremock::MockServer::builder()
             .start_https(certs.get_server_config())
@@ -17,7 +17,7 @@ mod tlstests {
 
     #[async_std::test]
     async fn test_tls_invalid() {
-        let certs = MockTlsCertificates::new();
+        let certs = MockTlsCertificates::random();
 
         let mock_server = wiremock::MockServer::builder()
             .start_https(certs.get_server_config())
@@ -38,15 +38,16 @@ mod tlstests {
 
     #[async_std::test]
     async fn test_tls_anonymous() {
-        let certs = MockTlsCertificates::new();
+        let certs = MockTlsCertificates::random();
 
         let mock_server = wiremock::MockServer::builder()
             .start_https(certs.get_server_config())
             .await;
         let uri = mock_server.uri();
 
-        let reqwest_root_certificate = reqwest::Certificate::from_der(certs.get_root_cert().der())
-            .expect("Failed to create certificate from DER");
+        let reqwest_root_certificate =
+            reqwest::Certificate::from_der(certs.get_root_ca_cert().der())
+                .expect("Failed to create certificate from DER");
         let client = reqwest::Client::builder()
             .add_root_certificate(reqwest_root_certificate)
             .use_rustls_tls() // It fails on MacOS with native-tls no mattter what, so use rustls.
@@ -62,16 +63,17 @@ mod tlstests {
 
     #[async_std::test]
     async fn test_tls_with_client_cert() {
-        let certs = MockTlsCertificates::new();
+        let certs = MockTlsCertificates::random();
 
         let mock_server = wiremock::MockServer::builder()
             .start_https(certs.get_server_config())
             .await;
         let uri = mock_server.uri();
 
-        let reqwest_root_certificate = reqwest::Certificate::from_der(certs.get_root_cert().der())
-            .expect("Failed to create certificate from DER");
-        let (client_cert, client_key) = certs.gen_client_cert("johnny@house-of-leaves.test");
+        let reqwest_root_certificate =
+            reqwest::Certificate::from_der(certs.get_root_ca_cert().der())
+                .expect("Failed to create certificate from DER");
+        let (client_cert, client_key) = certs.generate_client_cert("johnny@house-of-leaves.test");
         let client_cert_pem = client_cert.pem();
         let client_key_pem = client_key.serialize_pem();
         let client_cert =

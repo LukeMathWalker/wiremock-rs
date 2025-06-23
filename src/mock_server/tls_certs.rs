@@ -1,4 +1,4 @@
-//! Certificate generation.
+//! TLS Certificate generation helpers.
 //!
 // Based on https://github.com/rustls/rustls/blob/main/rustls/examples/internal/test_ca.rs
 use std::{
@@ -39,10 +39,14 @@ const EE_KEY_USAGES: &[KeyUsagePurpose; 2] = &[
 
 static SERIAL_NUMBER: AtomicU64 = AtomicU64::new(1);
 
+/// Configuration for a mock server TLS setup.
 pub struct MockServerTlsConfig {
+    /// Root CA certificate in DER format.
     pub root_cert_der: Vec<u8>,
+    /// Server certificate in DER format.
     pub server_cert_der: Vec<u8>,
-    pub server_key_der: Vec<u8>,
+    /// Server keypair in DER format.
+    pub server_keypair_der: Vec<u8>,
 }
 
 impl MockServerTlsConfig {
@@ -50,23 +54,22 @@ impl MockServerTlsConfig {
     pub fn from_der(
         root_cert_der: Vec<u8>,
         server_cert_der: Vec<u8>,
-        server_key_der: Vec<u8>,
+        server_keypair_der: Vec<u8>,
     ) -> Self {
         Self {
             root_cert_der,
             server_cert_der,
-            server_key_der,
+            server_keypair_der,
         }
     }
 
     /// Create a new `MockServerTlsConfig` from PEM-encoded certificates and key.
     ///
     /// Panics if the data cannot be parsed as valid PEM.
-    #[inline]
     pub fn from_pem(
         root_cert_pem: Vec<u8>,
         server_cert_pem: Vec<u8>,
-        server_key_pem: Vec<u8>,
+        server_keypair_pem: Vec<u8>,
     ) -> Self {
         let root_cert_der = CertificateDer::from_pem_slice(&root_cert_pem)
             .expect("Failed to parse root certificate from PEM")
@@ -74,7 +77,7 @@ impl MockServerTlsConfig {
         let server_cert_der = CertificateDer::from_pem_slice(&server_cert_pem)
             .expect("Failed to parse server certificate from PEM")
             .to_vec();
-        let server_key_der = PrivateKeyDer::from_pem_slice(&server_key_pem)
+        let server_keypair_der = PrivateKeyDer::from_pem_slice(&server_keypair_pem)
             .expect("Failed to parse server key from PEM")
             .secret_der()
             .to_vec();
@@ -82,73 +85,85 @@ impl MockServerTlsConfig {
         Self {
             root_cert_der,
             server_cert_der,
-            server_key_der,
+            server_keypair_der,
         }
     }
 }
 
+/// Mock self-signed TLS certificates for testing purposes.
+///
+/// This struct generates a root CA certificate and a server certificate signed by it, along with a key pair for the
+/// server.
 pub struct MockTlsCertificates {
     pub root_cert: Certificate,
     pub server_cert: Certificate,
-    pub server_key: KeyPair,
+    pub server_keypair: KeyPair,
 }
 
 impl MockTlsCertificates {
-    /// Generate server certificates and key with "localhost" and "127.0.0.1" as hostnames.
+    /// Generate server certificates and keypair with "localhost" and "127.0.0.1" as hostnames.
+    ///
+    /// Ed25519 is used as the default signature algorithm.
     // On the good old M1 processor it takes ~77 µs
     #[inline]
-    #[allow(clippy::new_without_default)]
-    pub fn new() -> Self {
-        Self::with_hostnames(default_hostnames())
+    pub fn random() -> Self {
+        Self::random_with_hostnames(default_hostnames())
     }
 
     /// Generate server certificates and key with custom hostnames and IPs.
-    pub fn with_hostnames(hostnames: impl Into<Vec<SanType>>) -> Self {
+    pub fn random_with_hostnames(hostnames: impl Into<Vec<SanType>>) -> Self {
         let (root_cert, root_key) = gen_root_cert(DEFAULT_ALGORITHM);
         // We do not bother to have an intermediate certificate because CAs use them for flexibility only.
-        let (server_cert, server_key) =
+        let (server_cert, server_keypair) =
             gen_server_cert(&root_cert, &root_key, DEFAULT_ALGORITHM, hostnames.into());
 
         Self {
             root_cert,
             server_cert,
-            server_key,
+            server_keypair,
         }
     }
 
+    /// Get the root CA certificate.
     #[inline]
-    pub fn get_root_cert(&self) -> &Certificate {
+    pub fn get_root_ca_cert(&self) -> &Certificate {
         &self.root_cert
     }
 
+    /// Get the server certificate signed by CA certificate, in DER format.
     #[inline]
     pub fn server_cert_der(&self) -> &CertificateDer {
         self.server_cert.der()
     }
 
-    pub fn server_private_key_der(&self) -> PrivateKeyDer {
-        self.server_key
+    /// Get the server keypair in DER format.
+    pub fn server_private_keypair_der(&self) -> PrivateKeyDer {
+        self.server_keypair
             .serialize_der()
             .try_into()
             .expect("Failed to deserialize a serialized key")
     }
 
+    /// Generate a client certificate signed by the CA certificate.
+    ///
+    /// Each invocation generates a new keypair and a certificate.
     #[inline]
-    pub fn gen_client_cert(&self, email: &str) -> (Certificate, KeyPair) {
+    pub fn generate_client_cert(&self, email: &str) -> (Certificate, KeyPair) {
         gen_client_cert(
             &self.server_cert,
-            &self.server_key,
+            &self.server_keypair,
             DEFAULT_ALGORITHM,
             email,
         )
     }
 
+    /// Get the server configuration for use with a mock server.
     #[inline]
     pub fn get_server_config(&self) -> MockServerTlsConfig {
         MockServerTlsConfig {
             root_cert_der: self.root_cert.der().to_vec(),
             server_cert_der: self.server_cert.der().to_vec(),
-            server_key_der: self.server_key.serialize_der(),
+            server_keypair_der: self.server_keypair.serialize_der(),
         }
     }
 }
@@ -180,7 +195,7 @@ fn gen_root_cert(alg: &'static SignatureAlgorithm) -> (Certificate, KeyPair) {
 
 fn gen_server_cert(
     signer_cert: &Certificate,
-    signer_key: &KeyPair,
+    signer_keypair: &KeyPair,
     alg: &'static SignatureAlgorithm,
     hostnames: Vec<SanType>,
 ) -> (Certificate, KeyPair) {
@@ -195,13 +210,13 @@ fn gen_server_cert(
     params.key_usages = EE_KEY_USAGES.to_vec();
     params.subject_alt_names = hostnames;
 
-    let cert = params.signed_by(&keypair, signer_cert, signer_key).unwrap();
+    let cert = params.signed_by(&keypair, signer_cert, signer_keypair).unwrap();
     (cert, keypair)
 }
 
 fn gen_client_cert(
     signer_cert: &Certificate,
-    signer_key: &KeyPair,
+    signer_keypair: &KeyPair,
     alg: &'static SignatureAlgorithm,
     email: &str,
 ) -> (Certificate, KeyPair) {
@@ -222,7 +237,7 @@ fn gen_client_cert(
             .unwrap_or_else(|_| panic!("Invalid email: {}", email)),
     )];
 
-    let cert = params.signed_by(&keypair, signer_cert, signer_key).unwrap();
+    let cert = params.signed_by(&keypair, signer_cert, signer_keypair).unwrap();
     (cert, keypair)
 }
 

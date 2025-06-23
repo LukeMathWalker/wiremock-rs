@@ -107,6 +107,16 @@
 //! The pool is designed to be invisible: it makes your life easier and your tests faster. If you
 //! end up having to worry about it, it's a bug: open an issue!
 //!
+//! ## HTTPS
+//!
+//! You may start a HTTPS server with `MockServer::start_https(MockServerTlsConfig)` method.
+//! The `MockServerTlsConfig` can be created from pregenerated TLS certificates, or you can
+//! generate self-signed server and client certificates with a `MockTlsCertificates` instance.
+//!
+//! HTTPS servers are not pooled yet.
+//!
+//! HTTPS functionality is gated by the `tls` feature.
+//!
 //! ## Prior art
 //!
 //! [`mockito`] and [`httpmock`] provide HTTP mocking for Rust.

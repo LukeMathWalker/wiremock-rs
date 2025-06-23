@@ -8,14 +8,13 @@ use wiremock::tls_certs::MockTlsCertificates;
 // On the good old M1 processor it takes ~77 µs
 pub fn tls_mock_tls_certificates_new(c: &mut Criterion) {
     c.bench_function("MockTlsCertificates::new", |b| {
-        b.iter(|| MockTlsCertificates::new())
+        b.iter(|| MockTlsCertificates::random())
     });
 }
 
 #[cfg(feature = "tls")]
-// TODO measure with a charger connected
 pub fn tls_mock_tls_certificates_client(c: &mut Criterion) {
-    let mock_tls_certificates = MockTlsCertificates::new();
+    let mock_tls_certificates = MockTlsCertificates::random();
     c.bench_function("MockTlsCertificates::gen_client", |b| {
         b.iter(|| mock_tls_certificates.gen_client("user@myserver.test"))
     });

@@ -146,7 +146,7 @@ impl MockServerBuilder {
 
         let rustls_config = RustlsConfig::from_der(
             vec![certs.server_cert_der, certs.root_cert_der],
-            certs.server_key_der,
+            certs.server_keypair_der,
         )
         .await
         .expect("Failed to build RustlsConfig");
