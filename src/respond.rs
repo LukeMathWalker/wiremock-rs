@@ -1,4 +1,4 @@
-use crate::{Request, ResponseTemplate};
+use crate::{ErrorResponse, Request, ResponseTemplate};
 
 /// Anything that implements `Respond` can be used to reply to an incoming request when a
 /// [`Mock`] is activated.
@@ -27,13 +27,13 @@ use crate::{Request, ResponseTemplate};
 ///         .await;
 ///
 ///     // Act
-///     let response = surf::get(&mock_server.uri())
+///     let response = reqwest::get(&mock_server.uri())
 ///         .await
 ///         .unwrap();
 ///
 ///     // Assert
 ///     assert_eq!(response.status(), 200);
-///     assert_eq!(response.header("X-Correlation-ID").unwrap().as_str(), correlation_id);
+///     assert_eq!(response.headers().get("X-Correlation-ID").unwrap().to_str().unwrap(), correlation_id);
 /// }
 /// ```
 ///
@@ -62,12 +62,14 @@ use crate::{Request, ResponseTemplate};
 ///         .mount(&mock_server)
 ///         .await;
 ///
-///     let mut response = surf::post(format!("{}/echo", &mock_server.uri()))
+///     let client = reqwest::Client::new();
+///     let response = client.post(format!("{}/echo", &mock_server.uri()))
 ///         .body(body.clone())
+///         .send()
 ///         .await
 ///         .unwrap();
 ///     assert_eq!(response.status(), 200);
-///     assert_eq!(response.body_string().await.unwrap(), body);
+///     assert_eq!(response.text().await.unwrap(), body);
 /// }
 /// ```
 ///
@@ -109,13 +111,16 @@ use crate::{Request, ResponseTemplate};
 ///         .respond_with(CorrelationIdResponder(ResponseTemplate::new(200)))
 ///         .mount(&mock_server)
 ///         .await;
-///     
-///     let response = surf::get(format!("{}/hello", &mock_server.uri()))
+///
+///     let client = reqwest::Client::new();
+///     let response = client
+///         .get(format!("{}/hello", &mock_server.uri()))
 ///         .header("X-Correlation-Id", correlation_id)
+///         .send()
 ///         .await
 ///         .unwrap();
 ///     assert_eq!(response.status(), 200);
-///     assert_eq!(response.header("X-Correlation-Id").unwrap().as_str(), correlation_id);
+///     assert_eq!(response.headers().get("X-Correlation-Id").unwrap().to_str().unwrap(), correlation_id);
 /// }
 /// ```
 ///
@@ -145,5 +150,20 @@ where
 {
     fn respond(&self, request: &Request) -> ResponseTemplate {
         (self)(request)
+    }
+}
+
+/// Like [`Respond`], but it only allows returning an error through a function.
+pub trait RespondErr: Send + Sync {
+    fn respond_err(&self, request: &Request) -> ErrorResponse;
+}
+
+impl<F, Err> RespondErr for F
+where
+    F: Send + Sync + Fn(&Request) -> Err,
+    Err: std::error::Error + Send + Sync + 'static,
+{
+    fn respond_err(&self, request: &Request) -> ErrorResponse {
+        Box::new((self)(request))
     }
 }

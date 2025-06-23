@@ -2,7 +2,9 @@ use std::sync::{atomic::AtomicBool, Arc};
 
 use tokio::sync::Notify;
 
-use crate::{verification::VerificationReport, Match, Mock, Request, ResponseTemplate};
+use crate::{
+    verification::VerificationReport, ErrorResponse, Match, Mock, Request, ResponseTemplate,
+};
 
 /// Given the behaviour specification as a [`Mock`], keep track of runtime information
 /// concerning this mock - e.g. how many times it matched on a incoming request.
@@ -80,7 +82,10 @@ impl MountedMock {
         }
     }
 
-    pub(crate) fn response_template(&self, request: &Request) -> ResponseTemplate {
+    pub(crate) fn response_template(
+        &self,
+        request: &Request,
+    ) -> Result<ResponseTemplate, ErrorResponse> {
         self.specification.response_template(request)
     }
 

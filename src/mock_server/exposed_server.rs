@@ -96,7 +96,7 @@ impl MockServer {
     ///
     ///     // Act
     ///
-    ///     let status = surf::get(&mock_server_one.uri())
+    ///     let status = reqwest::get(&mock_server_one.uri())
     ///         .await
     ///         .unwrap()
     ///         .status();
@@ -104,7 +104,7 @@ impl MockServer {
     ///
     ///     // This would have matched our mock, but we haven't registered it for `mock_server_two`!
     ///     // Hence it returns a 404, the default response when no mocks matched on the mock server.
-    ///     let status = surf::get(&mock_server_two.uri())
+    ///     let status = reqwest::get(&mock_server_two.uri())
     ///         .await
     ///         .unwrap()
     ///         .status();
@@ -142,7 +142,7 @@ impl MockServer {
     ///     let unregistered_mock = Mock::given(method("GET")).respond_with(response);
     ///
     ///     // Act
-    ///     let status = surf::get(&mock_server.uri())
+    ///     let status = reqwest::get(&mock_server.uri())
     ///         .await
     ///         .unwrap()
     ///         .status();
@@ -150,7 +150,9 @@ impl MockServer {
     ///
     ///     // This would have matched `unregistered_mock`, but we haven't registered it!
     ///     // Hence it returns a 404, the default response when no mocks matched on the mock server.
-    ///     let status = surf::post(&mock_server.uri())
+    ///     let client = reqwest::Client::new();
+    ///     let status = client.post(&mock_server.uri())
+    ///         .send()
     ///         .await
     ///         .unwrap()
     ///         .status();
@@ -200,7 +202,7 @@ impl MockServer {
     ///         .named("my_test_helper GET /");
     ///     let mock_guard = mock_server.register_as_scoped(mock).await;
     ///
-    ///     surf::get(&mock_server.uri())
+    ///     reqwest::get(&mock_server.uri())
     ///         .await
     ///         .unwrap();
     ///
@@ -217,7 +219,7 @@ impl MockServer {
     ///
     ///     // This would have returned 200 if the `Mock` in
     ///     // `my_test_helper` had not been scoped.
-    ///     let status = surf::get(&mock_server.uri())
+    ///     let status = reqwest::get(&mock_server.uri())
     ///         .await
     ///         .unwrap()
     ///         .status();
@@ -248,7 +250,7 @@ impl MockServer {
     ///     my_test_helper(&mock_server).await;
     ///
     ///     // Act
-    ///     let status = surf::get(&mock_server.uri())
+    ///     let status = reqwest::get(&mock_server.uri())
     ///         .await
     ///         .unwrap()
     ///         .status();
@@ -277,7 +279,7 @@ impl MockServer {
     ///     Mock::given(method("GET")).respond_with(response).mount(&mock_server).await;
     ///
     ///     // Act
-    ///     let status = surf::get(&mock_server.uri())
+    ///     let status = reqwest::get(&mock_server.uri())
     ///         .await
     ///         .unwrap()
     ///         .status();
@@ -287,7 +289,9 @@ impl MockServer {
     ///     mock_server.reset().await;
     ///
     ///     // This would have matched our mock, but we have dropped it resetting the server!
-    ///     let status = surf::post(&mock_server.uri())
+    ///     let client = reqwest::Client::new();
+    ///     let status = client.post(&mock_server.uri())
+    ///         .send()
     ///         .await
     ///         .unwrap()
     ///         .status();
@@ -307,7 +311,7 @@ impl MockServer {
     ///     let mock_server = MockServer::start().await;
     ///
     ///     // Act
-    ///     surf::get(&mock_server.uri()).await.unwrap();
+    ///     reqwest::get(&mock_server.uri()).await.unwrap();
     ///
     ///     // We have recorded the incoming request
     ///     let received_requests = mock_server.received_requests().await.unwrap();
@@ -381,7 +385,7 @@ impl MockServer {
     ///     let mock_server = MockServer::start().await;
     ///     // Act
     ///     let uri = format!("{}/health_check", &mock_server.uri());
-    ///     let status = surf::get(uri).await.unwrap().status();
+    ///     let status = reqwest::get(uri).await.unwrap().status();
     ///
     ///     // Assert - default response
     ///     assert_eq!(status, 404);
@@ -433,7 +437,7 @@ impl MockServer {
     ///     let mock_server = MockServer::start().await;
     ///
     ///     // Act
-    ///     surf::get(&mock_server.uri()).await.unwrap();
+    ///     reqwest::get(&mock_server.uri()).await.unwrap();
     ///
     ///     // Assert
     ///     let received_requests = mock_server.received_requests().await.unwrap();

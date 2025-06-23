@@ -1,5 +1,5 @@
-use crate::respond::Respond;
-use crate::{MockGuard, MockServer, Request, ResponseTemplate};
+use crate::respond::{Respond, RespondErr};
+use crate::{ErrorResponse, MockGuard, MockServer, Request, ResponseTemplate};
 use std::fmt::{Debug, Formatter};
 use std::ops::{
     Range, RangeBounds, RangeFrom, RangeFull, RangeInclusive, RangeTo, RangeToInclusive,
@@ -36,18 +36,24 @@ use std::ops::{
 ///         .respond_with(ResponseTemplate::new(200))
 ///         .mount(&mock_server)
 ///         .await;
-///     
+///
+///     let client = reqwest::Client::new();
+///
 ///     // Even length
-///     let status = surf::get(&mock_server.uri())
+///     let status = client
+///         .get(&mock_server.uri())
 ///         .header("custom", "even")
+///         .send()
 ///         .await
 ///         .unwrap()
 ///         .status();
 ///     assert_eq!(status, 404);
 ///
 ///     // Odd length
-///     let status = surf::get(&mock_server.uri())
+///     let status = client
+///         .get(&mock_server.uri())
 ///         .header("custom", "odd")
+///         .send()
 ///         .await
 ///         .unwrap()
 ///         .status();
@@ -82,18 +88,24 @@ use std::ops::{
 ///         .respond_with(ResponseTemplate::new(200))
 ///         .mount(&mock_server)
 ///         .await;
-///     
+///
+///     let client = reqwest::Client::new();
+///
 ///     // Even length
-///     let status = surf::get(&mock_server.uri())
+///     let status = client
+///         .get(&mock_server.uri())
 ///         .header("custom", "even")
+///         .send()
 ///         .await
 ///         .unwrap()
 ///         .status();
 ///     assert_eq!(status, 404);
 ///
 ///     // Odd length
-///     let status = surf::get(&mock_server.uri())
+///     let status = client
+///         .get(&mock_server.uri())
 ///         .header("custom", "odd")
+///         .send()
 ///         .await
 ///         .unwrap()
 ///         .status();
@@ -163,7 +175,7 @@ impl Debug for Matcher {
 ///     let unregistered_mock = Mock::given(method("POST")).respond_with(response);
 ///     
 ///     // Act
-///     let status = surf::get(&mock_server.uri())
+///     let status = reqwest::get(&mock_server.uri())
 ///         .await
 ///         .unwrap()
 ///         .status();
@@ -171,7 +183,9 @@ impl Debug for Matcher {
 ///
 ///     // This would have matched `unregistered_mock`, but we haven't registered it!
 ///     // Hence it returns a 404, the default response when no mocks matched on the mock server.
-///     let status = surf::post(&mock_server.uri())
+///     let client = reqwest::Client::new();
+///     let status = client.post(&mock_server.uri())
+///         .send()
 ///         .await
 ///         .unwrap()
 ///         .status();
@@ -200,7 +214,7 @@ impl Debug for Matcher {
 ///         .await;
 ///     
 ///     // Act
-///     let status = surf::get(&mock_server.uri())
+///     let status = reqwest::get(&mock_server.uri())
 ///         .await
 ///         .unwrap()
 ///         .status();
@@ -225,7 +239,7 @@ impl Debug for Matcher {
 ///         .mount_as_scoped(mock_server)
 ///         .await;
 ///
-///     surf::get(&mock_server.uri())
+///     reqwest::get(&mock_server.uri())
 ///         .await
 ///         .unwrap();
 ///
@@ -242,7 +256,7 @@ impl Debug for Matcher {
 ///
 ///     // This would have returned 200 if the `Mock` in
 ///     // `my_test_helper` had not been scoped.
-///     let status = surf::get(&mock_server.uri())
+///     let status = reqwest::get(&mock_server.uri())
 ///         .await
 ///         .unwrap()
 ///         .status();
@@ -256,7 +270,7 @@ impl Debug for Matcher {
 #[must_use = "`Mock`s have to be mounted or registered with a `MockServer` to become effective"]
 pub struct Mock {
     pub(crate) matchers: Vec<Matcher>,
-    pub(crate) response: Box<dyn Respond>,
+    pub(crate) response: Result<Box<dyn Respond>, Box<dyn RespondErr>>,
     /// Maximum number of times (inclusive) we should return a response from this Mock on
     /// matching requests.
     /// If `None`, there is no cap and we will respond to all incoming matching requests.
@@ -321,14 +335,14 @@ impl Mock {
     ///     // Act
     ///
     ///     // The first request matches, as expected.
-    ///     let status = surf::get(&mock_server.uri())
+    ///     let status = reqwest::get(&mock_server.uri())
     ///         .await
     ///         .unwrap()
     ///         .status();
     ///     assert_eq!(status, 200);
     ///
     ///     // The second request does NOT match given our `up_to_n_times(1)` setting.
-    ///     let status = surf::get(&mock_server.uri())
+    ///     let status = reqwest::get(&mock_server.uri())
     ///         .await
     ///         .unwrap()
     ///         .status();
@@ -379,7 +393,7 @@ impl Mock {
     ///     // Act
     ///
     ///     // The request with highest priority, as expected.
-    ///     let status = surf::get(&format!("{}/abcd", mock_server.uri()))
+    ///     let status = reqwest::get(&format!("{}/abcd", mock_server.uri()))
     ///         .await
     ///         .unwrap()
     ///         .status();
@@ -439,7 +453,7 @@ impl Mock {
     ///         .await;
     ///     
     ///     // Act
-    ///     let status = surf::get(&mock_server.uri())
+    ///     let status = reqwest::get(&mock_server.uri())
     ///         .await
     ///         .unwrap()
     ///         .status();
@@ -498,7 +512,7 @@ impl Mock {
     ///         .await;
     ///     
     ///     // Act
-    ///     let status = surf::get(&mock_server.uri())
+    ///     let status = reqwest::get(&mock_server.uri())
     ///         .await
     ///         .unwrap()
     ///         .status();
@@ -565,7 +579,7 @@ impl Mock {
     ///         .mount_as_scoped(mock_server)
     ///         .await;
     ///
-    ///     surf::get(&mock_server.uri())
+    ///     reqwest::get(&mock_server.uri())
     ///         .await
     ///         .unwrap();
     ///
@@ -582,7 +596,7 @@ impl Mock {
     ///
     ///     // This would have returned 200 if the `Mock` in
     ///     // `my_test_helper` had not been scoped.
-    ///     let status = surf::get(&mock_server.uri())
+    ///     let status = reqwest::get(&mock_server.uri())
     ///         .await
     ///         .unwrap()
     ///         .status();
@@ -614,7 +628,7 @@ impl Mock {
     ///     my_test_helper(&mock_server).await;
     ///
     ///     // Act
-    ///     let status = surf::get(&mock_server.uri())
+    ///     let status = reqwest::get(&mock_server.uri())
     ///         .await
     ///         .unwrap()
     ///         .status();
@@ -629,8 +643,14 @@ impl Mock {
 
     /// Given a [`Request`] build an instance a [`ResponseTemplate`] using
     /// the responder associated with the `Mock`.
-    pub(crate) fn response_template(&self, request: &Request) -> ResponseTemplate {
-        self.response.respond(request)
+    pub(crate) fn response_template(
+        &self,
+        request: &Request,
+    ) -> Result<ResponseTemplate, ErrorResponse> {
+        match &self.response {
+            Ok(responder) => Ok(responder.respond(request)),
+            Err(responder_err) => Err(responder_err.respond_err(request)),
+        }
     }
 }
 
@@ -656,7 +676,23 @@ impl MockBuilder {
     pub fn respond_with<R: Respond + 'static>(self, responder: R) -> Mock {
         Mock {
             matchers: self.matchers,
-            response: Box::new(responder),
+            response: Ok(Box::new(responder)),
+            max_n_matches: None,
+            priority: 5,
+            name: None,
+            expectation_range: Times(TimesEnum::Unbounded(RangeFull)),
+        }
+    }
+
+    /// Instead of response with an HTTP reply, return a Rust error.
+    ///
+    /// This can simulate lower level errors, e.g., a [`ConnectionReset`] IO Error.
+    ///
+    /// [`ConnectionReset`]: std::io::ErrorKind::ConnectionReset
+    pub fn respond_with_err<R: RespondErr + 'static>(self, responder_err: R) -> Mock {
+        Mock {
+            matchers: self.matchers,
+            response: Err(Box::new(responder_err)),
             max_n_matches: None,
             priority: 5,
             name: None,
