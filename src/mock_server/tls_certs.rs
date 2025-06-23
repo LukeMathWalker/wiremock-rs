@@ -210,7 +210,9 @@ fn gen_server_cert(
     params.key_usages = EE_KEY_USAGES.to_vec();
     params.subject_alt_names = hostnames;
 
-    let cert = params.signed_by(&keypair, signer_cert, signer_keypair).unwrap();
+    let cert = params
+        .signed_by(&keypair, signer_cert, signer_keypair)
+        .unwrap();
     (cert, keypair)
 }
 
@@ -237,7 +239,9 @@ fn gen_client_cert(
             .unwrap_or_else(|_| panic!("Invalid email: {}", email)),
     )];
 
-    let cert = params.signed_by(&keypair, signer_cert, signer_keypair).unwrap();
+    let cert = params
+        .signed_by(&keypair, signer_cert, signer_keypair)
+        .unwrap();
     (cert, keypair)
 }
 
