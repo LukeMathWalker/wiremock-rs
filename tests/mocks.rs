@@ -7,7 +7,11 @@ use std::io::ErrorKind;
 use std::iter;
 use std::net::TcpStream;
 use std::time::Duration;
-use wiremock::matchers::{body_json, body_partial_json, method, path, PathExactMatcher};
+use url::form_urlencoded;
+use wiremock::matchers::{
+    body_json, body_partial_json, form_url_encoded, form_url_encoded_field_is_missing, method,
+    path, PathExactMatcher,
+};
 use wiremock::{Mock, MockServer, Request, ResponseTemplate};
 
 #[async_std::test]
@@ -226,6 +230,82 @@ async fn body_json_partial_matches_a_part_of_response_json() {
 
     // Assert
     assert_eq!(response.status(), StatusCode::OK);
+}
+
+#[async_std::test]
+async fn body_form_matches_independent_of_key_ordering() {
+    let body = form_urlencoded::Serializer::new(String::new())
+        .append_pair("b", "2")
+        .append_pair("a", "1")
+        .finish();
+
+    let mock_server = MockServer::start().await;
+    let response = ResponseTemplate::new(200);
+    let mock = Mock::given(method("POST"))
+        .and(form_url_encoded("a", "1"))
+        .and(form_url_encoded("b", "2"))
+        .respond_with(response);
+    mock_server.register(mock).await;
+
+    let client = reqwest::Client::new();
+
+    // Act
+    let response = client
+        .post(mock_server.uri())
+        .body(body)
+        .send()
+        .await
+        .unwrap();
+
+    // Assert
+    assert_eq!(response.status(), StatusCode::OK);
+}
+
+#[async_std::test]
+async fn body_form_partial_matches() {
+    let body: String = form_urlencoded::Serializer::new(String::new())
+        .append_pair("a", "1")
+        .append_pair("b", "2")
+        .finish();
+
+    let mock_server = MockServer::start().await;
+    let response = ResponseTemplate::new(200);
+    let mock = Mock::given(method("POST"))
+        .and(form_url_encoded_field_is_missing("c"))
+        .respond_with(response);
+    mock_server.register(mock).await;
+
+    let client = reqwest::Client::new();
+
+    // Act
+    let response = client
+        .post(mock_server.uri())
+        .body(body)
+        .send()
+        .await
+        .unwrap();
+
+    // Assert
+    assert_eq!(response.status(), StatusCode::OK);
+
+    let body: String = form_urlencoded::Serializer::new(String::new())
+        .append_pair("a", "1")
+        .append_pair("b", "2")
+        .append_pair("c", "unexpected")
+        .finish();
+
+    let client = reqwest::Client::new();
+
+    // Act
+    let err_response = client
+        .post(mock_server.uri())
+        .body(body)
+        .send()
+        .await
+        .unwrap();
+
+    // Assert
+    assert_eq!(err_response.status(), StatusCode::NOT_FOUND);
 }
 
 #[should_panic(expected = "\
