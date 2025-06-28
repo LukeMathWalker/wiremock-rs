@@ -2,10 +2,15 @@ use crate::mock_server::bare_server::{BareMockServer, RequestRecording};
 use crate::mock_server::exposed_server::InnerServer;
 use crate::request::{BodyPrintLimit, BODY_PRINT_LIMIT};
 use crate::MockServer;
+#[cfg(feature = "tls")]
+use hyper_server::tls_rustls::RustlsConfig;
 use std::env;
 use std::net::TcpListener;
 
-/// A builder providing a fluent API to assemble a [`MockServer`] step-by-step.  
+#[cfg(feature = "tls")]
+use super::tls_certs::MockServerTlsConfig;
+
+/// A builder providing a fluent API to assemble a [`MockServer`] step-by-step.
 /// Use [`MockServer::builder`] to get started.
 pub struct MockServerBuilder {
     listener: Option<TcpListener>,
@@ -100,7 +105,9 @@ impl MockServerBuilder {
     }
 
     /// Finalise the builder to get an instance of a [`BareMockServer`].
-    pub(super) async fn build_bare(self) -> BareMockServer {
+    pub(super) async fn build_bare_http(self) -> BareMockServer {
+        use hyper_server::accept::DefaultAcceptor;
+
         let listener = if let Some(listener) = self.listener {
             listener
         } else {
@@ -111,11 +118,59 @@ impl MockServerBuilder {
         } else {
             RequestRecording::Disabled
         };
-        BareMockServer::start(listener, recording, self.body_print_limit).await
+        BareMockServer::start(
+            listener,
+            recording,
+            self.body_print_limit,
+            "http",
+            DefaultAcceptor::new(),
+        )
+        .await
+    }
+
+    /// Finalise the builder to get an HTTPS instance of a [`BareMockServer`].
+    ///
+    /// Panics if DER data the `certs` is invalid.
+    #[cfg(feature = "tls")]
+    pub(super) async fn build_bare_https(self, certs: MockServerTlsConfig) -> BareMockServer {
+        use hyper_server::tls_rustls::RustlsAcceptor;
+
+        let listener = if let Some(listener) = self.listener {
+            listener
+        } else {
+            TcpListener::bind("127.0.0.1:0").expect("Failed to bind an OS port for a mock server.")
+        };
+        let recording = if self.record_incoming_requests {
+            RequestRecording::Enabled
+        } else {
+            RequestRecording::Disabled
+        };
+
+        let rustls_config = RustlsConfig::from_der(
+            vec![certs.server_cert_der, certs.root_cert_der],
+            certs.server_keypair_der,
+        )
+        .await
+        .expect("Failed to parse TLS configuration from DER data");
+
+        BareMockServer::start(
+            listener,
+            recording,
+            self.body_print_limit,
+            "https",
+            RustlsAcceptor::new(rustls_config),
+        )
+        .await
     }
 
     /// Finalise the builder and launch the [`MockServer`] instance!
     pub async fn start(self) -> MockServer {
-        MockServer::new(InnerServer::Bare(self.build_bare().await))
+        MockServer::new(InnerServer::Bare(self.build_bare_http().await))
+    }
+
+    /// Finalise the builder and launch the HTTPS [`MockServer`] instance!
+    #[cfg(feature = "tls")]
+    pub async fn start_https(self, tls_conf: MockServerTlsConfig) -> MockServer {
+        MockServer::new(InnerServer::Bare(self.build_bare_https(tls_conf).await))
     }
 }
