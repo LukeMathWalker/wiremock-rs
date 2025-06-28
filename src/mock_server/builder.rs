@@ -128,7 +128,9 @@ impl MockServerBuilder {
         .await
     }
 
-    /// Finalise the builder to get an instance of a [`BareMockServer`].
+    /// Finalise the builder to get an HTTPS instance of a [`BareMockServer`].
+    ///
+    /// Panics if DER data the `certs` is invalid.
     #[cfg(feature = "tls")]
     pub(super) async fn build_bare_https(self, certs: MockServerTlsConfig) -> BareMockServer {
         use hyper_server::tls_rustls::RustlsAcceptor;
@@ -149,7 +151,7 @@ impl MockServerBuilder {
             certs.server_keypair_der,
         )
         .await
-        .expect("Failed to build RustlsConfig");
+        .expect("Failed to parse TLS configuration from DER data");
 
         BareMockServer::start(
             listener,
