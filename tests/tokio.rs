@@ -1,6 +1,6 @@
 use reqwest::Client;
 use wiremock::matchers::{method, path};
-use wiremock::{Mock, MockServer, ResponseTemplate};
+use wiremock::{Mock, MockServer, Request, ResponseTemplate};
 
 // regression tests for https://github.com/LukeMathWalker/wiremock-rs/issues/7
 // running both tests will _sometimes_ trigger a hang if the runtimes aren't separated correctly
@@ -41,7 +41,9 @@ async fn hello_reqwest_http2() {
 
     Mock::given(method("GET"))
         .and(path("/"))
-        .respond_with(ResponseTemplate::new(200))
+        .respond_with(|req: &Request| {
+            ResponseTemplate::new(200).insert_header("x-version", format!("{:?}", req.version))
+        })
         .mount(&mock_server)
         .await;
 
@@ -56,4 +58,5 @@ async fn hello_reqwest_http2() {
 
     assert_eq!(resp.status(), 200);
     assert_eq!(resp.version(), reqwest::Version::HTTP_2);
+    assert_eq!(resp.headers().get("x-version").unwrap().to_str().unwrap(), "HTTP/2.0");
 }
