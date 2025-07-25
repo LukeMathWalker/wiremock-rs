@@ -16,7 +16,7 @@ use regex::Regex;
 use serde::Serialize;
 use serde_json::Value;
 use std::convert::TryInto;
-use std::str;
+use std::str::{self, FromStr};
 use url::Url;
 
 /// Implement the `Match` trait for all closures, out of the box,
@@ -65,8 +65,7 @@ pub struct MethodExactMatcher(Method);
 /// Shorthand for [`MethodExactMatcher::new`].
 pub fn method<T>(method: T) -> MethodExactMatcher
 where
-    T: TryInto<Method>,
-    <T as TryInto<Method>>::Error: std::fmt::Debug,
+    T: AsRef<str>,
 {
     MethodExactMatcher::new(method)
 }
@@ -74,11 +73,9 @@ where
 impl MethodExactMatcher {
     pub fn new<T>(method: T) -> Self
     where
-        T: TryInto<Method>,
-        <T as TryInto<Method>>::Error: std::fmt::Debug,
+        T: AsRef<str>,
     {
-        let method = method
-            .try_into()
+        let method = Method::from_str(&method.as_ref().to_ascii_uppercase())
             .expect("Failed to convert to HTTP method.");
         Self(method)
     }
