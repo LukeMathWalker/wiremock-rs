@@ -450,3 +450,44 @@ async fn custom_err() {
     ];
     assert_eq!(actual_err, expected_err);
 }
+
+#[async_std::test]
+async fn method_matcher_is_case_insensitive() {
+    // Arrange
+    let mock_server = MockServer::start().await;
+    let response = ResponseTemplate::new(200).set_body_bytes("world");
+    let mock = Mock::given(method("Get"))
+        .and(PathExactMatcher::new("hello"))
+        .respond_with(response);
+    mock_server.register(mock).await;
+
+    // Act
+    let response = reqwest::get(format!("{}/hello", &mock_server.uri()))
+        .await
+        .unwrap();
+
+    // Assert
+    assert_eq!(response.status(), 200);
+    assert_eq!(response.text().await.unwrap(), "world");
+}
+
+#[async_std::test]
+async fn http_crate_method_can_be_used_directly() {
+    use http::Method;
+    // Arrange
+    let mock_server = MockServer::start().await;
+    let response = ResponseTemplate::new(200).set_body_bytes("world");
+    let mock = Mock::given(method(Method::GET))
+        .and(PathExactMatcher::new("hello"))
+        .respond_with(response);
+    mock_server.register(mock).await;
+
+    // Act
+    let response = reqwest::get(format!("{}/hello", &mock_server.uri()))
+        .await
+        .unwrap();
+
+    // Assert
+    assert_eq!(response.status(), 200);
+    assert_eq!(response.text().await.unwrap(), "world");
+}
