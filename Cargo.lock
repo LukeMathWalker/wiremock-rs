@@ -1991,7 +1991,7 @@ checksum = "271414315aff87387382ec3d271b52d7ae78726f5d44ac98b4f4030c91880486"
 
 [[package]]
 name = "wiremock"
-version = "0.6.4"
+version = "0.6.5"
 dependencies = [
  "actix-rt",
  "assert-json-diff",
