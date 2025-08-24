@@ -1,6 +1,5 @@
 use crate::MockServer;
 use crate::mock_server::bare_server::BareMockServer;
-use async_trait::async_trait;
 use deadpool::managed::{Metrics, Object, Pool};
 use once_cell::sync::Lazy;
 use std::convert::Infallible;
@@ -52,7 +51,6 @@ pub(crate) async fn get_pooled_mock_server() -> PooledMockServer {
 #[derive(Debug)]
 pub(crate) struct MockServerPoolManager;
 
-#[async_trait]
 impl deadpool::managed::Manager for MockServerPoolManager {
     type Error = Infallible;
     type Type = BareMockServer;
