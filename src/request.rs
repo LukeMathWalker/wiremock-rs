@@ -102,7 +102,10 @@ impl Request {
                                 self.body.len(),
                                 limit
                             )?;
-                            writeln!(buffer, "Increase this limit by setting `WIREMOCK_BODY_PRINT_LIMIT`, or calling `MockServerBuilder::body_print_limit` when building your MockServer instance")?;
+                            writeln!(
+                                buffer,
+                                "Increase this limit by setting `WIREMOCK_BODY_PRINT_LIMIT`, or calling `MockServerBuilder::body_print_limit` when building your MockServer instance"
+                            )?;
                         }
                         break;
                     }

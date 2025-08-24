@@ -7,7 +7,7 @@ use std::io::ErrorKind;
 use std::iter;
 use std::net::TcpStream;
 use std::time::Duration;
-use wiremock::matchers::{body_json, body_partial_json, method, path, PathExactMatcher};
+use wiremock::matchers::{PathExactMatcher, body_json, body_partial_json, method, path};
 use wiremock::{Mock, MockServer, Request, ResponseTemplate};
 
 #[async_std::test]
@@ -374,15 +374,17 @@ async fn debug_prints_mock_server_variants() {
     let pooled_debug_str = format!("{:?}", pooled_mock_server);
 
     assert!(pooled_debug_str.starts_with("MockServer(Pooled(Object {"));
-    assert!(pooled_debug_str
-        .find(
-            format!(
-                "BareMockServer {{ address: {} }}",
-                pooled_mock_server.address()
+    assert!(
+        pooled_debug_str
+            .find(
+                format!(
+                    "BareMockServer {{ address: {} }}",
+                    pooled_mock_server.address()
+                )
+                .as_str()
             )
-            .as_str()
-        )
-        .is_some());
+            .is_some()
+    );
 
     let bare_mock_server = MockServer::builder().start().await;
     assert_eq!(

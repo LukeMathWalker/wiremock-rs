@@ -1,7 +1,7 @@
+use crate::MockServer;
 use crate::mock_server::bare_server::{BareMockServer, RequestRecording};
 use crate::mock_server::exposed_server::InnerServer;
-use crate::request::{BodyPrintLimit, BODY_PRINT_LIMIT};
-use crate::MockServer;
+use crate::request::{BODY_PRINT_LIMIT, BodyPrintLimit};
 use std::env;
 use std::net::TcpListener;
 

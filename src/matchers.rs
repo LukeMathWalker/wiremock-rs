@@ -8,8 +8,8 @@
 //!
 //! Check [`Match`]'s documentation for examples.
 use crate::{Match, Request};
-use assert_json_diff::{assert_json_matches_no_panic, CompareMode};
-use base64::prelude::{Engine as _, BASE64_STANDARD};
+use assert_json_diff::{CompareMode, assert_json_matches_no_panic};
+use base64::prelude::{BASE64_STANDARD, Engine as _};
 use http::{HeaderName, HeaderValue, Method};
 use log::debug;
 use regex::Regex;
@@ -208,13 +208,21 @@ impl PathExactMatcher {
         let path = path.into();
 
         if path.contains('?') {
-            panic!("Wiremock can't match the path `{}` because it contains a `?`. You must use `wiremock::matchers::query_param` to match on query parameters (the part of the path after the `?`).", path);
+            panic!(
+                "Wiremock can't match the path `{}` because it contains a `?`. You must use `wiremock::matchers::query_param` to match on query parameters (the part of the path after the `?`).",
+                path
+            );
         }
 
-        if let Ok(url) = Url::parse(&path) {
-            if let Some(host) = url.host_str() {
-                panic!("Wiremock can't match the path `{}` because it contains the host `{}`. You don't have to specify the host - wiremock knows it. Try replacing your path with `path(\"{}\")`", path, host, url.path());
-            }
+        if let Ok(url) = Url::parse(&path)
+            && let Some(host) = url.host_str()
+        {
+            panic!(
+                "Wiremock can't match the path `{}` because it contains the host `{}`. You don't have to specify the host - wiremock knows it. Try replacing your path with `path(\"{}\")`",
+                path,
+                host,
+                url.path()
+            );
         }
 
         // Prepend "/" to the path if missing.

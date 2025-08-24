@@ -1,9 +1,9 @@
-use std::sync::{atomic::AtomicBool, Arc};
+use std::sync::{Arc, atomic::AtomicBool};
 
 use tokio::sync::Notify;
 
 use crate::{
-    verification::VerificationReport, ErrorResponse, Match, Mock, Request, ResponseTemplate,
+    ErrorResponse, Match, Mock, Request, ResponseTemplate, verification::VerificationReport,
 };
 
 /// Given the behaviour specification as a [`Mock`], keep track of runtime information
