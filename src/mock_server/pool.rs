@@ -1,5 +1,5 @@
-use crate::mock_server::bare_server::BareMockServer;
 use crate::MockServer;
+use crate::mock_server::bare_server::BareMockServer;
 use async_trait::async_trait;
 use deadpool::managed::{Metrics, Object, Pool};
 use once_cell::sync::Lazy;

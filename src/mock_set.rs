@@ -1,8 +1,8 @@
 use crate::request::BodyPrintLimit;
 use crate::{
+    ErrorResponse,
     mounted_mock::MountedMock,
     verification::{VerificationOutcome, VerificationReport},
-    ErrorResponse,
 };
 use crate::{Mock, Request};
 use http_body_util::Full;
@@ -10,10 +10,10 @@ use hyper::body::Bytes;
 use log::debug;
 use std::{
     ops::{Index, IndexMut},
-    sync::{atomic::AtomicBool, Arc},
+    sync::{Arc, atomic::AtomicBool},
 };
 use tokio::sync::Notify;
-use tokio::time::{sleep, Sleep};
+use tokio::time::{Sleep, sleep};
 
 /// The collection of mocks used by a `MockServer` instance to match against
 /// incoming requests.
@@ -143,7 +143,9 @@ impl MountedMockSet {
 impl IndexMut<MockId> for MountedMockSet {
     fn index_mut(&mut self, index: MockId) -> &mut Self::Output {
         if index.generation != self.generation {
-            panic!("The mock you are trying to access is no longer active. It has been deleted from the active set via `reset` - you should not hold on to a `MockId` after you call `reset`!.")
+            panic!(
+                "The mock you are trying to access is no longer active. It has been deleted from the active set via `reset` - you should not hold on to a `MockId` after you call `reset`!."
+            )
         }
         &mut self.mocks[index.index]
     }
@@ -154,7 +156,9 @@ impl Index<MockId> for MountedMockSet {
 
     fn index(&self, index: MockId) -> &Self::Output {
         if index.generation != self.generation {
-            panic!("The mock you are trying to access is no longer active. It has been deleted from the active set via `reset` - you should not hold on to a `MockId` after you call `reset`!.")
+            panic!(
+                "The mock you are trying to access is no longer active. It has been deleted from the active set via `reset` - you should not hold on to a `MockId` after you call `reset`!."
+            )
         }
         &self.mocks[index.index]
     }

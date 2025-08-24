@@ -1,6 +1,6 @@
 use wiremock::{
-    matchers::{method, path, path_regex},
     Mock, MockServer, ResponseTemplate,
+    matchers::{method, path, path_regex},
 };
 
 #[async_std::test]

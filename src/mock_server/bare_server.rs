@@ -2,14 +2,14 @@ use crate::mock_server::hyper::run_server;
 use crate::mock_set::MockId;
 use crate::mock_set::MountedMockSet;
 use crate::request::BodyPrintLimit;
-use crate::{mock::Mock, verification::VerificationOutcome, ErrorResponse, Request};
+use crate::{ErrorResponse, Request, mock::Mock, verification::VerificationOutcome};
 use http_body_util::Full;
 use hyper::body::Bytes;
 use std::fmt::{Debug, Write};
 use std::net::{SocketAddr, TcpListener, TcpStream};
 use std::pin::pin;
-use std::sync::atomic::AtomicBool;
 use std::sync::Arc;
+use std::sync::atomic::AtomicBool;
 use tokio::sync::Notify;
 use tokio::sync::RwLock;
 
