@@ -3,6 +3,7 @@ name = "wiremock"
 version = "0.6.5"
 authors = ["Luca Palmieri <rust@lpalmieri.com>"]
 edition = "2024"
+rust-version = "1.88"
 
 license = "MIT/Apache-2.0"
 
