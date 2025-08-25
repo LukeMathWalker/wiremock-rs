@@ -1,6 +1,6 @@
 use std::fmt;
 
-use http::{HeaderMap, Method};
+use http::{HeaderMap, Method, Version};
 use http_body_util::BodyExt;
 use serde::de::DeserializeOwned;
 use url::Url;
@@ -41,6 +41,7 @@ pub struct Request {
     pub method: Method,
     pub headers: HeaderMap,
     pub body: Vec<u8>,
+    pub version: Version,
 }
 
 impl Request {
@@ -67,6 +68,7 @@ impl Request {
             url,
             method: parts.method,
             headers: parts.headers,
+            version: parts.version,
             body: body.to_vec(),
         }
     }
