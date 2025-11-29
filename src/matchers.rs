@@ -211,15 +211,15 @@ impl PathExactMatcher {
             );
         }
 
-        if let Ok(url) = Url::parse(&path)
-            && let Some(host) = url.host_str()
-        {
-            panic!(
-                "Wiremock can't match the path `{}` because it contains the host `{}`. You don't have to specify the host - wiremock knows it. Try replacing your path with `path(\"{}\")`",
-                path,
-                host,
-                url.path()
-            );
+        if let Ok(url) = Url::parse(&path) {
+            if let Some(host) = url.host_str() {
+                panic!(
+                    "Wiremock can't match the path `{}` because it contains the host `{}`. You don't have to specify the host - wiremock knows it. Try replacing your path with `path(\"{}\")`",
+                    path,
+                    host,
+                    url.path()
+                );
+            }
         }
 
         // Prepend "/" to the path if missing.
