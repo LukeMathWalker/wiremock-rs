@@ -159,6 +159,28 @@ async fn should_not_match_multi_request_header_upon_incomplete_values() {
 }
 
 #[async_std::test]
+async fn should_match_single_header_value_containing_comma() {
+    // Arrange
+    let mock_server = MockServer::start().await;
+    let mock = Mock::given(method("GET"))
+        .and(header("x-ms-date", "Sun, 01 Jan 2023 00:00:00 GMT"))
+        .respond_with(ResponseTemplate::new(200));
+    mock_server.register(mock).await;
+
+    // Act
+    let client = reqwest::Client::new();
+    let should_match = client
+        .get(mock_server.uri())
+        .header("x-ms-date", "Sun, 01 Jan 2023 00:00:00 GMT")
+        .send()
+        .await
+        .unwrap();
+
+    // Assert
+    assert_eq!(should_match.status(), 200);
+}
+
+#[async_std::test]
 async fn should_match_regex_single_header_value() {
     // Arrange
     let mock_server = MockServer::start().await;

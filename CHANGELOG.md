@@ -2,6 +2,9 @@
 
 # Next
 
+- Fixes:
+    - `header` matcher now accepts a single header value containing commas (e.g. an RFC 2822 date such as `Sun, 01 Jan 2023 00:00:00 GMT`). Previously the received value was always split on `,`, which caused such matchers to fail.
+
 # `0.5.8`
 
 - Features:

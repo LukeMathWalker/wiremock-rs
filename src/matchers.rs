@@ -396,9 +396,13 @@ impl HeaderExactMatcher {
 
 impl Match for HeaderExactMatcher {
     fn matches(&self, request: &Request) -> bool {
-        let values = request
-            .headers
-            .get_all(&self.0)
+        let raw_values: Vec<&HeaderValue> = request.headers.get_all(&self.0).iter().collect();
+        if raw_values.len() == self.1.len()
+            && raw_values.iter().zip(self.1.iter()).all(|(a, b)| *a == b)
+        {
+            return true;
+        }
+        let split_values = raw_values
             .iter()
             .filter_map(|v| v.to_str().ok())
             .flat_map(|v| {
@@ -407,7 +411,7 @@ impl Match for HeaderExactMatcher {
                     .filter_map(|v| HeaderValue::from_str(v).ok())
             })
             .collect::<Vec<_>>();
-        values == self.1 // order matters
+        split_values == self.1
     }
 }
 
