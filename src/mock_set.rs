@@ -60,8 +60,12 @@ impl MountedMockSet {
     ) -> Result<(hyper::Response<Full<Bytes>>, Option<Sleep>), ErrorResponse> {
         debug!("Handling request.");
         let mut response_template: Option<_> = None;
-        self.mocks.sort_by_key(|(m, _)| m.specification.priority);
-        for (mock, mock_state) in &mut self.mocks {
+        // Don't reorder `self.mocks` itself: `MockId`s are stable indices into it and must always
+        // point to the same underlying mock over time.
+        let mut match_order: Vec<usize> = (0..self.mocks.len()).collect();
+        match_order.sort_by_key(|&i| self.mocks[i].0.specification.priority);
+        for i in match_order {
+            let (mock, mock_state) = &mut self.mocks[i];
             if *mock_state == MountedMockState::OutOfScope {
                 continue;
             }
@@ -191,10 +195,20 @@ mod tests {
     use crate::matchers::path;
     use crate::mock_set::{MountedMockSet, MountedMockState};
     use crate::request::BodyPrintLimit;
-    use crate::{Mock, ResponseTemplate};
+    use crate::{Mock, Request, ResponseTemplate};
+    use http::{HeaderMap, Method};
 
     fn test_mock_set() -> MountedMockSet {
         MountedMockSet::new(BodyPrintLimit::Unlimited)
+    }
+
+    fn test_request(path: &str) -> Request {
+        Request {
+            url: format!("http://localhost{}", path).parse().unwrap(),
+            method: Method::GET,
+            headers: HeaderMap::new(),
+            body: vec![],
+        }
     }
 
     #[test]
@@ -240,5 +254,36 @@ mod tests {
         assert_eq!(first_mock.1, MountedMockState::OutOfScope);
         let second_mock = &set[second_mock_id];
         assert_eq!(second_mock.1, MountedMockState::InScope);
+    }
+
+    #[tokio::test]
+    async fn mock_ids_stay_valid_after_handling_requests_with_mixed_priorities() {
+        // Initial setup: create three mocks, the first one having the highest priority number.
+        let mut set = test_mock_set();
+        let fallback = Mock::given(path("/fallback"))
+            .respond_with(ResponseTemplate::new(200))
+            .with_priority(u8::MAX);
+        let (_, fallback_id) = set.register(fallback);
+        let other = Mock::given(path("/other")).respond_with(ResponseTemplate::new(200));
+        set.register(other);
+        let scoped = Mock::given(path("/scoped")).respond_with(ResponseTemplate::new(200));
+        let (_, scoped_id) = set.register(scoped);
+
+        // Act: handle an unrelated request, so as to trigger the sorting behavior of
+        // `MountedMockSet::handle_request`.
+        //
+        // Re-sorting `MountedMockSet::mocks` directly by priority in
+        // `MountedMockSet::handle_request` would move `fallback` from index 0 to 2, which would
+        // make it so that `scoped_id` points to the `fallback` mock, not the `scoped` one anymore.
+        let _ = set.handle_request(test_request("/unmatched")).await;
+        // This is equivalent to `MockGuard::drop` for a guard returned by `mount_as_scoped()`.
+        set.deactivate(scoped_id);
+
+        // Assert
+        let (response, _) = set.handle_request(test_request("/fallback")).await.unwrap();
+        assert_eq!(response.status(), 200, "the fallback mock was deactivated");
+        let (response, _) = set.handle_request(test_request("/scoped")).await.unwrap();
+        assert_eq!(response.status(), 404, "the scoped mock is still active");
+        assert_eq!(set[fallback_id].1, MountedMockState::InScope);
     }
 }
